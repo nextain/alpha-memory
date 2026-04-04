@@ -1,0 +1,49 @@
+{
+	"name": "@nextain/alpha-memory",
+	"version": "0.1.0",
+	"description": "Alpha Memory System — Naia OS cognitive memory architecture with benchmark suite",
+	"type": "module",
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/nextain/alpha-memory.git"
+	},
+	"keywords": [
+		"memory",
+		"ai",
+		"naia",
+		"vector-search",
+		"knowledge-graph",
+		"benchmark",
+		"llm-memory"
+	],
+	"exports": {
+		".": "./src/memory/index.js"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"benchmark": "tsx src/benchmark/comparison/run-comparison.ts",
+		"check": "biome check --write ."
+	},
+	"dependencies": {
+		"better-sqlite3": "^12.8.0",
+		"openai": "^4.80.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"@huggingface/transformers": "^3.0.0",
+		"@types/better-sqlite3": "^7.6.0",
+		"@types/node": "^22.0.0",
+		"mem0ai": "^2.4.2",
+		"tsx": "^4.19.0",
+		"typescript": "^5.6.0",
+		"vectra": "^0.2.2",
+		"vitest": "^4.0.18"
+	},
+	"peerDependencies": {
+		"openai": "^4.0.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}
