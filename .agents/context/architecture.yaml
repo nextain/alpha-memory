@@ -1,0 +1,57 @@
+memory_architecture:
+  model: 4-store cognitive memory (Tulving taxonomy + CLS theory)
+  stores:
+    episodic:
+      analog: Hippocampus
+      holds: Timestamped events with full encoding context
+      key_fields: [id, content, summary, timestamp, importance, encodingContext, strength]
+    semantic:
+      analog: Neocortex
+      holds: Facts, entities, relationships
+      key_fields: [id, content, source, confidence, lastVerified]
+    procedural:
+      analog: Basal Ganglia
+      holds: Skills, strategies, learned patterns
+      key_fields: [id, name, description, successRate]
+    working:
+      analog: Prefrontal Cortex
+      holds: Active context (managed externally by ContextManager)
+      note: Not implemented in this module
+
+importance_scoring:
+  model: CraniMem (2025) 3-axis utility scoring
+  axes: [importance, surprise, emotion]
+  output: utility score (0.0–1.0)
+  gate: Only store if utility >= threshold
+  file: src/memory/importance.ts
+
+decay:
+  model: Ebbinghaus forgetting curve
+  formula: strength = e^(-k * elapsed_days / stability)
+  recall_effect: Recall increases stability (spaced repetition)
+  file: src/memory/decay.ts
+
+reconsolidation:
+  purpose: Detect contradictions between new input and existing memories
+  trigger: On retrieval of related memories
+  file: src/memory/reconsolidation.ts
+
+knowledge_graph:
+  purpose: Extract entities and relations for semantic memory
+  file: src/memory/knowledge-graph.ts
+
+embeddings:
+  abstraction: EmbeddingProvider interface
+  backends:
+    gemini: gemini-embedding-001 (3072d), requires GEMINI_API_KEY
+    solar: embedding-query/passage (4096d), requires UPSTAGE_API_KEY
+    qwen3: ollama local (2048d)
+    bge-m3: ollama local (1024d)
+    gateway: vertexai:text-embedding-004 (768d), requires GATEWAY_URL + GATEWAY_MASTER_KEY
+  file: src/memory/embeddings.ts
+
+adapters:
+  interface: MemoryAdapter (src/memory/types.ts)
+  implementations:
+    local: SQLite + hnswlib, no API key needed
+    mem0: mem0 OSS backend

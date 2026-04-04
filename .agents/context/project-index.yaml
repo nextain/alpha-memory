@@ -1,0 +1,45 @@
+project: alpha-memory
+description: Cognitive memory architecture for AI agents — part of Naia OS
+repo: nextain/alpha-memory
+license: Apache-2.0
+parent: nextain/naia-os
+
+structure:
+  src/memory: Core memory system (MemorySystem, adapters, types)
+  src/benchmark: Benchmark runner + comparison adapters
+  docs/reports: Generated benchmark reports (committed summaries only)
+  .agents/context: AI-optimized context (English, YAML/JSON)
+  .users/context: Human-readable mirror (same structure)
+
+entry_points:
+  - README.md
+  - .agents/context/project-index.yaml
+
+adapters:
+  - id: naia
+    file: src/benchmark/comparison/adapter-naia.ts
+    description: Alpha Memory — this project
+  - id: mem0
+    file: src/benchmark/comparison/adapter-mem0.ts
+    description: mem0 OSS — vector search + LLM dedup
+  - id: sillytavern
+    file: src/benchmark/comparison/adapter-sillytavern.ts
+    description: SillyTavern — vectra + transformers.js
+  - id: letta
+    file: src/benchmark/comparison/adapter-letta.ts
+    description: Letta (formerly MemGPT)
+  - id: zep
+    file: src/benchmark/comparison/adapter-zep.ts
+    description: Zep CE
+  - id: openclaw
+    file: src/benchmark/comparison/adapter-openclaw.ts
+    description: OpenClaw
+  - id: sap
+    file: src/benchmark/comparison/adapter-sap.ts
+    description: Super Agent Party — mem0 + FAISS/ChromaDB
+  - id: jikime-mem
+    file: src/benchmark/comparison/adapter-jikime-mem.ts
+    description: Jikime Memory
+  - id: no-memory
+    file: src/benchmark/comparison/adapter-no-memory.ts
+    description: Baseline — no memory system

@@ -6,4 +6,6 @@ dist/
 /tmp/
 .env
 .env.local
-reports/
+# generated benchmark output (not committed — too large)
+# 생성된 벤치마크 raw output은 커밋하지 않음
+*.raw.txt
