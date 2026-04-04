@@ -64,7 +64,38 @@ src/
 
 ---
 
-## Quick Start
+## Installation
+
+```bash
+npm install @nextain/alpha-memory
+# or
+pnpm add @nextain/alpha-memory
+```
+
+## Usage
+
+```typescript
+import { MemorySystem } from "@nextain/alpha-memory";
+
+// Initialize with local SQLite backend (no API key needed)
+const memory = new MemorySystem({ adapter: "local" });
+await memory.init();
+
+// Encode a message into memory
+await memory.encode("User prefers dark mode and uses Neovim as their editor");
+
+// Recall relevant memories for a query
+const results = await memory.recall("What editor does the user use?");
+console.log(results); // ["User prefers dark mode and uses Neovim as their editor"]
+
+// At session start — inject into system prompt
+const context = await memory.sessionRecall("new conversation started");
+// context: string to prepend to system prompt
+```
+
+---
+
+## Quick Start (Benchmark)
 
 ```bash
 npm install
@@ -137,6 +168,21 @@ See [`docs/reports/`](docs/reports/) for full reports.
 npm run typecheck   # TypeScript check
 npm run check       # Biome lint + format
 ```
+
+---
+
+## AI-Native Open Source
+
+This project is built with an AI-native development philosophy:
+
+- **AI context is a first-class artifact** — `.agents/` context files are versioned alongside code, not treated as throwaway prompts
+- **Privacy by architecture** — memory is stored locally and E2E encrypted; even the service provider cannot access it
+- **AI sovereignty** — the user owns their AI memories; Nextain provides infrastructure, not access
+- **Transparent AI assistance** — AI contributions are credited via `Assisted-by:` git trailers
+
+AI context in `.agents/` and `.users/` is licensed under [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — attribution and same license required.
+
+> In the vibe coding era, AI context is an asset as valuable as code.
 
 ---
 

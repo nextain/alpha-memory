@@ -64,7 +64,38 @@ src/
 
 ---
 
-## 빠른 시작
+## 설치
+
+```bash
+npm install @nextain/alpha-memory
+# 또는
+pnpm add @nextain/alpha-memory
+```
+
+## 사용법
+
+```typescript
+import { MemorySystem } from "@nextain/alpha-memory";
+
+// 로컬 SQLite 백엔드로 초기화 (API 키 불필요)
+const memory = new MemorySystem({ adapter: "local" });
+await memory.init();
+
+// 메시지를 메모리에 인코딩
+await memory.encode("사용자는 다크 모드를 선호하고 Neovim을 에디터로 사용함");
+
+// 쿼리에 관련된 기억 인출
+const results = await memory.recall("사용자가 쓰는 에디터는?");
+console.log(results); // ["사용자는 다크 모드를 선호하고 Neovim을 에디터로 사용함"]
+
+// 세션 시작 시 — 시스템 프롬프트에 주입
+const context = await memory.sessionRecall("새 대화 시작");
+// context: 시스템 프롬프트 앞에 붙일 문자열
+```
+
+---
+
+## 빠른 시작 (벤치마크)
 
 ```bash
 npm install
@@ -137,6 +168,21 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 npm run typecheck   # TypeScript 검사
 npm run check       # Biome 린트 + 포맷
 ```
+
+---
+
+## AI-Native 오픈소스 철학
+
+이 프로젝트는 AI-native 개발 철학으로 만들어졌습니다:
+
+- **AI 컨텍스트는 1급 산출물** — `.agents/` 컨텍스트 파일이 코드와 함께 버전 관리됨
+- **아키텍처로 증명하는 프라이버시** — 메모리는 로컬 저장 + E2E 암호화. 서비스 제공자도 내용 접근 불가
+- **AI 주권** — 사용자가 AI 기억의 주인. Nextain은 인프라를 제공할 뿐, 데이터에 접근하지 않음
+- **투명한 AI 기여** — AI 기여는 `Assisted-by:` git 트레일러로 명시
+
+`.agents/`, `.users/` AI 컨텍스트는 [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 라이선스 — 출처 표기 및 동일 라이선스 필수.
+
+> 바이브 코딩 시대에 AI 컨텍스트는 코드만큼 가치 있는 자산입니다.
 
 ---
 
