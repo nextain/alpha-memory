@@ -1,6 +1,6 @@
 {
 	"name": "@nextain/alpha-memory",
-	"version": "0.1.1",
+	"version": "0.1.4",
 	"description": "Alpha Memory System — Naia OS cognitive memory architecture",
 	"type": "module",
 	"license": "Apache-2.0",
