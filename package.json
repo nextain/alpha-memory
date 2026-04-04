@@ -1,7 +1,7 @@
 {
 	"name": "@nextain/alpha-memory",
 	"version": "0.1.0",
-	"description": "Alpha Memory System — Naia OS cognitive memory architecture with benchmark suite",
+	"description": "Alpha Memory System — Naia OS cognitive memory architecture",
 	"type": "module",
 	"license": "Apache-2.0",
 	"repository": {
@@ -14,13 +14,27 @@
 		"naia",
 		"vector-search",
 		"knowledge-graph",
-		"benchmark",
 		"llm-memory"
 	],
 	"exports": {
-		".": "./src/memory/index.js"
+		".": {
+			"import": "./dist/memory/index.js",
+			"types": "./dist/memory/index.d.ts"
+		}
+	},
+	"types": "./dist/memory/index.d.ts",
+	"files": [
+		"dist/memory/",
+		"src/memory/",
+		"README.md",
+		"README.ko.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"scripts": {
+		"build": "tsc",
 		"typecheck": "tsc --noEmit",
 		"benchmark": "tsx src/benchmark/comparison/run-comparison.ts",
 		"check": "biome check --write ."
