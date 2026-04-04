@@ -105,9 +105,10 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 | `sillytavern` | [SillyTavern](https://github.com/SillyTavern/SillyTavern) | vectra + transformers.js |
 | `letta` | [Letta](https://github.com/letta-ai/letta) | Requires Letta server |
 | `zep` | [Zep CE](https://github.com/getzep/zep) | Requires Zep server |
-| `openclaw` | OpenClaw | Local |
+| `openclaw` | [OpenClaw](https://github.com/nextain/naia-os) | Local (Naia Gateway) |
 | `sap` | Super Agent Party | mem0 + FAISS/ChromaDB |
-| `jikime-mem` | Jikime Memory | Local |
+| `open-llm-vtuber` | [Open-LLM-VTuber](https://github.com/t41372/Open-LLM-VTuber) | Letta-based agent memory |
+| `jikime-mem` | [Jikime Memory](https://github.com/jikime/jikime-mem) | Local |
 | `no-memory` | Baseline (no memory) | — |
 
 ---

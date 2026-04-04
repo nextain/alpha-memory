@@ -105,9 +105,10 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 | `sillytavern` | [SillyTavern](https://github.com/SillyTavern/SillyTavern) | vectra + transformers.js |
 | `letta` | [Letta](https://github.com/letta-ai/letta) | Letta 서버 필요 |
 | `zep` | [Zep CE](https://github.com/getzep/zep) | Zep 서버 필요 |
-| `openclaw` | OpenClaw | 로컬 |
+| `openclaw` | [OpenClaw](https://github.com/nextain/naia-os) | 로컬 (Naia Gateway) |
 | `sap` | Super Agent Party | mem0 + FAISS/ChromaDB |
-| `jikime-mem` | Jikime Memory | 로컬 |
+| `open-llm-vtuber` | [Open-LLM-VTuber](https://github.com/t41372/Open-LLM-VTuber) | Letta 기반 에이전트 메모리 |
+| `jikime-mem` | [Jikime Memory](https://github.com/jikime/jikime-mem) | 로컬 |
 | `no-memory` | 베이스라인 (메모리 없음) | — |
 
 ---
