@@ -158,7 +158,21 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 
 ## 벤치마크 결과
 
-전체 보고서는 [`docs/reports/`](docs/reports/)를 참조하세요.
+**R2 보고서 (2026년 4월)** — 1000 facts, 240 queries, 4개 시스템, 한국어 + 영어:
+
+| 시스템 | 한국어 (R1) | 영어 (R2) |
+|--------|:---------:|:--------:|
+| **Alpha Memory (Naia)** | **65%** | 46% |
+| SillyTavern | 46% | **64%** |
+| Letta | 47% | — |
+| mem0 | 재실행 필요* | 43% |
+| SAP | 재실행 필요* | 45% |
+
+*R1 한국어: mem0/SAP는 API 속도 제한 오류로 재실행 필요.
+
+모든 시스템이 F 등급 (abstention 기준 미충족).
+
+→ 전체 보고서: [`docs/reports/benchmark-r2-2026-04.ko.md`](docs/reports/benchmark-r2-2026-04.ko.md) | [`docs/reports/benchmark-r2-2026-04.en.md`](docs/reports/benchmark-r2-2026-04.en.md)
 
 ---
 

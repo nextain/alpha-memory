@@ -158,7 +158,21 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 
 ## Benchmark Results
 
-See [`docs/reports/`](docs/reports/) for full reports.
+**R2 Report (April 2026)** — 1000 facts, 240 queries, 4 systems, KO + EN:
+
+| System | KO (R1) | EN (R2) |
+|--------|:-------:|:-------:|
+| **Alpha Memory (Naia)** | **65%** | 46% |
+| SillyTavern | 46% | **64%** |
+| Letta | 47% | — |
+| mem0 | re-run* | 43% |
+| SAP | re-run* | 45% |
+
+*R1 KO: mem0/SAP had API rate limit failures; re-run in progress.
+
+All systems scored F grade (abstention criterion not met by any system).
+
+→ Full reports: [`docs/reports/benchmark-r2-2026-04.en.md`](docs/reports/benchmark-r2-2026-04.en.md) | [`docs/reports/benchmark-r2-2026-04.ko.md`](docs/reports/benchmark-r2-2026-04.ko.md)
 
 ---
 

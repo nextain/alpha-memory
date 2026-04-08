@@ -125,14 +125,15 @@ for line in sys.stdin:
 			["/tmp/sap-bench-worker.py", workerApiKey, workerBaseUrl, workerEmbedDims, chromaPath ?? ""],
 			{
 				stdio: ["pipe", "pipe", "pipe"],
+				env: { ...process.env, OPENAI_API_KEY: workerApiKey },
 			},
 		);
 
-		// Wait for READY
+		// Wait for READY (mem0 init can take ~30s on first run — allow 90s)
 		await new Promise<void>((resolve, reject) => {
 			const timeout = setTimeout(
 				() => reject(new Error("SAP worker timeout")),
-				30000,
+				90000,
 			);
 			const onData = (data: Buffer) => {
 				const text = data.toString();

@@ -8,8 +8,8 @@
  * - bge-m3: ollama local (bge-m3, 1024d)
  */
 import { randomUUID } from "node:crypto";
-import { Mem0Adapter } from "../../adapters/mem0.js";
-import { MemorySystem } from "../../index.js";
+import { Mem0Adapter } from "./adapter-mem0.js";
+import { MemorySystem } from "../../memory/index.js";
 import type { BenchmarkAdapter } from "./types.js";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
