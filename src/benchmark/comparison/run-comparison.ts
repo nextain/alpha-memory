@@ -42,7 +42,7 @@ const THROTTLE_MS = 2000;
 function parseArgs() {
 	const args = process.argv.slice(2);
 	let adapterNames = ["naia", "mem0"];
-	let judge: "claude-cli" | "keyword" = "claude-cli";
+	let judge: "claude-cli" | "keyword" | "gemini-pro" = "claude-cli";
 	let runs = 1;
 	let categories: string[] | null = null;
 	let llm: "gemini" | "qwen3" = "qwen3";
@@ -176,6 +176,83 @@ async function callGemini(
 	return "";
 }
 
+// ─── Token Usage Tracker ─────────────────────────────────────────────────────
+
+let totalPromptTokens = 0;
+let totalCompletionTokens = 0;
+let judgeCallCount = 0;
+
+function printTokenUsage(): void {
+	console.log(`\n  ─── Token Usage ───`);
+	console.log(`    Judge calls: ${judgeCallCount}`);
+	console.log(`    Prompt tokens: ${totalPromptTokens.toLocaleString()}`);
+	console.log(`    Completion tokens: ${totalCompletionTokens.toLocaleString()}`);
+	console.log(`    Total tokens: ${(totalPromptTokens + totalCompletionTokens).toLocaleString()}`);
+}
+
+// ─── Gemini CLI Batch Judge ──────────────────────────────────────────────────
+
+interface BatchJudgeItem {
+	idx: number;
+	q: any;
+	capName: string;
+	response: string;
+}
+
+function buildBatchJudgePrompt(items: BatchJudgeItem[]): string {
+	const parts = items.map(
+		(item, i) =>
+			`[${i + 1}] ${buildJudgePrompt(item.q, item.capName, item.response)}`,
+	);
+	return `${parts.join("\n\n---\n\n")}
+
+위 ${items.length}개 항목을 각각 채점하세요. 형식:
+각 항목 번호별로 첫 줄에 PASS 또는 FAIL, 둘째 줄에 이유 한 줄.
+항목 사이에 빈 줄로 구분.`;
+}
+
+/** Call gemini CLI (gemini-2.5-pro) to judge */
+function callGeminiCli(prompt: string): string {
+	try {
+		return execSync('gemini -p -m gemini-2.5-pro 2>/dev/null', {
+			input: prompt,
+			timeout: 120000,
+			encoding: "utf-8",
+			maxBuffer: 1024 * 1024,
+		}).trim();
+	} catch {
+		return "";
+	}
+}
+
+function geminiProBatchJudgeSync(
+	items: BatchJudgeItem[],
+): JudgeResult[] {
+	const prompt = buildBatchJudgePrompt(items);
+	console.log(`    🤖 gemini-pro batch: judging ${items.length} items...`);
+	const raw = callGeminiCli(prompt);
+	if (!raw) {
+		console.warn("    ⚠ gemini cli judge returned empty, falling back to keyword");
+		return items.map((item) => keywordJudge(item.response, item.q, item.capName));
+	}
+	judgeCallCount++;
+	// Rough token estimate for CLI budgeting (~4 chars per token)
+	totalPromptTokens += Math.ceil(prompt.length / 4);
+	totalCompletionTokens += Math.ceil(raw.length / 4);
+	return parseBatchVerdict(raw, items.length);
+}
+
+function parseBatchVerdict(raw: string, count: number): JudgeResult[] {
+	const results: JudgeResult[] = [];
+	const blocks = raw.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
+	for (let i = 0; i < count; i++) {
+		const block = blocks[i]?.trim() ?? "";
+		results.push(parseVerdict(block));
+	}
+	return results;
+}
+
+
 function callClaudeCli(prompt: string): string {
 	try {
 		return execSync("claude -p 2>/dev/null", {
@@ -207,10 +284,10 @@ async function askWithMemory(
 ## Rules
 1. Only use memories that are **directly relevant** to the user's question. Ignore unrelated memories.
 2. When the user asks for help, **don't ask back** — immediately apply their preferences and environment from memory.
-3. If the user asks about a **specific personal fact** and no memory **directly matches**, you MUST reply "기억에 없습니다" or "I don't have that in my memory".
+3. If the user asks about a **specific personal fact** and no memory **directly matches**, you MUST reply "I don't have that in my memory" (English) or "기억에 없습니다" (Korean).
 4. NEVER fabricate facts. Do NOT guess or infer from loosely related memories.
 5. If multiple memories can be combined to answer, synthesize them.
-6. For confirmation questions ("Did I say...?", "~했었지?"), if no memory directly matches, reply that you don't recall. Do NOT substitute with a different memory.
+6. For confirmation questions ("Did I say...?"), if no memory directly matches, reply that you don't recall. Do NOT substitute with a different memory.
 
 ${memCtx}`,
 		},
@@ -350,21 +427,45 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	return { pass: false, reason: "NO_JUDGE" };
 }
 
-async function judgeResponse(
+function judgeResponse(
 	apiKey: string,
 	mode: string,
 	q: any,
 	capName: string,
 	response: string,
-): Promise<JudgeResult> {
+): JudgeResult {
 	if (mode === "keyword") return keywordJudge(response, q, capName);
+	if (mode === "gemini-pro") {
+		const results = geminiProBatchJudgeSync([
+			{ idx: 0, q, capName, response },
+		]);
+		return results[0] ?? keywordJudge(response, q, capName);
+	}
 
-	// claude-cli batch judge
+	// claude-cli judge
 	const prompt = buildJudgePrompt(q, capName, response);
 	const raw = callClaudeCli(prompt);
 	if (!raw) return keywordJudge(response, q, capName); // fallback
 	return parseVerdict(raw);
 }
+
+/** Batch-judge items using Gemini CLI (10 items per call) */
+function batchJudgeGeminiProSync(
+	items: Array<{ q: any; capName: string; response: string }>,
+	batchSize = 10,
+): JudgeResult[] {
+	const results: JudgeResult[] = [];
+	for (let i = 0; i < items.length; i += batchSize) {
+		const batch = items.slice(i, i + batchSize).map((item, idx) => ({
+			idx,
+			...item,
+		}));
+		const batchResults = geminiProBatchJudgeSync(batch);
+		results.push(...batchResults);
+	}
+	return results;
+}
+
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
@@ -450,6 +551,7 @@ async function main() {
 			console.log("  Phase 2: Query + Judge\n");
 			const details: TestDetail[] = [];
 			let testNum = 0;
+				const pendingJudge: Array<{ q: any; capName: string; response: string; detailIdx: number }> = [];
 
 			// Explicit execution order — do NOT rely on JSON key order.
 			// Pre-update tests first, then contradiction (which mutates), then post-update tests.
@@ -530,48 +632,88 @@ async function main() {
 						console.error(`      ⚠ search: ${err.message?.slice(0, 60)}`);
 					}
 
-					// Generate response with memories + Judge (multiple runs, majority vote)
+					// Generate response with memories
+					let lastResponse = await askWithMemory(apiKey, memories, query, config.llm);
 					let passCount = 0;
-					let lastResponse = "";
 					let lastReason = "";
 
-					for (let run = 0; run < config.runs; run++) {
-						const response = await askWithMemory(apiKey, memories, query, config.llm);
-						lastResponse = response;
-						const verdict = await judgeResponse(
-							apiKey,
-							config.judge,
-							q,
-							capName,
-							response,
+					if (config.judge === "gemini-pro" && config.runs === 1) {
+						// Defer judge to batch — push placeholder detail
+						details.push({
+							id,
+							capability: capName,
+							query,
+							weight,
+							isBonus,
+							pass: false,
+							reason: "(pending judge)",
+							memories,
+							response: lastResponse.slice(0, 400),
+						});
+						pendingJudge.push({ q, capName, response: lastResponse, detailIdx: details.length - 1 });
+						console.log(
+							`      ⏳ ${id} "${query.slice(0, 30)}..." [${memories.length} mem] (pending judge)`,
 						);
-						lastReason = verdict.reason;
-						if (verdict.pass) passCount++;
-					}
+					} else {
+						for (let run = 0; run < config.runs; run++) {
+							if (run > 0) lastResponse = await askWithMemory(apiKey, memories, query, config.llm);
+							const verdict = judgeResponse(
+								apiKey,
+								config.judge,
+								q,
+								capName,
+								lastResponse,
+							);
+							lastReason = verdict.reason;
+							if (verdict.pass) passCount++;
+						}
 
-					const pass = passCount >= Math.ceil(config.runs / 2);
-					const reason =
-						config.runs > 1
-							? `${passCount}/${config.runs} → ${pass ? "PASS" : "FAIL"} | ${lastReason.slice(0, 60)}`
+						const pass = passCount >= Math.ceil(config.runs / 2);
+						const reason =
+							config.runs > 1
+								? `${passCount}/${config.runs} → ${pass ? "PASS" : "FAIL"} | ${lastReason.slice(0, 60)}`
 							: lastReason;
 
-					details.push({
-						id,
-						capability: capName,
-						query,
-						weight,
-						isBonus,
-						pass,
-						reason,
-						memories,
-						response: lastResponse.slice(0, 400),
-					});
-					console.log(
-						`      ${pass ? "✅" : "❌"} ${id} "${query.slice(0, 30)}..." [${memories.length} mem] ${reason.slice(0, 50)}`,
-					);
+						details.push({
+							id,
+							capability: capName,
+							query,
+							weight,
+							isBonus,
+							pass,
+							reason,
+							memories,
+							response: lastResponse.slice(0, 400),
+						});
+						console.log(
+							`      ${pass ? "✅" : "❌"} ${id} "${query.slice(0, 30)}..." [${memories.length} mem] ${reason.slice(0, 50)}`,
+						);
+					}
 				}
 				console.log();
 			}
+
+
+				// Phase 2.5: Batch judge (gemini-pro mode)
+				if (config.judge === "gemini-pro" && pendingJudge.length > 0) {
+					console.log(`\n  Phase 2.5: Batch judging ${pendingJudge.length} items with Gemini 2.5 Pro\n`);
+					const verdicts = batchJudgeGeminiProSync(pendingJudge);
+					for (let i = 0; i < pendingJudge.length; i++) {
+						const v = verdicts[i];
+						const d = details[pendingJudge[i].detailIdx];
+						if (d && v) {
+							d.pass = v.pass;
+							d.reason = v.reason;
+						}
+					}
+					// Print resolved results
+					for (const d of details) {
+						if (d.reason === "(pending judge)") {
+							console.log(`      ${d.pass ? "✅" : "❌"} ${d.id} (resolved) ${d.reason.slice(0, 50)}`);
+						}
+					}
+					printTokenUsage();
+				}
 
 			// Phase 3: Score (weighted)
 			const core = details.filter((d) => !d.isBonus);
