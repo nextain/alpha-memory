@@ -24,6 +24,9 @@ export interface BenchmarkAdapter {
 	/** Search for relevant memories. Returns plain text strings. */
 	search(query: string, topK: number): Promise<string[]>;
 
+	/** Optional: trigger manual memory consolidation (move episodes to facts) */
+	consolidate?(): Promise<void>;
+
 	/** Cleanup (close connections, remove temp files, stop containers) */
 	cleanup(): Promise<void>;
 }

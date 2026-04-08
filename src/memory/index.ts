@@ -13,7 +13,7 @@
  * - Consolidation scheduling (sleep cycle analog)
  */
 
-import { randomUUID } from "node:crypto";
+import crypto, { randomUUID } from "node:crypto";
 import { scoreImportance, shouldStore } from "./importance.js";
 import { findContradictions } from "./reconsolidation.js";
 import type {
@@ -409,7 +409,7 @@ export class MemorySystem {
 
 		// Reconsolidation: check if new info contradicts existing facts
 		// Runs for all stored messages — contradiction detection is cheap
-		await this.checkAndReconsolidate(input.content, now);
+		await this.checkAndReconsolidate(input.content, episode.id, score.utility, now);
 
 		// Strengthen associations between entities in the encoding context
 		if (context.project && context.activeFile) {
@@ -430,23 +430,29 @@ export class MemorySystem {
 	 */
 	private async checkAndReconsolidate(
 		newInfo: string,
+		episodeId: string,
+		importance: number,
 		now: number,
 	): Promise<void> {
 		// Search for semantically similar facts instead of loading all
 		const candidates = await this.adapter.semantic.search(newInfo, 10);
 		const contradictions = findContradictions(candidates, newInfo);
 
-		// Update only the first contradicted fact to avoid creating semantic duplicates
-		const firstUpdate = contradictions.find(
-			({ result }) => result.action === "update" && result.updatedContent,
-		);
-		if (firstUpdate) {
-			await this.adapter.semantic.upsert({
-				...firstUpdate.fact,
-				content: firstUpdate.result.updatedContent!,
-				updatedAt: now,
-				importance: Math.max(firstUpdate.fact.importance, 0.7),
-			});
+		// Update ALL contradicted facts to prevent stale contradictory data
+		// (Partial resolution bug #4 fixed)
+		for (const { fact, result } of contradictions) {
+			if (result.action === "update" && result.updatedContent) {
+				const newImportance = Math.max(fact.importance, importance, 0.7);
+				await this.adapter.semantic.upsert({
+					...fact,
+					content: result.updatedContent,
+					updatedAt: now,
+					lastAccessed: now, // Strengthening on reactivation
+					importance: newImportance,
+					strength: newImportance,
+					sourceEpisodes: [...new Set([...fact.sourceEpisodes, episodeId])],
+				});
+			}
 		}
 	}
 
@@ -465,10 +471,10 @@ export class MemorySystem {
 		facts: Fact[];
 		reflections: Reflection[];
 	}> {
-		const topK = context.topK ?? 3;
+		const topK = context.topK ?? 10;
 
 		const [episodes, facts, reflections] = await Promise.all([
-			this.adapter.episode.recall(query, context),
+			this.adapter.episode.recall(query, { ...context, topK }),
 			this.adapter.semantic.search(query, topK, context.deepRecall),
 			this.adapter.procedural.getReflections(query, topK),
 		]);
@@ -486,7 +492,7 @@ export class MemorySystem {
 	): Promise<string> {
 		const { episodes, facts, reflections } = await this.recall(firstMessage, {
 			...context,
-			topK: 5,
+			topK: 10,
 		});
 
 		if (facts.length === 0 && reflections.length === 0 && episodes.length === 0) return "";
@@ -596,7 +602,7 @@ export class MemorySystem {
 	 * 4. Mark processed episodes as consolidated
 	 * 5. Run adapter-level decay + association cleanup
 	 */
-	async consolidateNow(): Promise<ConsolidationResult> {
+	async consolidateNow(force = false): Promise<ConsolidationResult> {
 		if (this._isConsolidating) {
 			return {
 				episodesProcessed: 0,
@@ -617,7 +623,7 @@ export class MemorySystem {
 			// LocalAdapter returns insertion order (oldest-first); slice preserves that order.
 			const unconsolidated = await this.adapter.episode.getUnconsolidated();
 			const readyEpisodes = unconsolidated
-				.filter((ep) => now - ep.timestamp > 5 * 60 * 1000) // At least 5 minutes old
+				.filter((ep) => force || now - ep.timestamp > 5 * 60 * 1000) // 5 min age gate (skip if forced)
 				.slice(0, MAX_EPISODES_PER_CYCLE); // Cap batch size — oldest first
 
 			if (readyEpisodes.length > 0) {
@@ -634,46 +640,71 @@ export class MemorySystem {
 						ef.content,
 						10,
 					);
+
+					// Check for exact/near identity to prevent semantic redundancy (#4)
+					const duplicate = existingFacts.find((f) => {
+						const sim = jaccardSimilarity(contentTokens(f.content), contentTokens(ef.content));
+						return sim > 0.85; // High similarity threshold for identity
+					});
+
+					if (duplicate) {
+						// Near-duplicate found — update metadata but don't create new entry
+						const newImportance = Math.max(duplicate.importance, ef.importance, 0.7);
+						await this.adapter.semantic.upsert({
+							...duplicate,
+							updatedAt: now,
+							lastAccessed: now, // Strengthening on reactivation
+							importance: newImportance,
+							strength: newImportance,
+							sourceEpisodes: [...new Set([...duplicate.sourceEpisodes, ...ef.sourceEpisodeIds])],
+						});
+						factsUpdated++;
+						continue;
+					}
+
 					const contradictions = findContradictions(existingFacts, ef.content);
 
 					if (contradictions.length > 0) {
-						// Update only the first contradicted fact to avoid duplicates
-						// Use result.updatedContent (reconciled by findContradictions) when available,
-						// falling back to ef.content — consistent with checkAndReconsolidate().
-						const firstUpdate = contradictions.find(
-							({ result }) => result.action === "update" && result.updatedContent,
-						);
-						if (firstUpdate) {
-							await this.adapter.semantic.upsert({
-								...firstUpdate.fact,
-								content: firstUpdate.result.updatedContent!,
-								updatedAt: now,
-								importance: Math.max(
-									firstUpdate.fact.importance,
-									ef.importance,
-								),
-								sourceEpisodes: [
-									...new Set([
-										...firstUpdate.fact.sourceEpisodes,
-										...ef.sourceEpisodeIds,
-									]),
-								],
-							});
-							factsUpdated++;
+						// Update ALL contradicted facts to prevent stale contradictory data
+						// (Partial resolution bug #4 fixed)
+						for (const { fact, result } of contradictions) {
+							if (result.action === "update" && result.updatedContent) {
+								const newImportance = Math.max(fact.importance, ef.importance, 0.7);
+								await this.adapter.semantic.upsert({
+									...fact,
+									content: result.updatedContent,
+									updatedAt: now,
+									lastAccessed: now, // Strengthening on reactivation
+									importance: newImportance,
+									strength: newImportance,
+									sourceEpisodes: [
+										...new Set([...fact.sourceEpisodes, ...ef.sourceEpisodeIds]),
+									],
+								});
+								factsUpdated++;
+							}
 						}
 					} else {
-						// New fact — create
+						// New fact — create with deterministic UUID for idempotency
+						// Prevents duplicates if consolidation is interrupted and re-run.
+						const deterministicId = crypto
+							.createHash("sha256")
+							.update(ef.content + ef.sourceEpisodeIds.sort().join(","))
+							.digest("hex")
+							.slice(0, 36);
+
+						const newImportance = Math.max(ef.importance, 0.7);
 						const newFact: Fact = {
-							id: randomUUID(),
+							id: deterministicId,
 							content: ef.content,
 							entities: ef.entities,
 							topics: ef.topics,
 							createdAt: now,
 							updatedAt: now,
-							importance: ef.importance,
+							importance: newImportance,
 							recallCount: 0,
 							lastAccessed: now,
-							strength: ef.importance,
+							strength: newImportance,
 							sourceEpisodes: ef.sourceEpisodeIds,
 						};
 						await this.adapter.semantic.upsert(newFact);

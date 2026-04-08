@@ -108,13 +108,19 @@ pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge
 
 ## TODO: Benchmark R3 Re-run (before next re-run)
 
-Before re-running the benchmark, these changes need to be applied:
+Before re-running the benchmark, these changes have been applied:
 
 1. ~~시스템 프롬프트 한국어 제거~~ — DONE (commit 0b40bec)
 2. ~~parseBatchVerdict `---` 처리~~ — DONE (commit 0b40bec)
 3. ~~채점 기준 8개 원칙 judge 프롬프트 추가~~ — DONE (commit 0b40bec)
-4. **Top-K 증가**: adapter-naia.ts에서 topK 3→10 필요. 현재 너무 적어서 semantic_search 28% 원인 가능성
-5. **벤치마크 재실행**: 위 수정 후 run-comparison.ts 처음부터 재실행 필요 (기존 JSON 재사용 불가)
+4. ~~**Top-K 증가**~~: adapter-naia.ts에서 topK 3→10 및 MemorySystem.recall 일관성 적용 완료.
+5. ~~**Robust Memory Logic**~~:
+   - Semantic redundancy check (Jaccard sim 0.85) prevents duplicate facts.
+   - Deterministic SHA-256 fact IDs ensure idempotent consolidation.
+   - Full contradiction resolution (updates all contradictory facts).
+   - Reactivation strengthening (lastAccessed/strength refresh) and consistent 0.7 floor.
+6. ~~**Consolidation Gap**~~: Benchmark runner now triggers manual consolidation (`consolidateNow(force=true)`) to exercise semantic logic.
+7. **벤치마크 재실행**: 위 수정 후 run-comparison.ts 처음부터 재실행 필요 (기존 JSON 재사용 불가)
 
 ### R3 Expected Improvements
 - noise_resilience: 35% → ~90% (파서 수정)

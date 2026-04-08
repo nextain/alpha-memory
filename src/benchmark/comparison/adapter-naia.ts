@@ -177,6 +177,15 @@ export class NaiaAdapter implements BenchmarkAdapter {
 		return [...new Set(raw)];
 	}
 
+	async consolidate(): Promise<void> {
+		if (!this.system) throw new Error("Not initialized");
+		console.log("    ⚙ Naia: Triggering consolidation...");
+		const result = await this.system.consolidateNow(true);
+		console.log(
+			`    ⚙ Naia: ${result.factsCreated} new facts, ${result.factsUpdated} updated`,
+		);
+	}
+
 	async cleanup(): Promise<void> {
 		if (this.system) await this.system.close();
 	}

@@ -545,6 +545,11 @@ async function main() {
 				console.log(
 					`\n    Stored: ${stored}/${factBank.facts.length} (gated: ${gated})\n`,
 				);
+
+				if (adapter.consolidate) {
+					await adapter.consolidate();
+					console.log("    Phase 1.5: Consolidation Complete\n");
+				}
 			}
 
 			// Phase 2: Query + Respond + Judge
@@ -605,6 +610,7 @@ async function main() {
 					if (q.setup)
 						try {
 							await adapter.addFact(q.setup);
+							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ setup fail: ${e.message?.slice(0, 60)}`);
@@ -612,6 +618,7 @@ async function main() {
 					if (q.update)
 						try {
 							await adapter.addFact(q.update);
+							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ update fail: ${e.message?.slice(0, 60)}`);
@@ -619,6 +626,7 @@ async function main() {
 					if (q.noisy_input)
 						try {
 							await adapter.addFact(q.noisy_input);
+							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ noise fail: ${e.message?.slice(0, 60)}`);
