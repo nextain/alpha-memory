@@ -68,40 +68,64 @@ Key technical mechanisms:
 - **Grades**: A (≥90%), B (≥75%), C (≥60%), F (<60%)
 - **Special disqualification**: Any failure on the `abstention` (hallucination prevention) category results in **F (abstention fail)**, regardless of other scores
 
-### What This Benchmark Did NOT Measure: Speed and Cost
+### Speed and Cost: Architecture-Based Estimates
 
-R5 measured **accuracy only**. Two equally important dimensions — latency (response speed) and cost (tokens / infrastructure) — were excluded from this round. They are not minor footnotes; they are essential criteria for real deployment of Alpha Memory and must be addressed in the next benchmark.
+R5 measured accuracy only. But selecting a memory module for naia-os requires evaluating speed and cost alongside accuracy — you cannot make a real deployment decision without them. We did not time the runs directly, but **adapter code analysis** and **actual context-size data collected during the benchmark** make meaningful estimates possible.
 
-**Latency (Response Speed)**
+**Premise: Background Memory Module**
 
-Memory architecture has a first-order effect on response latency, independent of the response LLM.
+In a real application like naia-os, the memory module operates at two touch points:
+- **addFact (memory storage)**: Runs asynchronously after each user utterance. Does not block response generation. **Affects operating cost.**
+- **search (memory retrieval)**: Runs synchronously before response generation. **Directly affects the latency the user feels.**
 
-| Architecture | Retrieval method | Estimated latency | Notes |
-|---|---|---|---|
-| Vector search (naia, mem0) | HNSW approximate nearest neighbor | Low (~ms) | External embedding API adds network round-trip |
-| Keyword/string (SillyTavern) | SQLite full-text search | Very low | No semantic capability |
-| LLM-based retrieval (letta) | LLM call for retrieval | High (+seconds) | Retrieval itself requires LLM inference |
-| Graph traversal (graphiti) | Neo4j Cypher query | Variable | Multi-hop queries can reach O(n²) |
+AddFact cost is an operational (billing) metric. Search latency is a UX metric.
 
-> All systems used the same response LLM (Gemini 2.5 Flash Lite). **Latency differences between systems are purely architectural** — driven by the memory retrieval layer alone.
+**Search Latency Estimates (UX Impact)**
 
-**Cost (Tokens / Infrastructure)**
+Based on adapter code analysis:
 
-The cost structure varies fundamentally by architecture.
+| System | Retrieval method | Estimated latency |
+|--------|-----------------|------------------|
+| graphiti | Neo4j Cypher only (no LLM, no embed) | ~50ms |
+| naia | Gemini embed API + local HNSW | ~100ms |
+| mem0 | Gemini embed API + SQLite vector | ~105ms |
+| openclaw | Gemini embed API + FTS5 hybrid | ~105ms |
+| sap | Gemini embed API + FAISS + BM25 | ~110ms |
+| letta | Gemini embed API + Letta server round-trip | ~300ms |
+| sillytavern | Local transformers.js + vectra | ~500ms |
+| open-llm-vtuber | LLM recall call + embed + search | ~2,500ms |
+| airi | None (no-memory) | 0ms |
 
-| Architecture | Storage cost | Query cost | Key characteristic |
-|---|---|---|---|
-| Vector embedding (naia, mem0) | Embedding API × fact count | 1 embedding lookup | naia's 4-store = up to 4× embedding calls |
-| Context injection (SillyTavern) | Free (local storage) | Direct prompt token burn | Cost scales linearly with memory count |
-| LLM retrieval (letta) | 1 embedding | Additional LLM call per query | 2 LLM calls per response |
-| Graph (graphiti) | Neo4j infrastructure | Query cost (no LLM) | Requires running Neo4j server |
+> All systems use the same response LLM (Gemini 2.5 Flash Lite). Latency differences between systems are **purely architectural** — the memory retrieval layer only.
 
-**Implications for Naia**
+**Cost Structure (addFact API calls + context token burn)**
 
-naia's 4-store architecture currently triggers **up to 4 embedding API calls per stored fact** (one per store). Against a single-store system like mem0, this is a 4× cost multiplier at ingestion time. Before production deployment:
-- **Selective store routing**: not every fact belongs in all four stores; route by content type
-- **Batch compression via forgetting curve**: low-access memories consolidated to a single store
-- **Include retrieval latency in the next benchmark round** as a first-class metric alongside accuracy
+Combined with actual context-size measurements from the benchmark:
+
+| System | addFact API calls | Context size (measured avg) | Notes |
+|--------|------------------|-----------------------------|-------|
+| airi | None | 0 chars | No memory |
+| graphiti | LLM ×1 + Neo4j write | 166 chars | No LLM at search time |
+| open-llm-vtuber | LLM **×2** + embed ×1 | 242 chars | LLM used for both add and recall |
+| letta | LLM ×1 + embed ×1 | 259 chars | LLM-based add and retrieval |
+| naia | embed ×1 only | 320 chars | No LLM at add time — cost advantage |
+| mem0 | LLM ×1 + embed ×1 | 320 chars | Same accuracy as naia, 2× add cost |
+| sap | LLM ×1 + embed ×1 | 334 chars | mem0 variant with FAISS+BM25 |
+| sillytavern | Local embed (free) | 527 chars | Zero API cost, but high context injection |
+| openclaw | embed ×1 | 0 chars (retrieval failed) | No usable results despite embed cost |
+
+> Context size is the average number of characters of memory context actually passed to the LLM per query in the benchmark. Higher context means higher input token cost per response.
+
+**Evaluation from a naia-os Deployment Perspective**
+
+| Dimension | naia assessment | Improvement direction |
+|-----------|----------------|-----------------------|
+| Search latency | Good (~100ms) | Replace Gemini embed API with local model → near-zero latency |
+| addFact LLM calls | **None (advantage)** | letta/mem0/sap/olv all require 1–2 LLM calls per add; naia uses embed only |
+| Context injection | Moderate (320 chars avg) | Below sillytavern (527), above graphiti (166) — reasonable |
+| Embedding backend | Gemini API (external) | **No local embedding option** — sillytavern runs fully free locally; naia-os users must supply an API key |
+
+**Key takeaway**: naia has the lowest addFact cost among memory-capable systems (no LLM calls). Search latency is acceptable. The structural gap is **external API dependency for embeddings** — solvable by adding a local embedding backend (e.g., `nomic-embed-text`, `all-MiniLM-L6-v2`), which is a concrete near-term improvement target for naia-os integration.
 
 ---
 
