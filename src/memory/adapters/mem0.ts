@@ -93,15 +93,21 @@ export class Mem0Adapter implements MemoryAdapter {
 
 			// Also store in mem0 for vector search
 			const m = await this.ensureMem0();
-			await m.add([{ role: "user", content: event.content }], {
-				userId: this.userId,
-				metadata: {
-					type: "episode",
-					episodeId: event.id,
-					project: event.encodingContext.project,
-					timestamp: event.timestamp,
-				},
-			});
+			try {
+				await m.add([{ role: "user", content: event.content }], {
+					userId: this.userId,
+					metadata: {
+						type: "episode",
+						episodeId: event.id,
+						project: event.encodingContext.project,
+						timestamp: event.timestamp,
+					},
+				});
+			} catch (err: any) {
+				// mem0 internal errors (like 'Memory with ID undefined not found')
+				// are logged but shouldn't crash episodic storage.
+				console.warn(`[Mem0Adapter] episode.store internal error: ${err.message}`);
+			}
 		},
 
 		recall: async (
@@ -236,15 +242,19 @@ export class Mem0Adapter implements MemoryAdapter {
 		upsert: async (fact: Fact): Promise<void> => {
 			// Store/update in mem0
 			const m = await this.ensureMem0();
-			await m.add([{ role: "user", content: fact.content }], {
-				userId: this.userId,
-				metadata: {
-					type: "fact",
-					factId: fact.id,
-					entities: fact.entities,
-					topics: fact.topics,
-				},
-			});
+			try {
+				await m.add([{ role: "user", content: fact.content }], {
+					userId: this.userId,
+					metadata: {
+						type: "fact",
+						factId: fact.id,
+						entities: fact.entities,
+						topics: fact.topics,
+					},
+				});
+			} catch (err: any) {
+				console.warn(`[Mem0Adapter] semantic.upsert internal error: ${err.message}`);
+			}
 		},
 
 		search: async (

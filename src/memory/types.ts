@@ -35,7 +35,7 @@ export interface MemoryInput {
 // ─── Episodic Memory (Hippocampus) ───────────────────────────────────────────
 
 /** A single episode — a timestamped event with full context */
-export interface Episode {
+export interface Episode extends Record<string, unknown> {
 	id: string;
 	/** The content of the episode */
 	content: string;
@@ -93,7 +93,7 @@ export interface RecallContext {
 // ─── Semantic Memory (Neocortex) ─────────────────────────────────────────────
 
 /** A semantic fact — general knowledge extracted from episodes */
-export interface Fact {
+export interface Fact extends Record<string, unknown> {
 	id: string;
 	/** The fact content */
 	content: string;
@@ -122,7 +122,7 @@ export interface Fact {
 // ─── Procedural Memory (Basal Ganglia / Cerebellum) ──────────────────────────
 
 /** A learned skill/strategy from experience */
-export interface Skill {
+export interface Skill extends Record<string, unknown> {
 	id: string;
 	/** Skill name / identifier */
 	name: string;
@@ -139,7 +139,7 @@ export interface Skill {
 }
 
 /** A self-reflection from a failure (Reflexion pattern) */
-export interface Reflection {
+export interface Reflection extends Record<string, unknown> {
 	/** What task was attempted */
 	task: string;
 	/** What went wrong */
@@ -224,4 +224,37 @@ export interface MemoryAdapter {
 
 	/** Close the adapter and release resources */
 	close(): Promise<void>;
+}
+
+// ─── Backup ──────────────────────────────────────────────────────────────────
+
+/**
+ * BackupCapable u2014 implemented by adapters that support AES-256-GCM export/import.
+ *
+ * Blob layout (49-byte fixed header):
+ *   4 bytes  magic    "NAIA"
+ *   1 byte   version  0x01
+ *   16 bytes salt     (PBKDF2 input)
+ *   12 bytes iv       (AES-GCM nonce)
+ *   16 bytes authTag  (AES-GCM authentication tag)
+ *   N bytes  ciphertext
+ *
+ * Key derivation: PBKDF2-SHA256, 200_000 iterations, 32-byte key.
+ */
+export interface BackupCapable {
+	/**
+	 * Export all memory as an AES-256-GCM encrypted blob.
+	 * @param password  User-supplied passphrase (never stored)
+	 * @returns         Encrypted blob as Uint8Array
+	 */
+	export(password: string): Promise<Uint8Array>;
+
+	/**
+	 * Import memory from an encrypted blob created by export().
+	 * Replaces current memory entirely after successful decryption.
+	 * @param blob      Encrypted blob from export()
+	 * @param password  User-supplied passphrase
+	 * @throws          If decryption fails, JSON is invalid, or schema mismatch
+	 */
+	import(blob: Uint8Array, password: string): Promise<void>;
 }

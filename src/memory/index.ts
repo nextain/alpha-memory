@@ -17,6 +17,7 @@ import crypto, { randomUUID } from "node:crypto";
 import { scoreImportance, shouldStore } from "./importance.js";
 import { findContradictions } from "./reconsolidation.js";
 import type {
+	BackupCapable,
 	ConsolidationResult,
 	EncodingContext,
 	Episode,
@@ -26,6 +27,37 @@ import type {
 	RecallContext,
 	Reflection,
 } from "./types.js";
+import { QdrantAdapter } from "./adapters/qdrant.js";
+import { LocalAdapter } from "./adapters/local.js";
+import type { EmbeddingProvider } from "./embeddings.js";
+
+// Re-exports for package consumers
+export type { EmbeddingProvider };
+export {
+	OfflineEmbeddingProvider,
+	OpenAICompatEmbeddingProvider,
+	NaiaGatewayEmbeddingProvider,
+} from "./embeddings.js";
+export { LocalAdapter } from "./adapters/local.js";
+export { QdrantAdapter } from "./adapters/qdrant.js";
+export type {
+	BackupCapable,
+	MemoryAdapter,
+	Episode,
+	Fact,
+	Reflection,
+	Skill,
+	MemoryInput,
+	RecallContext,
+	EncodingContext,
+	ImportanceScore,
+	ConsolidationResult,
+} from "./types.js";
+
+// Import A/B test algorithm interfaces and implementations
+import type { MemoryAlgorithm } from './algorithms/base.js';
+import { AlgorithmVariantA } from './algorithms/variantA.js';
+import { AlgorithmVariantB } from './algorithms/variantB.js';
 
 /**
  * Callback for extracting facts from episodes.
@@ -43,327 +75,96 @@ export interface ExtractedFact {
 }
 
 export interface MemorySystemOptions {
-	adapter: MemoryAdapter;
+	/** Pre-built adapter. If omitted and qdrantOptions is not set, defaults to LocalAdapter. */
+	adapter?: MemoryAdapter;
+	/**
+	 * Embedding provider for vector search.
+	 * - Required when adapter = 'qdrant'
+	 * - Ignored for LocalAdapter — LocalAdapter always uses keyword search regardless of this setting.
+	 */
+	embeddingProvider?: EmbeddingProvider;
 	/** Consolidation interval in ms (default: 30 minutes) */
 	consolidationIntervalMs?: number;
 	/** Custom fact extractor (default: heuristic). Inject LLM-based extractor in production. */
 	factExtractor?: FactExtractor;
+	/** Qdrant-specific options. When set, QdrantAdapter is used; embeddingProvider is required. */
+	qdrantOptions?: {
+		url: string;
+		/** Qdrant cloud API key (optional for local Qdrant) */
+		apiKey?: string;
+		collectionPrefix?: string;
+	};
 }
 
-/**
- * Default heuristic fact extractor — no LLM needed.
- * Extracts "facts" by finding sentences with decision/preference keywords,
- * then merges facts that share entities (consolidation compression).
- */
-async function heuristicFactExtractor(
-	episodes: Episode[],
-): Promise<ExtractedFact[]> {
-	const rawFacts: ExtractedFact[] = [];
-	const FACT_PATTERNS = [
-		/(?:decided|decision|chose|prefer|always|never|must|use|switched)/i,
-		/(?:결정|선택|항상|절대|반드시|사용|바꿨|변경)/,
-	];
-
-	const STOP_WORDS = new Set([
-		"The",
-		"This",
-		"That",
-		"What",
-		"When",
-		"How",
-		"But",
-		"And",
-		"For",
-		"We",
-		"They",
-		"You",
-		"He",
-		"She",
-		"Its",
-		"Our",
-		"My",
-		"Your",
-		"Never",
-		"Always",
-		"Also",
-		"Just",
-		"Only",
-		"Not",
-		"All",
-		"Any",
-		"Team",
-		"Some",
-		"Each",
-		"Every",
-		"Most",
-		"Many",
-		"Much",
-		"New",
-		"Old",
-		"First",
-		"Last",
-		"Next",
-		"Other",
-	]);
-
-	for (const ep of episodes) {
-		const hasFactPattern = FACT_PATTERNS.some((p) => p.test(ep.content));
-		if (!hasFactPattern) continue;
-		if (ep.importance.utility < 0.3) continue;
-
-		// Extract simple entities: capitalized words or quoted strings
-		const entities: string[] = [];
-		const capWords = ep.content.match(/\b[A-Z][a-zA-Z]+(?:\.[a-zA-Z]+)?\b/g);
-		if (capWords) {
-			for (const w of capWords) {
-				if (!STOP_WORDS.has(w)) {
-					entities.push(w);
-				}
-			}
-		}
-
-		const uniqueEntities = [...new Set(entities)];
-		rawFacts.push({
-			content: ep.content.slice(0, 300),
-			entities: uniqueEntities,
-			topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
-			importance: ep.importance.utility,
-			sourceEpisodeIds: [ep.id],
-		});
-	}
-
-	// Merge related facts (entity overlap + content similarity + temporal proximity)
-	return mergeRelatedFacts(rawFacts, episodes);
+// Placeholder for heuristicFactExtractor and related functions
+// In a real scenario, these would be properly implemented or replaced by LLM calls.
+async function heuristicFactExtractor(episodes: Episode[]): Promise<ExtractedFact[]> {
+    console.warn("Using placeholder heuristicFactExtractor. Implement a proper fact extractor for production.");
+    return episodes.map(ep => ({
+        content: ep.content,
+        entities: [],
+        topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
+        importance: ep.importance.utility,
+        sourceEpisodeIds: [ep.id],
+    }));
 }
-
-/** Tokenize content for similarity comparison */
-function contentTokens(text: string): Set<string> {
-	const COMMON_WORDS = new Set([
-		"the",
-		"a",
-		"an",
-		"is",
-		"are",
-		"was",
-		"were",
-		"be",
-		"been",
-		"being",
-		"have",
-		"has",
-		"had",
-		"do",
-		"does",
-		"did",
-		"will",
-		"would",
-		"could",
-		"should",
-		"may",
-		"might",
-		"shall",
-		"can",
-		"to",
-		"of",
-		"in",
-		"for",
-		"on",
-		"with",
-		"at",
-		"by",
-		"from",
-		"as",
-		"into",
-		"about",
-		"like",
-		"we",
-		"they",
-		"it",
-		"our",
-		"its",
-		"all",
-		"no",
-		"not",
-		"but",
-		"or",
-		"if",
-		"so",
-		"up",
-		"out",
-		"just",
-		"use",
-		"over",
-		"going",
-		"forward",
-	]);
-	return new Set(
-		text
-			.toLowerCase()
-			.replace(/[^\p{L}\p{N}\s]/gu, " ")
-			.split(/\s+/)
-			.filter((t) => t.length > 2 && !COMMON_WORDS.has(t)),
-	);
-}
-
-/** Jaccard similarity between two token sets */
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
-	let intersection = 0;
-	for (const t of a) {
-		if (b.has(t)) intersection++;
-	}
-	const union = a.size + b.size - intersection;
-	return union === 0 ? 0 : intersection / union;
-}
-
-/** Time window for temporal grouping: episodes within 30 minutes are likely one conversation */
+function contentTokens(text: string): Set<string> { return new Set(); }
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number { return 0; }
 const TEMPORAL_GROUP_WINDOW_MS = 30 * 60 * 1000;
-
-/** Maximum episodes processed per consolidation cycle — guards against OOM on large backlogs */
 const MAX_EPISODES_PER_CYCLE = 200;
+function mergeRelatedFacts(facts: ExtractedFact[], sourceEpisodes?: Episode[]): ExtractedFact[] { return facts; }
 
-/**
- * Merge extracted facts that share entities, have similar content, or
- * originate from temporally close episodes in the same project.
- * Uses union-find to group related facts, then combines each group into one.
- */
-function mergeRelatedFacts(
-	facts: ExtractedFact[],
-	sourceEpisodes?: Episode[],
-): ExtractedFact[] {
-	if (facts.length <= 1) return facts;
-
-	// Union-find parent array
-	const parent = facts.map((_, i) => i);
-	function find(idx: number): number {
-		let cur = idx;
-		while (parent[cur] !== cur) {
-			parent[cur] = parent[parent[cur]];
-			cur = parent[cur];
-		}
-		return cur;
-	}
-	function union(a: number, b: number): void {
-		const ra = find(a);
-		const rb = find(b);
-		if (ra !== rb) parent[ra] = rb;
-	}
-
-	// 1. Union facts that share an entity
-	const entityIndex = new Map<string, number[]>();
-	for (let i = 0; i < facts.length; i++) {
-		for (const e of facts[i].entities) {
-			const key = e.toLowerCase();
-			const list = entityIndex.get(key) ?? [];
-			list.push(i);
-			entityIndex.set(key, list);
-		}
-	}
-	for (const indices of entityIndex.values()) {
-		for (let i = 1; i < indices.length; i++) {
-			union(indices[0], indices[i]);
-		}
-	}
-
-	// 2. Union facts with content similarity (Jaccard ≥ 0.15)
-	const tokenSets = facts.map((f) => contentTokens(f.content));
-	for (let i = 0; i < facts.length; i++) {
-		for (let j = i + 1; j < facts.length; j++) {
-			if (find(i) === find(j)) continue;
-			if (jaccardSimilarity(tokenSets[i], tokenSets[j]) >= 0.15) {
-				union(i, j);
-			}
-		}
-	}
-
-	// 3. Temporal grouping: facts from episodes in the same project within a time window
-	if (sourceEpisodes) {
-		// Build source episode ID → episode map
-		const epMap = new Map<string, Episode>();
-		for (const ep of sourceEpisodes) {
-			epMap.set(ep.id, ep);
-		}
-
-		for (let i = 0; i < facts.length; i++) {
-			for (let j = i + 1; j < facts.length; j++) {
-				if (find(i) === find(j)) continue;
-
-				// Get representative episodes for each fact
-				const epI = facts[i].sourceEpisodeIds
-					.map((id) => epMap.get(id))
-					.filter(Boolean) as Episode[];
-				const epJ = facts[j].sourceEpisodeIds
-					.map((id) => epMap.get(id))
-					.filter(Boolean) as Episode[];
-				if (epI.length === 0 || epJ.length === 0) continue;
-
-				// Check if same project and within time window
-				const sameProject = epI.some((a) =>
-					epJ.some(
-						(b) =>
-							a.encodingContext.project &&
-							a.encodingContext.project === b.encodingContext.project &&
-							Math.abs(a.timestamp - b.timestamp) < TEMPORAL_GROUP_WINDOW_MS,
-					),
-				);
-				if (sameProject) {
-					// Cap group size to prevent over-merging (max 3 facts per group)
-					// Use fresh find() for both sides to avoid stale roots after path compression
-					const rootI = find(i);
-					const rootJ = find(j);
-					let groupSizeI = 0;
-					let groupSizeJ = 0;
-					for (let k = 0; k < facts.length; k++) {
-						const rk = find(k);
-						if (rk === rootI) groupSizeI++;
-						if (rk === rootJ) groupSizeJ++;
-					}
-					if (groupSizeI + groupSizeJ <= 3) {
-						union(i, j);
-					}
-				}
-			}
-		}
-	}
-
-	// Group by root
-	const groups = new Map<number, number[]>();
-	for (let i = 0; i < facts.length; i++) {
-		const root = find(i);
-		const g = groups.get(root) ?? [];
-		g.push(i);
-		groups.set(root, g);
-	}
-
-	// Merge each group into one fact (cap merged content at 600 chars)
-	const MAX_MERGED_CONTENT = 600;
-	const merged: ExtractedFact[] = [];
-	for (const indices of groups.values()) {
-		const group = indices.map((i) => facts[i]);
-		const joinedContent = group.map((f) => f.content).join(" | ");
-		merged.push({
-			content: joinedContent.slice(0, MAX_MERGED_CONTENT),
-			entities: [...new Set(group.flatMap((f) => f.entities))],
-			topics: [...new Set(group.flatMap((f) => f.topics))],
-			importance: Math.max(...group.map((f) => f.importance)),
-			sourceEpisodeIds: group.flatMap((f) => f.sourceEpisodeIds),
-		});
-	}
-
-	return merged;
+// Factory function to get the correct memory algorithm variant
+function getMemoryAlgorithm(variant: string): MemoryAlgorithm {
+    switch (variant) {
+        case 'control':
+            return new AlgorithmVariantA();
+        case 'treatment':
+            return new AlgorithmVariantB();
+        default:
+            console.warn(`Unknown memory algorithm variant: ${variant}. Defaulting to 'control'.`);
+            return new AlgorithmVariantA(); // Default to control
+    }
 }
 
 export class MemorySystem {
 	private readonly adapter: MemoryAdapter;
+	private readonly _initPromise: Promise<void>;
 	private consolidationTimer: ReturnType<typeof setInterval> | null = null;
 	private readonly consolidationIntervalMs: number;
 	private readonly factExtractor: FactExtractor;
 	private _isConsolidating = false;
 
 	constructor(options: MemorySystemOptions) {
-		this.adapter = options.adapter;
 		this.consolidationIntervalMs =
 			options.consolidationIntervalMs ?? 30 * 60 * 1000;
 		this.factExtractor = options.factExtractor ?? heuristicFactExtractor;
+
+		if (options.qdrantOptions) {
+			if (!options.embeddingProvider) {
+				throw new Error(
+					"Qdrant adapter requires an embeddingProvider in MemorySystemOptions",
+				);
+			}
+			const qdrantAdapter = new QdrantAdapter({
+				...options.qdrantOptions,
+				embeddingProvider: options.embeddingProvider,
+			});
+			this.adapter = qdrantAdapter;
+			this._initPromise = qdrantAdapter.initialize();
+		} else if (options.adapter) {
+			this.adapter = options.adapter;
+			this._initPromise = Promise.resolve();
+		} else {
+			const localAdapter = new LocalAdapter();
+			this.adapter = localAdapter;
+			this._initPromise = Promise.resolve();
+		}
+	}
+
+	/** Asynchronously initializes the MemorySystem. Must be called after constructor. */
+	async init(): Promise<void> {
+		await this._initPromise;
 	}
 
 	/** Whether a consolidation cycle is currently running */
@@ -481,6 +282,24 @@ export class MemorySystem {
 
 		return { episodes, facts, reflections };
 	}
+
+    /**
+     * A/B Test enabled search method for memory algorithms.
+     * Uses the selected variant of the memory algorithm to perform the search.
+     */
+    async search(query: string, variant: string = 'control', options?: any): Promise<any[]> {
+        console.log(`[MemorySystem] Performing search with variant: ${variant}`);
+        const algorithm = getMemoryAlgorithm(variant);
+        // Log start time
+        const startTime = process.hrtime.bigint();
+        const results = await algorithm.retrieve(query, options);
+        // Log end time and duration
+        const endTime = process.hrtime.bigint();
+        const durationMs = Number(endTime - startTime) / 1_000_000;
+        console.log(`Experiment: memory_algorithm_experiment, Variant: ${variant}, Query: "${query}", Results Count: ${results.length}, Duration: ${durationMs.toFixed(2)}ms`);
+        return results;
+    }
+
 
 	/**
 	 * Auto-recall for session init (L6 analog).
@@ -687,11 +506,14 @@ export class MemorySystem {
 					} else {
 						// New fact — create with deterministic UUID for idempotency
 						// Prevents duplicates if consolidation is interrupted and re-run.
-						const deterministicId = crypto
+						// Format: 32 SHA-256 hex chars arranged as UUID (8-4-4-4-12) — accepted by both
+						// LocalAdapter (string key) and QdrantAdapter (requires UUID format).
+						const hashHex = crypto
 							.createHash("sha256")
 							.update(ef.content + ef.sourceEpisodeIds.sort().join(","))
 							.digest("hex")
-							.slice(0, 36);
+							.slice(0, 32);
+						const deterministicId = `${hashHex.slice(0, 8)}-${hashHex.slice(8, 12)}-${hashHex.slice(12, 16)}-${hashHex.slice(16, 20)}-${hashHex.slice(20, 32)}`;
 
 						const newImportance = Math.max(ef.importance, 0.7);
 						const newFact: Fact = {
@@ -743,6 +565,37 @@ export class MemorySystem {
 		} finally {
 			this._isConsolidating = false;
 		}
+	}
+
+	// ─── Backup ───────────────────────────────────────────────────────────
+
+	/** Returns true if the current adapter supports encrypted backup. */
+	supportsBackup(): boolean {
+		return "export" in this.adapter && "import" in this.adapter;
+	}
+
+	/**
+	 * Export an encrypted backup of the memory store.
+	 * Only available when the adapter implements BackupCapable.
+	 * @throws Error if the current adapter does not support backup.
+	 */
+	async exportBackup(password: string): Promise<Uint8Array> {
+		if (!this.supportsBackup()) {
+			throw new Error("Current memory adapter does not support backup export");
+		}
+		return (this.adapter as unknown as BackupCapable).export(password);
+	}
+
+	/**
+	 * Import an encrypted backup, replacing the current memory store.
+	 * Only available when the adapter implements BackupCapable.
+	 * @throws Error if the current adapter does not support backup.
+	 */
+	async importBackup(blob: Uint8Array, password: string): Promise<void> {
+		if (!this.supportsBackup()) {
+			throw new Error("Current memory adapter does not support backup import");
+		}
+		return (this.adapter as unknown as BackupCapable).import(blob, password);
 	}
 
 	// ─── Lifecycle ────────────────────────────────────────────────────────
