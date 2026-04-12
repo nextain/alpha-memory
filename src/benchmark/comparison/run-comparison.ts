@@ -17,7 +17,7 @@ import { execSync } from "node:child_process";
  *
  * Requires: GEMINI_API_KEY env var
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { JikimeMemAdapter } from "./adapter-jikime-mem.js";
 import { LettaAdapter } from "./adapter-letta.js";
@@ -45,7 +45,7 @@ function parseArgs() {
 	let judge: "claude-cli" | "keyword" | "gemini-pro" = "claude-cli";
 	let runs = 1;
 	let categories: string[] | null = null;
-	let llm: "gemini" | "qwen3" = "qwen3";
+	let llm: "gemini" | "qwen3" | "gemini-cli" = "qwen3";
 	let skipEncode = false;
 	let lang = "ko";
 	let embedder = "gemini";
@@ -176,6 +176,38 @@ async function callGemini(
 	return "";
 }
 
+/**
+ * Call Gemini via CLI (gemini command).
+ * credit-free usage.
+ */
+async function callGeminiCLI(
+	messages: Array<{ role: string; content: string }>,
+	model: string = "gemini-2.5-flash",
+): Promise<string> {
+	// Format prompt for CLI
+	const fullPrompt = messages
+		.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
+		.join("\n\n");
+
+	try {
+		// Use stdin for prompt to handle large content
+		const output = execSync(`gemini -p "" -m ${model} -o text`, {
+			input: fullPrompt,
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		return output.trim();
+	} catch (error: any) {
+		const stderr = error.stderr?.toString() ?? "";
+		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
+			console.error("\n[STOP] Gemini CLI Quota Exceeded. Please switch accounts and resume.");
+			process.exit(1);
+		}
+		console.error(`Gemini CLI Error: ${stderr}`);
+		return "";
+	}
+}
+
 // ─── Token Usage Tracker ─────────────────────────────────────────────────────
 
 let totalPromptTokens = 0;
@@ -211,16 +243,22 @@ function buildBatchJudgePrompt(items: BatchJudgeItem[]): string {
 항목 사이에 빈 줄로 구분.`;
 }
 
-/** Call gemini CLI (gemini-2.5-pro) to judge */
+/** Call gemini CLI (gemini-3.1-pro-preview) to judge */
 function callGeminiCli(prompt: string): string {
 	try {
-		return execSync('gemini -p -m gemini-2.5-pro 2>/dev/null', {
+		return execSync("gemini -p \"\" -m gemini-3.1-pro-preview -o text", {
 			input: prompt,
 			timeout: 120000,
 			encoding: "utf-8",
 			maxBuffer: 1024 * 1024,
+			stdio: ["pipe", "pipe", "pipe"],
 		}).trim();
-	} catch {
+	} catch (e: any) {
+		const stderr = e.stderr?.toString() ?? "";
+		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
+			console.error("\n[STOP] Gemini CLI Judge Quota Exceeded. Please switch accounts and resume.");
+			process.exit(1);
+		}
 		return "";
 	}
 }
@@ -269,7 +307,7 @@ async function askWithMemory(
 	apiKey: string,
 	memories: string[],
 	question: string,
-	llm: "gemini" | "qwen3" = "gemini",
+	llm: "gemini" | "qwen3" | "gemini-cli" = "gemini",
 ): Promise<string> {
 	const memCtx =
 		memories.length > 0
@@ -294,6 +332,9 @@ ${memCtx}`,
 		{ role: "user", content: question },
 	];
 
+	if (llm === "gemini-cli") {
+		return callGeminiCLI(messages, "gemini-2.5-flash");
+	}
 	if (llm === "qwen3") {
 		return callOllama("qwen3:8b", messages, 500);
 	}
@@ -307,7 +348,57 @@ interface JudgeResult {
 	reason: string;
 }
 
-function buildJudgePrompt(q: any, capName: string, response: string): string {
+function buildJudgePrompt(q: any, capName: string, response: string, lang: string = "ko"): string {
+	if (lang === "en") {
+		if (capName === "abstention") {
+			return `[Judge] abstention (Hallucination Prevention)
+Question: "${q.query || q.verify}"
+AI Response: "${response}"
+This question is about something the user never mentioned. The AI must decline to answer (e.g., "I don't recall", "Not in memory").
+- If declined → PASS
+- If fabricated information → FAIL
+First line: PASS or FAIL. Second line: one-line reason.`;
+		}
+
+		if (capName === "irrelevant_isolation") {
+			const forbidden = (q.expected_not_contains ?? []).join(", ");
+			return `[Judge] irrelevant_isolation
+Question: "${q.query}"
+AI Response: "${response}"
+Forbidden keywords: [${forbidden}]
+If the AI unnecessarily includes user's private info in a general question → FAIL.
+First line: PASS or FAIL. Second line: one-line reason.`;
+		}
+
+		if (q.expected_any) {
+			const min = q.min_expected ?? 1;
+			return `[Judge] ${capName}
+Question: "${q.query || q.verify}"
+AI Response: "${response}"
+Expected at least ${min} of: [${q.expected_any.join(", ")}]
+If AI response semantically contains at least ${min} of these → PASS.
+First line: PASS or FAIL. Second line: one-line reason.`;
+		}
+
+		if (q.expected_contains) {
+			return `[Judge] ${capName}
+Question: "${q.query || q.verify}"
+AI Response: "${response}"
+Expected keywords: [${q.expected_contains.join(", ")}]
+${q.expected_not_contains?.length ? `Forbidden keywords: [${q.expected_not_contains.join(", ")}]` : ""}
+${q.fail_signal?.length ? `FAIL signals: [${q.fail_signal.join(", ")}]` : ""}
+If AI response semantically contains any of the expected keywords → PASS.
+First line: PASS or FAIL. Second line: one-line reason.`;
+		}
+
+		return `[Judge] ${capName}
+Question: "${q.query || q.verify}"
+AI Response: "${response}"
+If the AI answered appropriately → PASS, otherwise FAIL.
+First line: PASS or FAIL. Second line: one-line reason.`;
+	}
+
+	// Legacy Korean prompts
 	if (capName === "abstention") {
 		return `[채점] abstention (환각 방지)
 질문: "${q.query || q.verify}"
@@ -527,19 +618,32 @@ async function main() {
 				let stored = 0;
 				let gated = 0;
 				for (const fact of factBank.facts) {
-					try {
-						const ok = await adapter.addFact(fact.statement);
-						if (ok) {
-							stored++;
-							console.log(
-								`    ✅ ${fact.id}: ${fact.statement.slice(0, 50)}...`,
-							);
-						} else {
-							gated++;
-							console.log(`    ⛔ ${fact.id}: GATED`);
+					let retryCount = 0;
+					const MAX_RETRIES = 3;
+					let success = false;
+
+					while (retryCount < MAX_RETRIES && !success) {
+						try {
+							const ok = await adapter.addFact(fact.statement);
+							if (ok) {
+								stored++;
+								console.log(
+									`    ✅ ${fact.id}: ${fact.statement.slice(0, 50)}...`,
+								);
+							} else {
+								gated++;
+								console.log(`    ⛔ ${fact.id}: GATED`);
+							}
+							success = true;
+						} catch (err: any) {
+							retryCount++;
+							if (retryCount < MAX_RETRIES) {
+								console.warn(`    ⚠️ ${fact.id}: Retry ${retryCount}/${MAX_RETRIES} due to error: ${err.message?.slice(0, 50)}`);
+								await new Promise((r) => setTimeout(r, 2000 * retryCount)); // Exponential backoff
+							} else {
+								console.error(`    ❌ ${fact.id}: Failed after ${MAX_RETRIES} attempts: ${err.message?.slice(0, 60)}`);
+							}
 						}
-					} catch (err: any) {
-						console.log(`    ❌ ${fact.id}: ${err.message?.slice(0, 60)}`);
 					}
 				}
 				console.log(
@@ -555,6 +659,17 @@ async function main() {
 			// Phase 2: Query + Respond + Judge
 			console.log("  Phase 2: Query + Judge\n");
 			const details: TestDetail[] = [];
+			const checkpointPath = join(import.meta.dirname, "..", "..", "..", "reports", `checkpoint-${adapterName}-${config.lang}.json`);
+			let existingDetails: TestDetail[] = [];
+			if (existsSync(checkpointPath)) {
+				try {
+					existingDetails = JSON.parse(readFileSync(checkpointPath, "utf-8"));
+					console.log(`    ↻ Resuming from checkpoint: ${existingDetails.length} items already completed.`);
+				} catch (e) {
+					console.warn("    ⚠ Failed to load checkpoint, starting fresh.");
+				}
+			}
+
 			let testNum = 0;
 				const pendingJudge: Array<{ q: any; capName: string; response: string; detailIdx: number }> = [];
 
@@ -605,6 +720,14 @@ async function main() {
 					const id = `${capName.slice(0, 4).toUpperCase()}-${String(testNum).padStart(2, "0")}`;
 					const query = q.query || q.verify || "";
 					if (!query) continue;
+
+					// RESUME LOGIC: Check if already completed
+					const existing = existingDetails.find(d => d.id === id);
+					if (existing) {
+						details.push(existing);
+						console.log(`      ⏩ ${id} "${query.slice(0, 30)}..." [Skipped - Already completed]`);
+						continue;
+					}
 
 					// Handle setup/update/noise — log failures + wait for indexing
 					if (q.setup)
@@ -696,6 +819,11 @@ async function main() {
 						console.log(
 							`      ${pass ? "✅" : "❌"} ${id} "${query.slice(0, 30)}..." [${memories.length} mem] ${reason.slice(0, 50)}`,
 						);
+
+						// Save checkpoint after each query
+						try {
+							writeFileSync(checkpointPath, JSON.stringify(details, null, 2));
+						} catch (e) {}
 					}
 				}
 				console.log();

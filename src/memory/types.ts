@@ -28,6 +28,8 @@ export interface MemoryInput {
 	role: "user" | "assistant" | "tool";
 	/** Current conversation context for scoring */
 	context?: string;
+	/** Optional override for timestamp (used in benchmarks) */
+	timestamp?: number;
 }
 
 // ─── Episodic Memory (Hippocampus) ───────────────────────────────────────────

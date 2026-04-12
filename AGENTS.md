@@ -160,8 +160,21 @@ Before re-running the benchmark, these changes have been applied:
 7. multi_fact_synthesis: 단일 사실만으로는 FAIL, 종합성 필요
 8. 판정 이유 필수: 이유 없는 FAIL은 기각
 
-## Reports
+## Model Settings
 
+### LLM (Response Generation)
+- **Primary**: Gemini 2.5 Flash via CLI (`gemini -m gemini-2.5-flash`)
+- **Reason**: Free, fast, and robust for large batches.
+
+### Judge (Evaluation)
+- **Primary**: GLM-5.1 via Coding API
+- **Endpoint**: `https://api.z.ai/api/coding/paas/v4/chat/completions` (OpenAI-compatible)
+- **API Key**: `GLM_API_KEY` (from `my-envs`)
+- **Model Name**: `glm-5.1`
+- **Mandate**: Use this specific coding endpoint for GLM-5.1 judging to ensure identity and reasoning accuracy.
+
+## Reports
+...
 Benchmark results are saved in `reports/` as JSON files.
 
 ## Conventions

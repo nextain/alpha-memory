@@ -8,7 +8,7 @@
  * - bge-m3: ollama local (bge-m3, 1024d)
  */
 import { randomUUID } from "node:crypto";
-import { Mem0Adapter } from "./adapter-mem0.js";
+import { Mem0Adapter } from "../../memory/adapters/mem0.js";
 import { MemorySystem } from "../../memory/index.js";
 import type { BenchmarkAdapter } from "./types.js";
 
@@ -169,10 +169,9 @@ export class NaiaAdapter implements BenchmarkAdapter {
 			project: "benchmark",
 			topK,
 		});
-		const fmt = (ts: number) => new Date(ts).toISOString().slice(0, 10);
 		const raw = [
-			...result.facts.map((f) => `[${fmt(f.updatedAt)}] ${f.content}`),
-			...result.episodes.map((e) => `[${fmt(e.timestamp)}] ${e.content}`),
+			...result.facts.map((f) => f.content),
+			...result.episodes.map((e) => e.content),
 		];
 		return [...new Set(raw)];
 	}

@@ -390,7 +390,7 @@ export class MemorySystem {
 			return null; // Gated out — not worth storing
 		}
 
-		const now = Date.now();
+		const now = input.timestamp ?? Date.now();
 		const episode: Episode = {
 			id: randomUUID(),
 			content: input.content,

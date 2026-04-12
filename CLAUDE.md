@@ -32,12 +32,13 @@ src/
 │       ├── adapter-mem0.ts    # mem0 OSS
 │       ├── adapter-sillytavern.ts
 │       ├── adapter-letta.ts
-│       ├── adapter-zep.ts
+│       ├── adapter-graphiti.ts   # Graphiti (getzep/graphiti) — Neo4j temporal KG
+│       ├── adapter-zep.ts        # Zep CE — session-based memory (legacy Zep)
 │       ├── adapter-openclaw.ts
 │       ├── adapter-sap.ts
 │       ├── adapter-open-llm-vtuber.ts
-│       ├── adapter-jikime-mem.ts
-│       └── adapter-no-memory.ts
+│       ├── adapter-starnion.ts   # Starnion (구 jikime-mem) — SQLite + ChromaDB
+│       └── adapter-no-memory.ts  # 베이스라인 (project-airi, memory 없음)
 ```
 
 ## 4-Store Architecture
@@ -93,6 +94,17 @@ pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge
 | gemini-pro-cli | gemini CLI (batch 10) | fast |
 | glm-api | Z.AI API direct (batch 10) | fast |
 | claude-cli | claude CLI via 9router (one-by-one) | slow |
+
+## Response LLM
+
+Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with `--llm` flag.
+
+| LLM | Notes |
+|-----|-------|
+| gemini-flash-lite (default) | gemini-2.5-flash-lite via direct API |
+| gemini | Same API path, explicitly named |
+| gemini-cli | gemini CLI tool (buggy `-m` flag, avoid) |
+| qwen3 | Local ollama qwen3:8b |
 
 ## Scoring
 
@@ -163,6 +175,39 @@ Before re-running the benchmark, these changes have been applied:
 ## Reports
 
 Benchmark results are saved in `reports/` as JSON files.
+
+### Report Structure
+
+```
+reports/
+├── REPORT_TEMPLATE.md       ← 보고서 작성 절차/템플릿 (3-AI 협업 방법 포함)
+├── r5-en-benchmark/
+│   ├── report-ko.md         ← R5 EN 벤치마크 한국어 보고서
+│   └── report-en.md         ← R5 EN 벤치마크 영문 보고서
+└── runs/                    ← 원시 JSON 결과 파일
+```
+
+### R5 EN Benchmark Results (2026-04-12, GLM-5.1 Judge)
+
+| Rank | Adapter | Score | Grade |
+|------|---------|-------|-------|
+| 1 | letta | 87.5% | F(abs) |
+| 2 | open-llm-vtuber | 85.2% | F(abs) |
+| 3 | naia | 84.0% | F(abs) |
+| 4 | mem0 | 83.1% | F(abs) |
+| 5 | sillytavern | 79.8% | F(abs) |
+| 6 | sap | 74.1% | F(abs) |
+| 7 | graphiti | 55.8% | F |
+| 8 | openclaw | 43.3% | F |
+| 9 | airi(baseline) | 33.9% | F |
+
+**Key Findings:**
+- All memory-capable systems fail abstention (40-65%) — memory-confidence structural coupling issue
+- naia unchanged_persistence 47%: known bug naia-os#221 (cascade delete on contradiction update)
+- graphiti: contradiction 100% vs semantic_search 4% — Neo4j KG cannot substitute vector search
+- R2(KO,44%) → R5(EN,84%) improvement: EN system prompt Korean removal + Top-K 3→10
+
+**Report Template:** See `reports/REPORT_TEMPLATE.md` for 3-AI collaborative report generation procedure.
 
 ## Conventions
 

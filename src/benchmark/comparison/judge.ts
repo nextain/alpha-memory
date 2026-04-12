@@ -221,13 +221,14 @@ function callClaudeCli(prompt: string): string {
 	}
 }
 
-function callGeminiCli(prompt: string, model = "gemini-2.5-pro"): string {
+function callGeminiCli(prompt: string, model = "gemini-3.1-pro-preview"): string {
 	try {
-		return execSync(`gemini -p "" -m ${model} 2>/dev/null`, {
+		return execSync(`gemini -p "" -m ${model} -o text 2>/dev/null`, {
 			input: prompt,
 			timeout: 120000,
 			encoding: "utf-8",
 			maxBuffer: 1024 * 1024,
+			stdio: ["pipe", "pipe", "pipe"],
 		}).trim();
 	} catch {
 		return "";
