@@ -68,6 +68,41 @@ Key technical mechanisms:
 - **Grades**: A (≥90%), B (≥75%), C (≥60%), F (<60%)
 - **Special disqualification**: Any failure on the `abstention` (hallucination prevention) category results in **F (abstention fail)**, regardless of other scores
 
+### What This Benchmark Did NOT Measure: Speed and Cost
+
+R5 measured **accuracy only**. Two equally important dimensions — latency (response speed) and cost (tokens / infrastructure) — were excluded from this round. They are not minor footnotes; they are essential criteria for real deployment of Alpha Memory and must be addressed in the next benchmark.
+
+**Latency (Response Speed)**
+
+Memory architecture has a first-order effect on response latency, independent of the response LLM.
+
+| Architecture | Retrieval method | Estimated latency | Notes |
+|---|---|---|---|
+| Vector search (naia, mem0) | HNSW approximate nearest neighbor | Low (~ms) | External embedding API adds network round-trip |
+| Keyword/string (SillyTavern) | SQLite full-text search | Very low | No semantic capability |
+| LLM-based retrieval (letta) | LLM call for retrieval | High (+seconds) | Retrieval itself requires LLM inference |
+| Graph traversal (graphiti) | Neo4j Cypher query | Variable | Multi-hop queries can reach O(n²) |
+
+> All systems used the same response LLM (Gemini 2.5 Flash Lite). **Latency differences between systems are purely architectural** — driven by the memory retrieval layer alone.
+
+**Cost (Tokens / Infrastructure)**
+
+The cost structure varies fundamentally by architecture.
+
+| Architecture | Storage cost | Query cost | Key characteristic |
+|---|---|---|---|
+| Vector embedding (naia, mem0) | Embedding API × fact count | 1 embedding lookup | naia's 4-store = up to 4× embedding calls |
+| Context injection (SillyTavern) | Free (local storage) | Direct prompt token burn | Cost scales linearly with memory count |
+| LLM retrieval (letta) | 1 embedding | Additional LLM call per query | 2 LLM calls per response |
+| Graph (graphiti) | Neo4j infrastructure | Query cost (no LLM) | Requires running Neo4j server |
+
+**Implications for Naia**
+
+naia's 4-store architecture currently triggers **up to 4 embedding API calls per stored fact** (one per store). Against a single-store system like mem0, this is a 4× cost multiplier at ingestion time. Before production deployment:
+- **Selective store routing**: not every fact belongs in all four stores; route by content type
+- **Batch compression via forgetting curve**: low-access memories consolidated to a single store
+- **Include retrieval latency in the next benchmark round** as a first-class metric alongside accuracy
+
 ---
 
 ## 3. The 12 Evaluation Categories Explained
@@ -347,6 +382,7 @@ After independent analysis, the three AIs exchanged views on key points of debat
 - **R6 Korean Benchmark**: Same methodology applied to Korean-language environment
 - **Re-benchmark after naia-os#221 fix**: Verify bug fix impact
 - **Dedicated abstention evaluation**: Design new categories to more precisely measure metacognition capability
+- **R7 Speed/Cost Benchmark**: Measure memory retrieval latency (ms) and per-query token cost with equal weighting alongside accuracy. Include naia 4-store embedding cost vs. single-store alternatives for real deployment viability
 
 ---
 

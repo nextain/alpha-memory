@@ -206,6 +206,7 @@ reports/
 - naia unchanged_persistence 47%: known bug naia-os#221 (cascade delete on contradiction update)
 - graphiti: contradiction 100% vs semantic_search 4% — Neo4j KG cannot substitute vector search
 - R2(KO,44%) → R5(EN,84%) improvement: EN system prompt Korean removal + Top-K 3→10
+- **NOT measured**: retrieval latency (ms) and per-query token cost — planned for R7. naia 4-store = up to 4× embedding calls vs single-store systems
 
 **Report Template:** See `reports/REPORT_TEMPLATE.md` for 3-AI collaborative report generation procedure.
 
