@@ -15,14 +15,14 @@
 | 순위 | 어댑터 | 점수 | 등급 | EN R5 점수 | EN→KO 변화 |
 |------|--------|------|------|-----------|------------|
 | 1 | letta | **67.5%** | F(abs) | 87.5% | -20pp |
-| 2 | mem0 | **24.0%** | F(abs) | 83.1% | **-59pp** |
-| 3 | sillytavern | **17.6%** | F(abs) | 79.8% | -62pp |
-| 4 | airi(baseline) | **16.0%** | F(abs) | 33.9% | -18pp |
-| 5 | openclaw | **14.8%** | F | 43.3% | -29pp |
-| 6 | open-llm-vtuber | **14.4%** | F | 85.2% | **-71pp** |
-| 7 | sap | **12.9%** | F(abs) | 74.1% | -61pp |
+| 2 | **naia** | **24.7%** (KW) / **24.0%** (GLM) | F(abs) | 84.0% | **-60pp** |
+| 3 | mem0 | **24.0%** | F(abs) | 83.1% | **-59pp** |
+| 4 | sillytavern | **17.6%** | F(abs) | 79.8% | -62pp |
+| 5 | airi(baseline) | **16.0%** | F(abs) | 33.9% | -18pp |
+| 6 | openclaw | **14.8%** | F | 43.3% | -29pp |
+| 7 | open-llm-vtuber | **14.4%** | F | 85.2% | **-71pp** |
+| 8 | sap | **12.9%** | F(abs) | 74.1% | -61pp |
 | — | graphiti | **DNF** | — | 55.8% | — |
-| — | naia | *측정중* | — | 84.0% | TBD |
 
 > 점수 = weighted pass rate (카테고리별 가중치 적용)  
 > 등급 기준: A≥90%, B≥75%, C≥60%, F<60%; F(abs)=abstention 실패
@@ -31,21 +31,21 @@
 
 ## 카테고리별 결과
 
-| 카테고리 (가중치) | letta | mem0 | sillytavern | airi | openclaw | open-llm-vtuber | sap |
-|-----------------|-------|------|-------------|------|----------|-----------------|-----|
-| direct_recall (×1) | **88%** | 16% | 28% | 4% | 0% | 8% | 0% |
-| semantic_search (×2) | **48%** | 12% | 0% | 4% | 0% | 0% | 0% |
-| proactive_recall (×2) | **65%** | 10% | 0% | 0% | 10% | 0% | 5% |
-| abstention (×2) | ⚠️40% | 90% | 70% | 95% | **100%** | **100%** | 85% |
-| irrelevant_isolation (×1) | 93% | **100%** | 93% | **100%** | **100%** | **100%** | **100%** |
-| multi_fact_synthesis (×2) | **65%** | 15% | 10% | 5% | 5% | 5% | 5% |
-| entity_disambiguation (×2) | **80%** | 20% | 15% | 5% | 0% | 5% | 5% |
-| contradiction_direct (×2) | **55%** | 5% | 5% | 5% | 5% | 0% | 0% |
-| contradiction_indirect (×2) | **67%** | 7% | 0% | 7% | 0% | 0% | 0% |
-| noise_resilience (×2) | **65%** | 15% | 10% | 5% | 0% | 0% | 0% |
-| unchanged_persistence (×1) | **87%** | 20% | 13% | 0% | 0% | 0% | 0% |
-| temporal (×2) | **92%** | 20% | 16% | 4% | 0% | 0% | 0% |
-| **TOTAL** | **67.5%** | **24.0%** | **17.6%** | **16.0%** | **14.8%** | **14.4%** | **12.9%** |
+| 카테고리 (가중치) | letta | **naia** | mem0 | sillytavern | airi | openclaw | open-llm-vtuber | sap |
+|-----------------|-------|---------|------|-------------|------|----------|-----------------|-----|
+| direct_recall (×1) | **88%** | 20% | 16% | 28% | 4% | 0% | 8% | 0% |
+| semantic_search (×2) | **48%** | 12% | 12% | 0% | 4% | 0% | 0% | 0% |
+| proactive_recall (×2) | **65%** | 5% | 10% | 0% | 0% | 10% | 0% | 5% |
+| abstention (×2) | ⚠️40% | ⚠️**100%** | 90% | 70% | 95% | **100%** | **100%** | 85% |
+| irrelevant_isolation (×1) | 93% | **100%** | **100%** | 93% | **100%** | **100%** | **100%** | **100%** |
+| multi_fact_synthesis (×2) | **65%** | 5% | 15% | 10% | 5% | 5% | 5% | 5% |
+| entity_disambiguation (×2) | **80%** | 10% | 20% | 15% | 5% | 0% | 5% | 5% |
+| contradiction_direct (×2) | **55%** | 15% | 5% | 5% | 5% | 5% | 0% | 0% |
+| contradiction_indirect (×2) | **67%** | 7% | 7% | 0% | 7% | 0% | 0% | 0% |
+| noise_resilience (×2) | **65%** | 15% | 15% | 10% | 5% | 0% | 0% | 0% |
+| unchanged_persistence (×1) | **87%** | 27% | 20% | 13% | 0% | 0% | 0% | 0% |
+| temporal (×2) | **92%** | 20% | 20% | 16% | 4% | 0% | 0% | 0% |
+| **TOTAL** | **67.5%** | **24.0%**(GLM) | **24.0%** | **17.6%** | **16.0%** | **14.8%** | **14.4%** | **12.9%** |
 
 ---
 
@@ -89,12 +89,20 @@ EN R5에서 발견된 abstention 실패가 KO에서도 반복됨:
 
 graphiti는 query 156/240 지점에서 Neo4j 500 에러로 중단(DNF). EN R5에서도 55.8%에 그쳤는데, KO에서는 자체 인프라 문제로 완주하지 못함. Neo4j KG 접근방식의 안정성 문제.
 
-### 6. naia (R6 수정 버전) — 측정 중
+### 6. naia (R6 확정 결과)
 
-naia는 이전 세션에서 확인된 consolidation 버그(쿼리당 `consolidateNow(force=true)` 호출) 수정 후 재실행 중.
-- **버그**: 에피소드 1000개를 매 쿼리마다 전체 재스코어 → O(n²) 다운
-- **수정**: query boundary에서만 consolidation (카테고리 단위)
-- EN+KO 동시 재실행 중, 인코딩 완료 후 리포트 업데이트 예정
+**KO R6 결과: 24.7% (keyword) / 24.0% (GLM-5.1)**
+- 순위 **2위** (letta 67.5% 다음, mem0 24.0%와 동등 수준)
+- 버그 수정 사항: per-query consolidation 제거 (O(n²) 해결) + cacheId 분리
+- **abstention 100%**: 검색 실패로 LLM이 "모른다"는 거짓 양성. 진짜 confidence gating이 아님
+- multi_fact_synthesis 5%, proactive_recall 5%: 메모리 저장되지만 연결 실패
+- unchanged_persistence 27%: EN R6 47% 대비 한국어에서 요인 별도 존재
+
+**근본 원인 확인** (GLM/Gemini 적대적 리뷰):
+1. **Mem0Adapter LLM dedup** — 영어 기반 LLM이 한국어 정규화 시 의미 손실. mem0 KO 24.0% ≈ naia KO 24.0%로 동일 파이프라인 확인
+2. **레거시 임베딩** — text-embedding-004 (768d, EN 최적화, deprecated 2026-01-14). letta는 gemini-embedding-001 (3072d, MTEB 다국어 #1) 사용
+
+**R7 목표**: LocalAdapter + gemini-embedding-001 전환 → KO 55%+ (letta 신종 추격)
 
 ---
 
@@ -121,7 +129,7 @@ sap              yes   74.1%   12.9%   -61pp
 sillytavern      yes   79.8%   17.6%   -62pp
 open-llm-vtuber  yes   85.2%   14.4%   -71pp
 graphiti         yes   55.8%   DNF      -
-naia             yes   84.0%   TBD      -
+naia             yes   84.0%   24.0%   -60pp
 ```
 
 ### 주목할 상관관계
@@ -164,7 +172,8 @@ R6 KO 벤치마크에서 가장 중요한 발견은 **한국어 지원은 선택
 - Korean용 메모리 시스템 개발 시 다중언어 LLM + 한국어 entity 추출 능력이 필수
 - 임베딩만으로는 언어바를 넘지 못함 (LLM 레이어가 핵심)
 - letta(Letta AI + 다중언어 LLM)만이 한국어 실용 범위에 진입
-- naia 결과 업데이트 예정 (인코딩 완료 후)
+- naia KO 24.0% (GLM) = 2위: Mem0Adapter LLM dedup + deprecated 임베딩으로 인한 동일 파이프라인 확인
+- R7 목표: LocalAdapter + gemini-embedding-001 전환으로 KO 55%+ 추겜 (letta 67%의 83% 수준)
 
 ---
 

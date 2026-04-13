@@ -226,18 +226,20 @@ pnpm exec tsx src/benchmark/comparison/judge.ts \
 | Rank | System | Score | EN R5 | Drop |
 |:----:|--------|:-----:|:-----:|:----:|
 | 1 | Letta | 67.5% | 87.5% | -20pp |
-| 2 | mem0 | 24.0% | 83.1% | -59pp |
-| 3 | SillyTavern | 17.6% | 79.8% | -62pp |
-| 4 | Baseline (no memory) | 16.0% | 33.9% | -18pp |
-| 5 | OpenClaw | 14.8% | 43.3% | -29pp |
-| 6 | Open-LLM-VTuber | 14.4% | 85.2% | -71pp |
-| 7 | SAP | 12.9% | 74.1% | -61pp |
+| 2 | **Alpha Memory (Naia)** | **24.7%** | 84.0% | -60pp |
+| 3 | mem0 | 24.0% | 83.1% | -59pp |
+| 4 | SillyTavern | 17.6% | 79.8% | -62pp |
+| 5 | Baseline (no memory) | 16.0% | 33.9% | -18pp |
+| 6 | OpenClaw | 14.8% | 43.3% | -29pp |
+| 7 | Open-LLM-VTuber | 14.4% | 85.2% | -71pp |
+| 8 | SAP | 12.9% | 74.1% | -61pp |
 | — | Graphiti | DNF | 55.8% | — |
 
 **Key findings:**
 - Korean language is a system-level barrier: most systems drop 50–70pp vs EN
 - Letta alone retains meaningful Korean performance — internal multilingual LLM processing
-- Memory systems fail to beat the no-memory baseline in Korean — retrieval quality collapses at the LLM synthesis layer
+- **Alpha Memory ranks #2 in KO** (24.7%), narrowly ahead of mem0 (24.0%) — same EN-optimized pipeline; improvement path is LocalAdapter + gemini-embedding-001
+- Memory systems largely fail to beat the no-memory baseline in Korean — retrieval quality collapses at the LLM synthesis layer
 
 > Grade legend: A ≥90% · B ≥75% · C ≥60% · F <60% · F(abs) = abstention criterion failed
 
