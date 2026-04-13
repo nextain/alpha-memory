@@ -99,34 +99,28 @@ pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge
 
 Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with `--llm` flag.
 
+| LLM | Notes |
+|-----|-------|
+| gemini-flash-lite (default) | gemini-2.5-flash-lite via direct API |
+| gemini | Same API path, explicitly named |
+| gemini-cli | gemini CLI tool (buggy `-m` flag, avoid) |
+| qwen3 | Local ollama qwen3:8b |
+
 ## Scoring
 
 - Core tests: weighted pass rate
 - Bonus tests: extra credit
 - Grade: A (90%+), B (75%+), C (60%+), F (<60%), F (abstention fail)
 
-## Model Settings
-
-### LLM (Response Generation)
-- **Primary**: `gemini-2.5-flash-lite` via gateway (OpenAI-compatible)
-- **Env**: `GATEWAY_URL` + `GATEWAY_MASTER_KEY`
-
-### Judge (Evaluation)
-- **Primary**: GLM-5.1 via Z.AI Coding API
-- **Endpoint**: `https://api.z.ai/api/coding/paas/v4/chat/completions`
-- **API Key**: `GLM_API_KEY`
-- **Model Name**: `glm-5.1`
-
 ## Known Issues (from benchmark results)
 
-- **abstention structural failure**: All memory-capable systems fail abstention (40–65% EN). Memory retrieval is not confidence-gated — unrelated memories trigger confabulation. → alpha-memory#9
+- **deprecated embedding + missing vector search**: `text-embedding-004` (768d, EN-optimized, deprecated 2026-01-14) is not wired into LocalAdapter. Benchmark uses Mem0Adapter backend — LocalAdapter has never been measured. → alpha-memory#5 (Critical)
+- **Mem0Adapter LLM dedup kills Korean**: mem0 KO 24.5% = naia KO 24.0% — same pipeline, confirmed root cause. mem0's EN-optimized LLM dedup strips Korean text during normalization. Fix: switch benchmark + production to LocalAdapter. → alpha-memory#12
+- **abstention KO 100% is retrieval failure, not confidence gating**: naia KO abstention 100% is a false positive — nothing is retrieved so LLM says "I don't know". Real fix requires #5 (vector search) first, then cosine similarity threshold. → alpha-memory#9
 - **unchanged_persistence cascade delete**: Contradiction update deletes unrelated facts. naia EN 47%, KO 33%. → alpha-memory#10
 - **temporal 0% EN / 20% KO**: Naia overwrites facts on contradiction update, losing past state history. → alpha-memory#8
-- **Korean LLM synthesis failure**: naia KO 24% vs EN 84% (−60pp). Memories retrieved but LLM fails to synthesize Korean answer. → alpha-memory#12
 - **System prompt language mixing**: EN benchmark system prompt contained Korean phrases. Fixed (commit 0b40bec).
 - **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
-- **R6 cacheId bug**: EN/KO data shared same `stable` DB → KO consolidation processed 2000 facts. Fixed (commit c77990f) — always uses `cache-${lang}`.
-- **R6 per-query consolidation**: 3× `consolidateNow(force=true)` calls per query = O(n²) over 1000 facts. Removed.
 
 ## Reports
 
@@ -185,7 +179,11 @@ reports/
 - letta alone retains meaningful KO performance — internal multilingual LLM processing
 - airi(no-memory) outperforms openclaw/open-llm-vtuber/sap — memory systems don't beat baseline in KO
 - graphiti DNF at query 156/240 due to Neo4j 500 errors
-- naia: cacheId bug fixed + per-query consolidation O(n²) removed; KO re-encoding in progress
+- naia: cacheId bug fixed (c77990f) + per-query consolidation O(n²) removed; KO result: 24.7% (keyword) / 24.0% (GLM-5.1)
+
+**Bug Fixes (R6):**
+- `cacheId` always uses `cache-${lang}` — keeps EN/KO data in separate DBs (was using shared `stable` DB)
+- Removed 3× `consolidateNow(force=true)` per-query calls — was O(n²) over 1000 facts
 
 **Report:** See `reports/r6-ko-benchmark/report-ko.md`
 

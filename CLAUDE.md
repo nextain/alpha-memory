@@ -114,10 +114,11 @@ Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with 
 
 ## Known Issues (from benchmark results)
 
-- **abstention structural failure**: All memory-capable systems fail abstention (40–65% EN). Memory retrieval is not confidence-gated — unrelated memories trigger confabulation. → alpha-memory#9
+- **deprecated embedding + missing vector search**: `text-embedding-004` (768d, EN-optimized, deprecated 2026-01-14) is not wired into LocalAdapter. Benchmark uses Mem0Adapter backend — LocalAdapter has never been measured. → alpha-memory#5 (Critical)
+- **Mem0Adapter LLM dedup kills Korean**: mem0 KO 24.5% = naia KO 24.0% — same pipeline, confirmed root cause. mem0's EN-optimized LLM dedup strips Korean text during normalization. Fix: switch benchmark + production to LocalAdapter. → alpha-memory#12
+- **abstention KO 100% is retrieval failure, not confidence gating**: naia KO abstention 100% is a false positive — nothing is retrieved so LLM says "I don't know". Real fix requires #5 (vector search) first, then cosine similarity threshold. → alpha-memory#9
 - **unchanged_persistence cascade delete**: Contradiction update deletes unrelated facts. naia EN 47%, KO 33%. → alpha-memory#10
 - **temporal 0% EN / 20% KO**: Naia overwrites facts on contradiction update, losing past state history. → alpha-memory#8
-- **Korean LLM synthesis failure**: naia KO 24% vs EN 84% (−60pp). Memories retrieved but LLM fails to synthesize Korean answer. → alpha-memory#12
 - **System prompt language mixing**: EN benchmark system prompt contained Korean phrases. Fixed (commit 0b40bec).
 - **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
 

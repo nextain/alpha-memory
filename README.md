@@ -266,15 +266,30 @@ Full reports: [`reports/r5-en-benchmark/`](reports/r5-en-benchmark/) · [`report
 
 ## Roadmap
 
+### R7 Sprint — Core Fixes (next benchmark target)
+
+R6 KO benchmark (GLM-5.1 judge) revealed two root causes behind naia's 24% KO vs letta's 67%:
+1. **Mem0Adapter LLM dedup** strips Korean text during normalization (confirmed: mem0 24.5% = naia 24.0%)
+2. **Deprecated embedding** — `text-embedding-004` (768d, EN-optimized) vs letta's `gemini-embedding-001` (3072d, MTEB multilingual #1)
+
+R7 goal: switch to `LocalAdapter` + `gemini-embedding-001` → target KO 55%+ (letta parity).
+
 | Issue | Description | Priority |
 |-------|-------------|:--------:|
-| [#5](https://github.com/nextain/alpha-memory/issues/5) | Semantic search — embed LocalAdapter + KG recall + HyDE | High |
-| [#6](https://github.com/nextain/alpha-memory/issues/6) | CompactionMap — encode provenance tracking + safe compact() | High |
+| [#5](https://github.com/nextain/alpha-memory/issues/5) | **LocalAdapter + gemini-embedding-001** — wire vector search, replace deprecated text-embedding-004, switch benchmark to LocalAdapter backend | **Critical** |
+| [#9](https://github.com/nextain/alpha-memory/issues/9) | Abstention — cosine similarity threshold (requires #5 first; current 100% KO is retrieval failure, not confidence gating) | High |
+| [#10](https://github.com/nextain/alpha-memory/issues/10) | unchanged_persistence — fix cascade delete on contradiction update | Medium |
 | [#8](https://github.com/nextain/alpha-memory/issues/8) | Temporal recall — preserve fact history with timestamps | Medium |
-| [#9](https://github.com/nextain/alpha-memory/issues/9) | Abstention fix — retrieval confidence threshold | High |
-| [#10](https://github.com/nextain/alpha-memory/issues/10) | unchanged_persistence — fix cascade delete on contradiction | Medium |
-| [#11](https://github.com/nextain/alpha-memory/issues/11) | R7 benchmark — retrieval latency + per-query token cost | Medium |
-| [#12](https://github.com/nextain/alpha-memory/issues/12) | Korean language support improvement | Medium |
+| [#6](https://github.com/nextain/alpha-memory/issues/6) | CompactionMap — encode provenance tracking + safe compact() | Medium |
+| [#12](https://github.com/nextain/alpha-memory/issues/12) | Korean language support — after #5, add KO-aware prompts + tokenizer | Medium |
+| [#11](https://github.com/nextain/alpha-memory/issues/11) | R7 benchmark — retrieval latency + per-query token cost | Low |
+
+### Future Directions
+
+- **Hybrid search** — dense (vector) + sparse (keyword) RRF fusion for higher precision
+- **5k+ fact scale test** — stress test with 5000 facts to validate KG and decay at scale
+- **Multilingual embeddings** — compare `qwen3-embedding` (MTEB multilingual 70.58) vs `gemini-embedding-001` (68.32) in R8
+- **Abstention 2.0** — uncertainty layer: pass Ebbinghaus strength as LLM metadata hint
 
 ---
 
