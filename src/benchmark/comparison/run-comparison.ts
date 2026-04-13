@@ -9,7 +9,7 @@ import { execSync } from "node:child_process";
  *   pnpm exec tsx src/memory/benchmark/comparison/run-comparison.ts [options]
  *
  * Options:
- *   --adapters=naia,mem0,letta,zep   (default: naia,mem0)
+ *   --adapters=naia,mem0,letta   (default: naia,mem0)
  *   --judge=claude-cli|keyword                (default: claude-cli)
  *   --runs=N                                  (runs per test, default: 1)
  *   --skip-encode                             (skip encoding, assume already done)
@@ -17,17 +17,18 @@ import { execSync } from "node:child_process";
  *
  * Requires: GEMINI_API_KEY env var
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { JikimeMemAdapter } from "./adapter-jikime-mem.js";
+import { StarnionAdapter } from "./adapter-starnion.js";
 import { LettaAdapter } from "./adapter-letta.js";
 import { Mem0Adapter } from "./adapter-mem0.js";
 import { type EmbeddingBackend, NaiaAdapter } from "./adapter-naia.js";
 import { NoMemoryAdapter } from "./adapter-no-memory.js";
+import { OpenClawAdapter } from "./adapter-openclaw.js";
 import { OpenLLMVTuberAdapter } from "./adapter-open-llm-vtuber.js";
 import { SapAdapter } from "./adapter-sap.js";
 import { SillyTavernAdapter } from "./adapter-sillytavern.js";
-import { ZepAdapter } from "./adapter-zep.js";
+import { GraphitiAdapter } from "./adapter-graphiti.js";
 import type {
 	BenchmarkAdapter,
 	ComparisonResult,
@@ -35,17 +36,18 @@ import type {
 } from "./types.js";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
-const THROTTLE_MS = 2000;
+// THROTTLE_MS removed — Vertex AI gateway has no rate limit
+const THROTTLE_MS = 0;
 
 // ─── CLI Args ────────────────────────────────────────────────────────────────
 
 function parseArgs() {
 	const args = process.argv.slice(2);
 	let adapterNames = ["naia", "mem0"];
-	let judge: "claude-cli" | "keyword" | "gemini-pro" = "claude-cli";
+	let judge: "claude-cli" | "keyword" | "gemini-pro" | "glm-api" = "claude-cli";
 	let runs = 1;
 	let categories: string[] | null = null;
-	let llm: "gemini" | "qwen3" | "gemini-cli" = "qwen3";
+	let llm: "gemini" | "qwen3" | "gemini-cli" | "gemini-flash-lite" = "gemini-flash-lite";
 	let skipEncode = false;
 	let lang = "ko";
 	let embedder = "gemini";
@@ -76,10 +78,10 @@ function createAdapter(name: string, apiKey: string, embedder?: string): Benchma
 			return new Mem0Adapter(apiKey);
 		case "letta":
 			return new LettaAdapter();
-		case "zep":
-			return new ZepAdapter();
-		case "jikime-mem":
-			return new JikimeMemAdapter();
+		case "graphiti":
+			return new GraphitiAdapter();
+		case "starnion":
+			return new StarnionAdapter();
 		case "sap":
 			return new SapAdapter(apiKey);
 		case "sillytavern":
@@ -91,6 +93,8 @@ function createAdapter(name: string, apiKey: string, embedder?: string): Benchma
 			);
 		case "open-llm-vtuber":
 			return new OpenLLMVTuberAdapter();
+		case "openclaw":
+			return new OpenClawAdapter();
 		default:
 			throw new Error(`Unknown adapter: ${name}`);
 	}
@@ -146,7 +150,7 @@ async function callGemini(
 		? `${gwUrl}/v1/chat/completions`
 		: `${GEMINI_BASE}chat/completions`;
 	const authKey = useGateway ? gwKey : apiKey;
-	const model = useGateway ? "vertexai:gemini-2.5-flash" : "gemini-2.5-flash";
+	const model = useGateway ? "vertexai:gemini-2.5-flash-lite" : "gemini-2.5-flash-lite-preview";
 
 	for (let attempt = 0; attempt < 3; attempt++) {
 		await new Promise((r) => setTimeout(r, THROTTLE_MS));
@@ -263,6 +267,44 @@ function callGeminiCli(prompt: string): string {
 	}
 }
 
+/** Call GLM-5.1 API (Z.AI) for judge */
+async function callGlmApi(prompt: string): Promise<string> {
+	const apiKey = process.env.GLM_API_KEY ?? "";
+	if (!apiKey) {
+		console.error("  ❌ GLM_API_KEY not found in environment.");
+		return "";
+	}
+
+	const url = "https://api.z.ai/api/coding/paas/v4/chat/completions";
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			const res = await fetch(url, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					model: "glm-5.1",
+					messages: [{ role: "user", content: prompt }],
+					max_tokens: 2000,
+					temperature: 0.3,
+				}),
+			});
+			if (!res.ok) {
+				console.warn(`    ⚠ glm-api error ${res.status}, attempt ${attempt + 1}`);
+				await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+				continue;
+			}
+			const data = (await res.json()) as any;
+			return data.choices?.[0]?.message?.content ?? "";
+		} catch {
+			await new Promise((r) => setTimeout(r, 2000));
+		}
+	}
+	return "";
+}
+
 function geminiProBatchJudgeSync(
 	items: BatchJudgeItem[],
 ): JudgeResult[] {
@@ -338,7 +380,7 @@ ${memCtx}`,
 	if (llm === "qwen3") {
 		return callOllama("qwen3:8b", messages, 500);
 	}
-	return callGemini(apiKey, messages, 500);
+	return callGemini(apiKey, messages, 500); // gemini-flash-lite (default) and gemini both use API
 }
 
 // ─── Judge ───────────────────────────────────────────────────────────────────
@@ -540,6 +582,33 @@ function judgeResponse(
 	return parseVerdict(raw);
 }
 
+/** Batch-judge items using GLM-5.1 API (10 items per call) */
+async function batchJudgeGlmApi(
+	items: Array<{ q: any; capName: string; response: string }>,
+	batchSize = 10,
+): Promise<JudgeResult[]> {
+	const results: JudgeResult[] = [];
+	for (let i = 0; i < items.length; i += batchSize) {
+		const batch = items.slice(i, i + batchSize).map((item, idx) => ({
+			idx,
+			...item,
+		}));
+		const prompt = buildBatchJudgePrompt(batch);
+		console.log(`    🤖 glm-5.1 batch ${Math.floor(i / batchSize) + 1}: judging ${batch.length} items...`);
+		const raw = await callGlmApi(prompt);
+		if (!raw) {
+			console.warn("    ⚠ glm api judge returned empty, falling back to keyword");
+			results.push(...batch.map((item) => keywordJudge(item.response, item.q, item.capName)));
+		} else {
+			judgeCallCount++;
+			totalPromptTokens += Math.ceil(prompt.length / 4);
+			totalCompletionTokens += Math.ceil(raw.length / 4);
+			results.push(...parseBatchVerdict(raw, batch.length));
+		}
+	}
+	return results;
+}
+
 /** Batch-judge items using Gemini CLI (10 items per call) */
 function batchJudgeGeminiProSync(
 	items: Array<{ q: any; capName: string; response: string }>,
@@ -591,6 +660,18 @@ async function main() {
 	const factBank = JSON.parse(readFileSync(factBankPath, "utf-8"));
 	const templates = JSON.parse(readFileSync(templatesPath, "utf-8"));
 
+	const timestampStr = new Date().toISOString().replace(/[:.]/g, "-");
+	const runId = `run-${timestampStr}`;
+	const reportsDir = join(import.meta.dirname, "..", "..", "..", "reports");
+	const runDir = join(reportsDir, "runs", runId);
+	mkdirSync(runDir, { recursive: true });
+
+	const historyLogPath = join(reportsDir, "EXECUTION_HISTORY.md");
+	const startInfo = `\n### 🚀 Run Started: ${new Date().toLocaleString()}\n- Run ID: \`${runId}\`\n- Adapters: ${config.adapterNames.join(", ")}\n- Language: ${config.lang}\n- LLM: ${config.llm}\n- Judge: ${config.judge}\n`;
+	try { appendFileSync(historyLogPath, startInfo); } catch (e) {}
+
+	console.log(`  📂 Artifacts will be saved to: ${runDir}\n`);
+
 	const allResults: ComparisonResult[] = [];
 
 	for (const adapterName of config.adapterNames) {
@@ -608,31 +689,66 @@ async function main() {
 
 		try {
 			// Phase 1: Init + Encode
-			const cacheId = config.skipEncode ? `cache-${config.lang}` : undefined;
+			// Always use lang-specific cacheId so EN and KO data stay in separate DBs.
+			// skip-encode mode reuses the existing DB without re-encoding.
+			const cacheId = `cache-${config.lang}`;
 			await adapter.init(cacheId);
 
 			if (config.skipEncode) {
 				console.log("  Phase 1: ⚡ SKIPPED (using cached DB)\n");
 			} else {
 				console.log("  Phase 1: Init + Encode\n");
+				const encodeLogPath = join(runDir, `encoding-${adapterName}.json`);
+				const encodeCheckpointPath = join(import.meta.dirname, "..", "..", "..", "reports", `encode-checkpoint-${adapterName}-${config.lang}.json`);
+				let processedIds: string[] = [];
+				let encodingLogs: any[] = [];
+				try {
+					processedIds = JSON.parse(readFileSync(encodeCheckpointPath, "utf-8"));
+					if (processedIds.length > 0) {
+						console.log(`    🔄 Resuming from checkpoint: ${processedIds.length} facts already stored.\n`);
+					}
+				} catch (e) {}
+
 				let stored = 0;
 				let gated = 0;
 				for (const fact of factBank.facts) {
+					if (processedIds.includes(fact.id)) {
+						stored++;
+						console.log(`    ⏭️ [SKIP] ${fact.id}: Already processed in checkpoint.`);
+						continue;
+					}
 					let retryCount = 0;
 					const MAX_RETRIES = 3;
 					let success = false;
 
 					while (retryCount < MAX_RETRIES && !success) {
+						const startTime = Date.now();
 						try {
-							const ok = await adapter.addFact(fact.statement);
+							console.log(`    💸 [COST] ${fact.id}: Calling API for embedding/extraction...`);
+							const ok = await adapter.addFact(fact.statement, (fact as any).date);
+							const duration = Date.now() - startTime;
+							
+							const logEntry = {
+								id: fact.id,
+								statement: fact.statement,
+								date: (fact as any).date,
+								timestamp: new Date().toISOString(),
+								duration_ms: duration,
+								status: ok ? "stored" : "gated"
+							};
+							encodingLogs.push(logEntry);
+							try { writeFileSync(encodeLogPath, JSON.stringify(encodingLogs, null, 2)); } catch (e) {}
+
 							if (ok) {
 								stored++;
-								console.log(
-									`    ✅ ${fact.id}: ${fact.statement.slice(0, 50)}...`,
-								);
+								console.log(`    ✅ [DONE] ${fact.id}: Stored successfully (${duration}ms).`);
+								processedIds.push(fact.id);
+								try { writeFileSync(encodeCheckpointPath, JSON.stringify(processedIds)); } catch (e) {}
 							} else {
 								gated++;
-								console.log(`    ⛔ ${fact.id}: GATED`);
+								console.log(`    ⛔ [GATE] ${fact.id}: GATED (not stored)`);
+								processedIds.push(fact.id);
+								try { writeFileSync(encodeCheckpointPath, JSON.stringify(processedIds)); } catch (e) {}
 							}
 							success = true;
 						} catch (err: any) {
@@ -646,6 +762,8 @@ async function main() {
 						}
 					}
 				}
+				const summary = `  - [Phase 1] ${adapterName}: Stored: ${stored}/${factBank.facts.length} (New: ${stored - processedIds.length}, Skipped: ${processedIds.length})\n`;
+				try { appendFileSync(historyLogPath, summary); } catch (e) {}
 				console.log(
 					`\n    Stored: ${stored}/${factBank.facts.length} (gated: ${gated})\n`,
 				);
@@ -733,7 +851,6 @@ async function main() {
 					if (q.setup)
 						try {
 							await adapter.addFact(q.setup);
-							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ setup fail: ${e.message?.slice(0, 60)}`);
@@ -741,7 +858,6 @@ async function main() {
 					if (q.update)
 						try {
 							await adapter.addFact(q.update);
-							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ update fail: ${e.message?.slice(0, 60)}`);
@@ -749,7 +865,6 @@ async function main() {
 					if (q.noisy_input)
 						try {
 							await adapter.addFact(q.noisy_input);
-							if (adapter.consolidate) await adapter.consolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ noise fail: ${e.message?.slice(0, 60)}`);
@@ -768,7 +883,7 @@ async function main() {
 					let passCount = 0;
 					let lastReason = "";
 
-					if (config.judge === "gemini-pro" && config.runs === 1) {
+					if ((config.judge === "gemini-pro" || config.judge === "glm-api") && config.runs === 1) {
 						// Defer judge to batch — push placeholder detail
 						details.push({
 							id,
@@ -830,10 +945,14 @@ async function main() {
 			}
 
 
-				// Phase 2.5: Batch judge (gemini-pro mode)
-				if (config.judge === "gemini-pro" && pendingJudge.length > 0) {
-					console.log(`\n  Phase 2.5: Batch judging ${pendingJudge.length} items with Gemini 2.5 Pro\n`);
-					const verdicts = batchJudgeGeminiProSync(pendingJudge);
+				// Phase 2.5: Batch judge (gemini-pro or glm-api mode)
+				if ((config.judge === "gemini-pro" || config.judge === "glm-api") && pendingJudge.length > 0) {
+					console.log(`\n  Phase 2.5: Batch judging ${pendingJudge.length} items with ${config.judge === "gemini-pro" ? "Gemini 2.5 Pro" : "GLM-5.1"}\n`);
+
+					const verdicts = config.judge === "gemini-pro" 
+						? batchJudgeGeminiProSync(pendingJudge)
+						: await batchJudgeGlmApi(pendingJudge);
+
 					for (let i = 0; i < pendingJudge.length; i++) {
 						const v = verdicts[i];
 						const d = details[pendingJudge[i].detailIdx];
@@ -842,7 +961,16 @@ async function main() {
 							d.reason = v.reason;
 						}
 					}
+
+					// Save intermediate judgments for verification
+					try {
+						const judgmentsPath = join(runDir, `judgments-${adapterName}.json`);
+						writeFileSync(judgmentsPath, JSON.stringify(verdicts, null, 2));
+						console.log(`    💾 Saved intermediate judgments to: ${judgmentsPath}`);
+					} catch (e) {}
+
 					// Print resolved results
+
 					for (const d of details) {
 						if (d.reason === "(pending judge)") {
 							console.log(`      ${d.pass ? "✅" : "❌"} ${d.id} (resolved) ${d.reason.slice(0, 50)}`);
@@ -968,21 +1096,17 @@ async function main() {
 		`  ${"GRADE".padEnd(25)} ${allResults.map((r) => r.grade.padStart(10)).join(" ")}`,
 	);
 
-	// Save report — per-adapter files to avoid overwrite in parallel runs
-	const reportDir = join(import.meta.dirname, "../../../..", "reports");
-	mkdirSync(reportDir, { recursive: true });
-	const date = new Date().toISOString().slice(0, 10);
-
-	// Save individual adapter reports
+	// Save report — per-adapter files in the run directory
 	for (const result of allResults) {
 		const adapterPath = join(
-			reportDir,
-			`memory-comparison-${result.adapter}-${date}.json`,
+			runDir,
+			`report-${result.adapter}.json`,
 		);
 		writeFileSync(
 			adapterPath,
 			JSON.stringify(
 				{
+					runId,
 					timestamp: new Date().toISOString(),
 					version: "comparison-v2",
 					judge: config.judge,
@@ -997,12 +1121,18 @@ async function main() {
 		console.log(`  Report (${result.adapter}): ${adapterPath}`);
 	}
 
+	// Also save a global summary in the main reports dir for convenience
+	const summaryPath = join(import.meta.dirname, "../../../..", "reports", `summary-${runId}.json`);
+	writeFileSync(summaryPath, JSON.stringify({ runId, summary: allResults.map(r => ({ adapter: r.adapter, score: r.core.rate, grade: r.grade })) }, null, 2));
+
 	// Also save combined report
-	const combinedPath = join(reportDir, `memory-comparison-${date}.json`);
+	const date = new Date().toISOString().slice(0, 10);
+	const combinedPath = join(reportsDir, `memory-comparison-${date}.json`);
 	writeFileSync(
 		combinedPath,
 		JSON.stringify(
 			{
+				runId,
 				timestamp: new Date().toISOString(),
 				version: "comparison-v2",
 				judge: config.judge,
