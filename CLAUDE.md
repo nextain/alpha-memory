@@ -185,10 +185,11 @@ reports/
 - `cacheId` always uses `cache-${lang}` — keeps EN/KO data in separate DBs (was using shared `stable` DB)
 - Removed 3× `consolidateNow(force=true)` per-query calls — was O(n²) over 1000 facts
 
-**naia EN R6 (bug-fixed rerun, 2026-04-14, keyword judge):** 61% (150/240) keyword
-- GLM re-judge pending — comparison vs R5 EN GLM 84.0% planned
-- Highs: irrelevant_isolation 100%, entity_disambiguation 80%
-- Lows: semantic_search 36%, unchanged_persistence 47%, abstention 55%
+**naia EN R6 (bug-fixed rerun, 2026-04-14):**
+- **GLM-5.1: 83.5%** (201/240) — essentially same as R5 EN 84.0%; bug fixes did not degrade EN performance
+- keyword: 61% (150/240) — shows judge calibration gap (keyword 73% of GLM score)
+- Highs: entity_disambiguation 100%, multi_fact_synthesis 95%, noise_resilience 95%
+- Lows: abstention 55% (known structural bug), semantic_search 88% (GLM) vs 36% (keyword)
 
 **Report:** See `reports/r6-ko-benchmark/report-ko.md`
 
