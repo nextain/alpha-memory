@@ -59,6 +59,7 @@ import type { MemoryAlgorithm } from './algorithms/base.js';
 import { AlgorithmVariantA } from './algorithms/variantA.js';
 import { AlgorithmVariantB } from './algorithms/variantB.js';
 
+
 /**
  * Callback for extracting facts from episodes.
  * In production, this would call an LLM. For testing, a simple heuristic.

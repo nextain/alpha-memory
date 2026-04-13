@@ -229,7 +229,7 @@ export interface MemoryAdapter {
 // ─── Backup ──────────────────────────────────────────────────────────────────
 
 /**
- * BackupCapable u2014 implemented by adapters that support AES-256-GCM export/import.
+ * BackupCapable — implemented by adapters that support AES-256-GCM export/import.
  *
  * Blob layout (49-byte fixed header):
  *   4 bytes  magic    "NAIA"
