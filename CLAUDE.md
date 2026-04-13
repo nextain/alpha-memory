@@ -114,8 +114,11 @@ Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with 
 
 ## Known Issues (from benchmark results)
 
-- **temporal 0%**: Naia overwrites facts on contradiction update, losing past state history. → naia-os#221
-- **System prompt language mixing**: EN benchmark system prompt contained Korean phrases, causing Korean responses to English queries. Fixed (commit 0b40bec).
+- **abstention structural failure**: All memory-capable systems fail abstention (40–65% EN). Memory retrieval is not confidence-gated — unrelated memories trigger confabulation. → alpha-memory#9
+- **unchanged_persistence cascade delete**: Contradiction update deletes unrelated facts. naia EN 47%, KO 33%. → alpha-memory#10
+- **temporal 0% EN / 20% KO**: Naia overwrites facts on contradiction update, losing past state history. → alpha-memory#8
+- **Korean LLM synthesis failure**: naia KO 24% vs EN 84% (−60pp). Memories retrieved but LLM fails to synthesize Korean answer. → alpha-memory#12
+- **System prompt language mixing**: EN benchmark system prompt contained Korean phrases. Fixed (commit 0b40bec).
 - **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
 
 ## Reports
@@ -161,21 +164,21 @@ reports/
 | Rank | Adapter | Score | EN R5 | EN→KO |
 |------|---------|-------|-------|-------|
 | 1 | letta | 67.5% | 87.5% | -20pp |
-| 2 | mem0 | 24.0% | 83.1% | -59pp |
-| 3 | sillytavern | 17.6% | 79.8% | -62pp |
-| 4 | airi(baseline) | 16.0% | 33.9% | -18pp |
-| 5 | openclaw | 14.8% | 43.3% | -29pp |
-| 6 | open-llm-vtuber | 14.4% | 85.2% | -71pp |
-| 7 | sap | 12.9% | 74.1% | -61pp |
+| 2 | **naia** | **24.7%** (KW) / **24.0%** (GLM) | 84.0% | -60pp |
+| 3 | mem0 | 24.0% | 83.1% | -59pp |
+| 4 | sillytavern | 17.6% | 79.8% | -62pp |
+| 5 | airi(baseline) | 16.0% | 33.9% | -18pp |
+| 6 | openclaw | 14.8% | 43.3% | -29pp |
+| 7 | open-llm-vtuber | 14.4% | 85.2% | -71pp |
+| 8 | sap | 12.9% | 74.1% | -61pp |
 | — | graphiti | DNF | 55.8% | — |
-| — | naia | *TBD* | 84.0% | TBD |
 
 **Key Findings:**
 - Korean language barrier: most systems drop 50-70pp vs EN — EN-optimized LLM pipeline is the bottleneck
 - letta alone retains meaningful KO performance — internal multilingual LLM processing
 - airi(no-memory) outperforms openclaw/open-llm-vtuber/sap — memory systems don't beat baseline in KO
 - graphiti DNF at query 156/240 due to Neo4j 500 errors
-- naia: cacheId bug fixed (c77990f) + per-query consolidation O(n²) removed; KO re-encoding in progress
+- naia: cacheId bug fixed (c77990f) + per-query consolidation O(n²) removed; KO result: 24.7% (keyword) / 24.0% (GLM-5.1)
 
 **Bug Fixes (R6):**
 - `cacheId` always uses `cache-${lang}` — keeps EN/KO data in separate DBs (was using shared `stable` DB)

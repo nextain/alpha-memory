@@ -32,20 +32,20 @@ Part of the broader Naia principle: repos couple through **published interfaces*
 Alpha Memory implements a 4-store memory architecture inspired by cognitive science:
 
 | Store | Brain Analog | What it holds |
-|-------|-------------|--------------|
+|-------|-------------|---------------|
 | **Episodic** | Hippocampus | Timestamped events with full context |
 | **Semantic** | Neocortex | Facts, entities, relationships |
 | **Procedural** | Basal Ganglia | Skills, strategies, learned patterns |
-| **Working** | Prefrontal Cortex | Active context (managed externally by ContextManager) |
+| **Working** | Prefrontal Cortex | Active context (managed externally) |
 
 ### Key Features
 
 - **Importance gating** — 3-axis scoring (importance × surprise × emotion) filters what gets stored
-- **Knowledge graph** — entity/relation extraction for semantic memory
+- **Knowledge graph** — entity/relation extraction + spreading activation for semantic recall
 - **Ebbinghaus decay** — memory strength fades over time, strengthened by recall
 - **Reconsolidation** — contradiction detection on retrieval
-- **Pluggable adapters** — swap the vector backend (local SQLite, mem0, etc.)
-- **Benchmark suite** — compare against mem0, SillyTavern, Letta, Zep, SAP, OpenClaw, and more
+- **Pluggable adapters** — swap the vector backend (local SQLite, mem0, Qdrant)
+- **Benchmark suite** — compare against mem0, SillyTavern, Letta, SAP, OpenClaw, Graphiti, and more
 
 ---
 
@@ -56,31 +56,35 @@ src/
 ├── memory/
 │   ├── index.ts            # MemorySystem — main orchestrator
 │   ├── types.ts            # Type definitions
-│   ├── importance.ts       # 3-axis importance scoring (Amygdala analog)
+│   ├── importance.ts       # 3-axis importance scoring
 │   ├── decay.ts            # Ebbinghaus forgetting curve
-│   ├── reconsolidation.ts  # Contradiction detection
-│   ├── knowledge-graph.ts  # Entity/relation extraction
-│   ├── embeddings.ts       # Embedding abstraction
+│   ├── reconsolidation.ts  # Contradiction detection on retrieval
+│   ├── knowledge-graph.ts  # Entity/relation extraction + spreading activation
+│   ├── embeddings.ts       # Embedding abstraction (Gemini text-embedding-004)
 │   └── adapters/
-│       ├── local.ts        # SQLite + hnswlib (local, no API key)
-│       └── mem0.ts         # mem0 OSS backend
+│       ├── local.ts        # SQLite + hnswlib (local, no API key required)
+│       ├── mem0.ts         # mem0 OSS backend
+│       └── qdrant.ts       # Qdrant vector DB backend
 └── benchmark/
-    ├── fact-bank.json          # 1000 Korean facts
+    ├── fact-bank.json          # 1000 Korean facts (fictional persona)
     ├── fact-bank.en.json       # 1000 English facts
-    ├── query-templates.json    # Korean test queries
+    ├── query-templates.json    # Korean test queries (12 categories)
     ├── query-templates.en.json # English test queries
     ├── criteria.ts             # Scoring criteria
     └── comparison/
-        ├── run-comparison.ts       # Main benchmark runner
-        ├── types.ts                # BenchmarkAdapter interface
-        ├── adapter-naia.ts         # Alpha Memory (this project)
-        ├── adapter-mem0.ts         # mem0 OSS
-        ├── adapter-sillytavern.ts  # SillyTavern (vectra + transformers.js)
-        ├── adapter-letta.ts        # Letta (formerly MemGPT)
-        ├── adapter-zep.ts          # Zep CE
-        ├── adapter-openclaw.ts     # OpenClaw
-        ├── adapter-sap.ts          # Super Agent Party (mem0 + FAISS)
-        └── adapter-jikime-mem.ts   # Jikime Memory
+        ├── run-comparison.ts        # Main benchmark runner
+        ├── types.ts                 # BenchmarkAdapter interface
+        ├── judge.ts                 # Standalone re-judge script
+        ├── adapter-naia.ts          # Alpha Memory (this project)
+        ├── adapter-mem0.ts          # mem0 OSS
+        ├── adapter-sillytavern.ts   # SillyTavern
+        ├── adapter-letta.ts         # Letta (formerly MemGPT)
+        ├── adapter-openclaw.ts      # OpenClaw
+        ├── adapter-sap.ts           # Super Agent Party
+        ├── adapter-open-llm-vtuber.ts  # Open-LLM-VTuber
+        ├── adapter-graphiti.ts      # Graphiti (Neo4j temporal KG)
+        ├── adapter-starnion.ts      # Starnion (SQLite + ChromaDB)
+        └── adapter-no-memory.ts    # Baseline (no memory)
 ```
 
 ---
@@ -107,7 +111,7 @@ await memory.encode("User prefers dark mode and uses Neovim as their editor");
 
 // Recall relevant memories for a query
 const results = await memory.recall("What editor does the user use?");
-console.log(results); // ["User prefers dark mode and uses Neovim as their editor"]
+console.log(results); // ["User prefers Neovim as their editor"]
 
 // At session start — inject into system prompt
 const context = await memory.sessionRecall("new conversation started");
@@ -119,20 +123,25 @@ const context = await memory.sessionRecall("new conversation started");
 ## Quick Start (Benchmark)
 
 ```bash
-npm install
+pnpm install
 
 # Korean benchmark, keyword judge
-GEMINI_API_KEY=your-key npx tsx src/benchmark/comparison/run-comparison.ts \
-  --adapters=naia,mem0,sillytavern \
+GEMINI_API_KEY=your-key pnpm exec tsx src/benchmark/comparison/run-comparison.ts \
+  --adapters=naia,mem0 \
   --judge=keyword \
   --lang=ko
 
-# With gateway (Vertex AI, no rate limits)
+# English benchmark via gateway (Vertex AI, no rate limits)
 GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
-  npx tsx src/benchmark/comparison/run-comparison.ts \
+  pnpm exec tsx src/benchmark/comparison/run-comparison.ts \
   --adapters=naia \
-  --judge=keyword \
+  --judge=glm-api \
   --lang=en
+
+# Re-judge existing results with a different judge
+pnpm exec tsx src/benchmark/comparison/judge.ts \
+  --input=reports/runs/run-xxx/report-naia.json \
+  --judge=glm-api
 ```
 
 ### CLI Options
@@ -140,11 +149,12 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--adapters=a,b,c` | `naia,mem0` | Adapters to run |
-| `--judge=keyword\|claude-cli` | `claude-cli` | Scoring method |
+| `--judge=keyword\|glm-api\|gemini-pro-cli\|claude-cli` | `keyword` | Scoring method |
 | `--lang=ko\|en` | `ko` | Fact bank language |
 | `--embedder=gemini\|solar\|qwen3\|bge-m3` | `gemini` | Embedding model |
-| `--llm=gemini\|qwen3` | `qwen3` | LLM for Naia adapter |
-| `--skip-encode` | off | Reuse cached DB |
+| `--llm=gemini-flash-lite\|qwen3` | `gemini-flash-lite` | Response LLM |
+| `--skip-encode` | off | Reuse cached encoding DB |
+| `--cache-id=name` | `cache-${lang}` | Cache DB identifier |
 | `--runs=N` | `1` | Runs per test |
 | `--categories=a,b` | all | Filter categories |
 
@@ -152,16 +162,25 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 
 | ID | System | Backend |
 |----|--------|---------|
-| `naia` | Alpha Memory (this project) | SQLite + vector search + KG |
-| `mem0` | [mem0 OSS](https://github.com/mem0ai/mem0) | SQLite vector + LLM dedup |
+| `naia` | Alpha Memory (this project) | SQLite + vector + KG |
+| `mem0` | [mem0 OSS](https://github.com/mem0ai/mem0) | Vector + LLM dedup |
 | `sillytavern` | [SillyTavern](https://github.com/SillyTavern/SillyTavern) | vectra + transformers.js |
-| `letta` | [Letta](https://github.com/letta-ai/letta) | Requires Letta server |
-| `zep` | [Zep CE](https://github.com/getzep/zep) | Requires Zep server |
-| `openclaw` | [OpenClaw](https://github.com/nextain/naia-os) | Local (Naia Gateway) |
-| `sap` | Super Agent Party | mem0 + FAISS/ChromaDB |
-| `open-llm-vtuber` | [Open-LLM-VTuber](https://github.com/t41372/Open-LLM-VTuber) | Letta-based agent memory |
-| `jikime-mem` | [Jikime Memory](https://github.com/jikime/jikime-mem) | Local |
-| `no-memory` | Baseline (no memory) | — |
+| `letta` | [Letta](https://github.com/letta-ai/letta) | Archival memory + vector |
+| `openclaw` | OpenClaw | FTS5 + vector hybrid |
+| `sap` | Super Agent Party | mem0 + FAISS |
+| `open-llm-vtuber` | [Open-LLM-VTuber](https://github.com/t41372/Open-LLM-VTuber) | Letta-based |
+| `graphiti` | [Graphiti](https://github.com/getzep/graphiti) | Neo4j temporal KG |
+| `starnion` | Starnion | SQLite + ChromaDB |
+| `no-memory` | Baseline | No memory (LLM only) |
+
+### Judge Modes
+
+| Mode | How | Speed |
+|------|-----|-------|
+| `keyword` | Exact/substring match | Instant |
+| `glm-api` | GLM-5.1 via Z.AI API (batch 10) | Fast |
+| `gemini-pro-cli` | Gemini CLI (batch 10) | Fast |
+| `claude-cli` | Claude CLI via gateway (one-by-one) | Slow |
 
 ---
 
@@ -169,39 +188,102 @@ GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
 
 | Backend | Model | Dims | Notes |
 |---------|-------|------|-------|
-| `gemini` | gemini-embedding-001 | 3072 | Requires `GEMINI_API_KEY` |
-| `solar` | embedding-query/passage | 4096 | Requires `UPSTAGE_API_KEY` |
+| `gemini` (default) | text-embedding-004 via gateway | 768 | `GATEWAY_URL` + `GATEWAY_MASTER_KEY` |
+| `gemini-direct` | text-embedding-004 direct | 768 | `GEMINI_API_KEY` |
+| `solar` | embedding-query/passage | 4096 | `UPSTAGE_API_KEY` |
 | `qwen3` | qwen3-embedding (Ollama) | 2048 | Local |
 | `bge-m3` | bge-m3 (Ollama) | 1024 | Local, multilingual |
-| Gateway | vertexai:text-embedding-004 | 768 | `GATEWAY_URL` + `GATEWAY_MASTER_KEY` |
 
 ---
 
 ## Benchmark Results
 
-**R2 Report (April 2026)** — 1000 facts, 240 queries, 4 systems, KO + EN:
+### R5 EN — English Benchmark (2026-04-12, GLM-5.1 judge)
 
-| System | KO (R1) | EN (R2) |
-|--------|:-------:|:-------:|
-| **Alpha Memory (Naia)** | **65%** | 46% |
-| SillyTavern | 46% | **64%** |
-| Letta | 47% | — |
-| mem0 | re-run* | 43% |
-| SAP | re-run* | 45% |
+1000 facts · 240 queries · 9 systems
 
-*R1 KO: mem0/SAP had API rate limit failures; re-run in progress.
+| Rank | System | Score | Grade |
+|:----:|--------|:-----:|:-----:|
+| 1 | Letta | 87.5% | F(abs) |
+| 2 | Open-LLM-VTuber | 85.2% | F(abs) |
+| 3 | **Alpha Memory (Naia)** | **84.0%** | F(abs) |
+| 4 | mem0 | 83.1% | F(abs) |
+| 5 | SillyTavern | 79.8% | F(abs) |
+| 6 | SAP | 74.1% | F(abs) |
+| 7 | Graphiti | 55.8% | F |
+| 8 | OpenClaw | 43.3% | F |
+| 9 | Baseline (no memory) | 33.9% | F |
 
-All systems scored F grade (abstention criterion not met by any system).
+**Key findings:**
+- All memory-capable systems fail abstention (40–65%) — structural issue where memory retrieval is not confidence-gated
+- Graphiti: contradiction 100% vs semantic_search 4% — Neo4j KG alone cannot substitute vector search
+- Retrieval latency and per-query token cost not measured — planned for R7
 
-→ Full reports: [`docs/reports/benchmark-r2-2026-04.en.md`](docs/reports/benchmark-r2-2026-04.en.md) | [`docs/reports/benchmark-r2-2026-04.ko.md`](docs/reports/benchmark-r2-2026-04.ko.md)
+### R6 KO — Korean Benchmark (2026-04-13, keyword judge)
+
+1000 facts · 240 queries · 8 systems
+
+| Rank | System | Score | EN R5 | Drop |
+|:----:|--------|:-----:|:-----:|:----:|
+| 1 | Letta | 67.5% | 87.5% | -20pp |
+| 2 | mem0 | 24.0% | 83.1% | -59pp |
+| 3 | SillyTavern | 17.6% | 79.8% | -62pp |
+| 4 | Baseline (no memory) | 16.0% | 33.9% | -18pp |
+| 5 | OpenClaw | 14.8% | 43.3% | -29pp |
+| 6 | Open-LLM-VTuber | 14.4% | 85.2% | -71pp |
+| 7 | SAP | 12.9% | 74.1% | -61pp |
+| — | Graphiti | DNF | 55.8% | — |
+
+**Key findings:**
+- Korean language is a system-level barrier: most systems drop 50–70pp vs EN
+- Letta alone retains meaningful Korean performance — internal multilingual LLM processing
+- Memory systems fail to beat the no-memory baseline in Korean — retrieval quality collapses at the LLM synthesis layer
+
+> Grade legend: A ≥90% · B ≥75% · C ≥60% · F <60% · F(abs) = abstention criterion failed
+
+Full reports: [`reports/r5-en-benchmark/`](reports/r5-en-benchmark/) · [`reports/r6-ko-benchmark/`](reports/r6-ko-benchmark/)
+
+---
+
+## Benchmark Categories (12)
+
+| Category | Weight | What it tests |
+|----------|:------:|---------------|
+| `direct_recall` | ×1 | Direct fact retrieval |
+| `semantic_search` | ×2 | Meaning-based search |
+| `proactive_recall` | ×2 | Proactive memory suggestion |
+| `abstention` | ×2 | Knowing what you don't know (hallucination prevention) |
+| `irrelevant_isolation` | ×1 | Not injecting personal info into unrelated queries |
+| `multi_fact_synthesis` | ×2 | Combining multiple memories |
+| `entity_disambiguation` | ×2 | Distinguishing entities by context |
+| `contradiction_direct` | ×2 | Handling direct contradictions |
+| `contradiction_indirect` | ×2 | Handling indirect contradictions |
+| `noise_resilience` | ×2 | Recalling signal amid noise |
+| `unchanged_persistence` | ×1 | Preserving facts that shouldn't change after updates |
+| `temporal` | ×2 | Recalling past states over time |
+
+---
+
+## Roadmap
+
+| Issue | Description | Priority |
+|-------|-------------|:--------:|
+| [#5](https://github.com/nextain/alpha-memory/issues/5) | Semantic search — embed LocalAdapter + KG recall + HyDE | High |
+| [#6](https://github.com/nextain/alpha-memory/issues/6) | CompactionMap — encode provenance tracking + safe compact() | High |
+| [#8](https://github.com/nextain/alpha-memory/issues/8) | Temporal recall — preserve fact history with timestamps | Medium |
+| [#9](https://github.com/nextain/alpha-memory/issues/9) | Abstention fix — retrieval confidence threshold | High |
+| [#10](https://github.com/nextain/alpha-memory/issues/10) | unchanged_persistence — fix cascade delete on contradiction | Medium |
+| [#11](https://github.com/nextain/alpha-memory/issues/11) | R7 benchmark — retrieval latency + per-query token cost | Medium |
+| [#12](https://github.com/nextain/alpha-memory/issues/12) | Korean language support improvement | Medium |
 
 ---
 
 ## Development
 
 ```bash
-npm run typecheck   # TypeScript check
-npm run check       # Biome lint + format
+pnpm install
+pnpm run typecheck   # TypeScript check
+pnpm run check       # Biome lint + format
 ```
 
 ---
@@ -210,14 +292,12 @@ npm run check       # Biome lint + format
 
 This project is built with an AI-native development philosophy:
 
-- **AI context is a first-class artifact** — `.agents/` context files are versioned alongside code, not treated as throwaway prompts
-- **Privacy by architecture** — memory is stored locally and E2E encrypted; even the service provider cannot access it
-- **AI sovereignty** — the user owns their AI memories; Nextain provides infrastructure, not access
+- **AI context is a first-class artifact** — `.agents/` context files are versioned alongside code
+- **Privacy by architecture** — memory is stored locally; the service provider cannot access it
+- **AI sovereignty** — users own their AI memories
 - **Transparent AI assistance** — AI contributions are credited via `Assisted-by:` git trailers
 
-AI context in `.agents/` and `.users/` is licensed under [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — attribution and same license required.
-
-> In the vibe coding era, AI context is an asset as valuable as code.
+AI context in `.agents/` and `.users/` is licensed under [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ---
 
