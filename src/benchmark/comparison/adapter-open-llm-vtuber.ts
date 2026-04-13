@@ -40,7 +40,7 @@ export class OpenLLMVTuberAdapter implements BenchmarkAdapter {
 		// how Letta decides to store facts during chat.
 		const agent = await this.fetchJson("POST", "/v1/agents/", {
 			name: `open-llm-vtuber-bench-${Date.now()}`,
-			model: "gemini/gemini-2.5-flash",
+			model: "openai-proxy/models/gemini-2.5-flash",
 			embedding_config: {
 				embedding_endpoint_type: "openai",
 				embedding_endpoint:
@@ -70,7 +70,7 @@ export class OpenLLMVTuberAdapter implements BenchmarkAdapter {
 		}
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		if (!this.agentId) throw new Error("Not initialized");
 
 		// Open-LLM-VTuber pattern: send fact as a chat message.

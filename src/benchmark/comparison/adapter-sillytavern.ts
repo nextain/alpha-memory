@@ -45,10 +45,9 @@ export class SillyTavernAdapter implements BenchmarkAdapter {
 		const vectra = await import("vectra");
 		const { pipeline: createPipeline } = await import("@huggingface/transformers");
 
-		// cacheId: fixed path for --skip-encode reuse. Without it, use random UUID (fresh index).
-		this.indexPath = cacheId
-			? `/tmp/sillytavern-bench-${cacheId}`
-			: `/tmp/sillytavern-bench-${randomUUID()}`;
+		const id = cacheId ?? "stable";
+		this.indexPath = `./memory-sillytavern-${id}`;
+		console.log(`    [SillyTavern] Initializing memory system with persistent store: ${this.indexPath}`);
 		this.store = new vectra.LocalIndex(this.indexPath);
 
 		if (!(await this.store.isIndexCreated())) {
@@ -60,7 +59,7 @@ export class SillyTavernAdapter implements BenchmarkAdapter {
 		this.pipeline = await createPipeline("feature-extraction", DEFAULT_MODEL);
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		if (!this.store || !this.pipeline) throw new Error("Not initialized");
 
 		const vector = await this.embed(content);
@@ -94,7 +93,7 @@ export class SillyTavernAdapter implements BenchmarkAdapter {
 	async cleanup(): Promise<void> {
 		this.store = null;
 		this.pipeline = null;
-		if (this.indexPath) {
+		if (this.indexPath && !this.indexPath.includes("-stable")) {
 			try {
 				rmSync(this.indexPath, { recursive: true, force: true });
 			} catch {

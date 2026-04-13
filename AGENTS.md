@@ -17,7 +17,8 @@ src/
 │   ├── embeddings.ts          # Gemini text-embedding-004 (768d)
 │   └── adapters/
 │       ├── local.ts           # SQLite + hnswlib (default, no API key)
-│       └── mem0.ts            # mem0 OSS backend
+│       ├── mem0.ts            # mem0 OSS backend
+│       └── qdrant.ts          # Qdrant vector DB backend
 ├── benchmark/
 │   ├── fact-bank.json         # 1000 Korean facts (fictional persona)
 │   ├── fact-bank.en.json      # 1000 English facts
@@ -32,12 +33,12 @@ src/
 │       ├── adapter-mem0.ts    # mem0 OSS
 │       ├── adapter-sillytavern.ts
 │       ├── adapter-letta.ts
-│       ├── adapter-zep.ts
+│       ├── adapter-graphiti.ts   # Graphiti (getzep/graphiti) — Neo4j temporal KG
 │       ├── adapter-openclaw.ts
 │       ├── adapter-sap.ts
 │       ├── adapter-open-llm-vtuber.ts
-│       ├── adapter-jikime-mem.ts
-│       └── adapter-no-memory.ts
+│       ├── adapter-starnion.ts   # Starnion (구 jikime-mem) — SQLite + ChromaDB
+│       └── adapter-no-memory.ts  # 베이스라인 (project-airi, memory 없음)
 ```
 
 ## 4-Store Architecture
@@ -94,88 +95,97 @@ pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge
 | glm-api | Z.AI API direct (batch 10) | fast |
 | claude-cli | claude CLI via 9router (one-by-one) | slow |
 
+## Response LLM
+
+Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with `--llm` flag.
+
 ## Scoring
 
 - Core tests: weighted pass rate
 - Bonus tests: extra credit
 - Grade: A (90%+), B (75%+), C (60%+), F (<60%), F (abstention fail)
 
-## Known Issues (from benchmark results)
-
-- **temporal 0%**: Naia overwrites facts on contradiction update, losing past state history. → naia-os#221
-- **System prompt language mixing**: EN benchmark system prompt contained Korean phrases, causing Korean responses to English queries. Fixed (commit 0b40bec).
-- **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
-
-## TODO: Benchmark R3 Re-run (before next re-run)
-
-Before re-running the benchmark, these changes have been applied:
-
-1. ~~시스템 프롬프트 한국어 제거~~ — DONE (commit 0b40bec)
-2. ~~parseBatchVerdict `---` 처리~~ — DONE (commit 0b40bec)
-3. ~~채점 기준 8개 원칙 judge 프롬프트 추가~~ — DONE (commit 0b40bec)
-4. ~~**Top-K 증가**~~: adapter-naia.ts에서 topK 3→10 및 MemorySystem.recall 일관성 적용 완료.
-5. ~~**Robust Memory Logic**~~:
-   - Semantic redundancy check (Jaccard sim 0.85) prevents duplicate facts.
-   - Deterministic SHA-256 fact IDs ensure idempotent consolidation.
-   - Full contradiction resolution (updates all contradictory facts).
-   - Reactivation strengthening (lastAccessed/strength refresh) and consistent 0.7 floor.
-6. ~~**Consolidation Gap**~~: Benchmark runner now triggers manual consolidation (`consolidateNow(force=true)`) to exercise semantic logic.
-7. **벤치마크 재실행**: 위 수정 후 run-comparison.ts 처음부터 재실행 필요 (기존 JSON 재사용 불가)
-
-### R3 Expected Improvements
-- noise_resilience: 35% → ~90% (파서 수정)
-- semantic_search: 28% → ? (Top-K 증가 효과 확인)
-- direct_recall: 8% → ? (한국어 응답 감소로 키워드 매칭 개선 기대)
-
-### R2 Results (2026-04-08, for reference)
-
-| Category | keyword | 2.5-pro(기존) | 2.5-pro(기준적용) | GLM-5.1(기존) | GLM-5.1(최종) |
-|---|---|---|---|---|---|
-| direct_recall | 4% | 4% | 8% | 8% | 4% |
-| semantic_search | 24% | 28% | 28% | 20% | 28% |
-| proactive_recall | 10% | 10% | 10% | 25% | 25% |
-| abstention | 100% | 100% | 100% | 100% | 100% |
-| irrelevant_isolation | 100% | 100% | 100% | 80% | 93% |
-| multi_fact_synthesis | 20% | 20% | 20% | 15% | 20% |
-| entity_disambiguation | 5% | 10% | 10% | 5% | 10% |
-| contradiction_direct | 90% | 70% | 90% | 90% | 95% |
-| contradiction_indirect | 27% | 60% | 87% | 87% | 87% |
-| noise_resilience | 55% | 90% | 35% | 75% | 75% |
-| unchanged_persistence | 7% | 20% | 7% | 20% | 13% |
-| temporal | 0% | 0% | 0% | 0% | 0% |
-| **TOTAL** | **35%** | **40%** | **39%** | **42%** | **44%** |
-
-### Related Issues
-- nextain/alpha-memory#2 — parseBatchVerdict --- 버그
-- nextain/alpha-memory#3 — EN 시스템 프롬프트 한국어 혼재
-- nextain/naia-os#221 — temporal 0%: 과거 상태 보존 안 됨
-
-### 채점 기준 8원칙 (gemini-3.1-pro + GLM-5.1 합의)
-1. 의미 기반 평가: exact match가 아닌 semantic matching 우선
-2. 다국어 강건성: 한국어/영어 동의어 인정
-3. 다중 키워드 부분 허용: min_expected 이상 충족 시 PASS
-4. proactive_recall 엄격: 능동 제안 없으면 FAIL
-5. irrelevant_isolation: 응답 잘림은 감점 아님, 개인정보 누출만 평가
-6. contradiction: 과거값 맥락 언급 허용, 현재값 정확하면 PASS
-7. multi_fact_synthesis: 단일 사실만으로는 FAIL, 종합성 필요
-8. 판정 이유 필수: 이유 없는 FAIL은 기각
-
 ## Model Settings
 
 ### LLM (Response Generation)
-- **Primary**: Gemini 2.5 Flash via CLI (`gemini -m gemini-2.5-flash`)
-- **Reason**: Free, fast, and robust for large batches.
+- **Primary**: `gemini-2.5-flash-lite` via gateway (OpenAI-compatible)
+- **Env**: `GATEWAY_URL` + `GATEWAY_MASTER_KEY`
 
 ### Judge (Evaluation)
-- **Primary**: GLM-5.1 via Coding API
-- **Endpoint**: `https://api.z.ai/api/coding/paas/v4/chat/completions` (OpenAI-compatible)
-- **API Key**: `GLM_API_KEY` (from `my-envs`)
+- **Primary**: GLM-5.1 via Z.AI Coding API
+- **Endpoint**: `https://api.z.ai/api/coding/paas/v4/chat/completions`
+- **API Key**: `GLM_API_KEY`
 - **Model Name**: `glm-5.1`
-- **Mandate**: Use this specific coding endpoint for GLM-5.1 judging to ensure identity and reasoning accuracy.
+
+## Known Issues (from benchmark results)
+
+- **temporal 0%**: Naia overwrites facts on contradiction update, losing past state history. → naia-os#221
+- **abstention structural coupling**: Memory-rich systems hallucinate when memory is insufficient — confidence not separated from retrieval.
+- **System prompt language mixing**: EN benchmark system prompt contained Korean phrases. Fixed (commit 0b40bec).
+- **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
+- **R6 cacheId bug**: EN/KO data shared same `stable` DB → KO consolidation processed 2000 facts. Fixed (commit c77990f) — always uses `cache-${lang}`.
+- **R6 per-query consolidation**: 3× `consolidateNow(force=true)` calls per query = O(n²) over 1000 facts. Removed.
 
 ## Reports
-...
+
 Benchmark results are saved in `reports/` as JSON files.
+
+### Report Structure
+
+```
+reports/
+├── REPORT_TEMPLATE.md       ← 보고서 작성 절차/템플릿 (3-AI 협업 방법 포함)
+├── EXECUTION_HISTORY.md     ← 벤치마크 실행 이력
+├── r5-en-benchmark/
+│   ├── report-ko.md         ← R5 EN 벤치마크 한국어 보고서
+│   └── report-en.md         ← R5 EN 벤치마크 영문 보고서
+├── r6-ko-benchmark/
+│   └── report-ko.md         ← R6 KO 벤치마크 한국어 보고서
+└── runs/                    ← 원시 JSON 결과 파일
+```
+
+### R5 EN Benchmark Results (2026-04-12, GLM-5.1 Judge)
+
+| Rank | Adapter | Score | Grade |
+|------|---------|-------|-------|
+| 1 | letta | 87.5% | F(abs) |
+| 2 | open-llm-vtuber | 85.2% | F(abs) |
+| 3 | naia | 84.0% | F(abs) |
+| 4 | mem0 | 83.1% | F(abs) |
+| 5 | sillytavern | 79.8% | F(abs) |
+| 6 | sap | 74.1% | F(abs) |
+| 7 | graphiti | 55.8% | F |
+| 8 | openclaw | 43.3% | F |
+| 9 | airi(baseline) | 33.9% | F |
+
+**Key Findings:**
+- All memory-capable systems fail abstention (40-65%) — memory-confidence structural coupling issue
+- naia unchanged_persistence 47%: known bug naia-os#221 (cascade delete on contradiction update)
+- graphiti: contradiction 100% vs semantic_search 4% — Neo4j KG cannot substitute vector search
+- **NOT measured**: retrieval latency (ms) and per-query token cost — planned for R7
+
+### R6 KO Benchmark Results (2026-04-13, keyword Judge)
+
+| Rank | Adapter | Score | EN R5 | EN→KO |
+|------|---------|-------|-------|-------|
+| 1 | letta | 67.5% | 87.5% | -20pp |
+| 2 | mem0 | 24.0% | 83.1% | -59pp |
+| 3 | sillytavern | 17.6% | 79.8% | -62pp |
+| 4 | airi(baseline) | 16.0% | 33.9% | -18pp |
+| 5 | openclaw | 14.8% | 43.3% | -29pp |
+| 6 | open-llm-vtuber | 14.4% | 85.2% | -71pp |
+| 7 | sap | 12.9% | 74.1% | -61pp |
+| — | graphiti | DNF | 55.8% | — |
+| — | naia | *TBD* | 84.0% | TBD |
+
+**Key Findings:**
+- Korean language barrier: most systems drop 50-70pp vs EN — EN-optimized LLM pipeline is the bottleneck
+- letta alone retains meaningful KO performance — internal multilingual LLM processing
+- airi(no-memory) outperforms openclaw/open-llm-vtuber/sap — memory systems don't beat baseline in KO
+- graphiti DNF at query 156/240 due to Neo4j 500 errors
+- naia: cacheId bug fixed + per-query consolidation O(n²) removed; KO re-encoding in progress
+
+**Report:** See `reports/r6-ko-benchmark/report-ko.md`
 
 ## Conventions
 

@@ -26,7 +26,7 @@ export class LettaAdapter implements BenchmarkAdapter {
 		// Create a benchmark agent with Gemini embedding via OpenAI-compatible endpoint
 		const agent = await this.fetchJson("POST", "/v1/agents/", {
 			name: `bench-${Date.now()}`,
-			model: "gemini/gemini-2.5-flash",
+			model: "openai-proxy/models/gemini-2.5-flash",
 			embedding_config: {
 				embedding_endpoint_type: "openai",
 				embedding_endpoint:
@@ -46,7 +46,7 @@ export class LettaAdapter implements BenchmarkAdapter {
 			throw new Error(`Failed to create Letta agent: ${JSON.stringify(agent)}`);
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		if (!this.agentId) throw new Error("Not initialized");
 		const result = await this.fetchJson(
 			"POST",

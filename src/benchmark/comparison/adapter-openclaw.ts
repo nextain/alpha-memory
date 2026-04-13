@@ -35,7 +35,7 @@ export class OpenClawAdapter implements BenchmarkAdapter {
 
 	private indexed = false;
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		this.facts.push(content);
 		const md = `# Benchmark Memory\n\n${this.facts.map((f) => `- ${f}`).join("\n")}\n`;
 		writeFileSync(`${WORKSPACE}/MEMORY.md`, md, "utf-8");

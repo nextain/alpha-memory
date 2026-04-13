@@ -15,7 +15,7 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const GATEWAY_BASE = process.env.GATEWAY_URL ?? "";
 const GATEWAY_KEY = process.env.GATEWAY_MASTER_KEY ?? "";
 const GATEWAY_USER = "benchmark";
-const THROTTLE_MS = 2000;
+// THROTTLE_MS removed — Vertex AI gateway has no rate limit
 const ADD_TIMEOUT_MS = 60000; // 60s — mem0 LLM dedup call timeout
 
 export class Mem0Adapter implements BenchmarkAdapter {
@@ -32,10 +32,9 @@ export class Mem0Adapter implements BenchmarkAdapter {
 
 	async init(cacheId?: string): Promise<void> {
 		const { Memory } = await import("mem0ai/oss");
-		// cacheId: fixed path for --skip-encode reuse. Without it, use random UUID (fresh DB).
-		const dbPath = cacheId
-			? `/tmp/mem0-bench-mem0-${cacheId}`
-			: `/tmp/mem0-bench-raw-${randomUUID()}`;
+		const id = cacheId ?? "stable";
+		const dbPath = `./memory-mem0-raw-${id}`;
+		console.log(`    [Mem0] Initializing memory system with persistent store: ${dbPath}`);
 
 		const useGateway = !!(GATEWAY_BASE && GATEWAY_KEY);
 
@@ -87,9 +86,8 @@ export class Mem0Adapter implements BenchmarkAdapter {
 		});
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		if (!this.mem0) throw new Error("Not initialized");
-		await new Promise((r) => setTimeout(r, THROTTLE_MS));
 		try {
 			const timeout = new Promise<never>((_, reject) =>
 				setTimeout(() => reject(new Error(`mem0 addFact timeout after ${ADD_TIMEOUT_MS}ms`)), ADD_TIMEOUT_MS),
@@ -109,7 +107,6 @@ export class Mem0Adapter implements BenchmarkAdapter {
 
 	async search(query: string, topK: number): Promise<string[]> {
 		if (!this.mem0) throw new Error("Not initialized");
-		await new Promise((r) => setTimeout(r, THROTTLE_MS));
 		const raw = await this.mem0.search(query, { userId: "bench", limit: topK });
 		return [
 			...new Set(

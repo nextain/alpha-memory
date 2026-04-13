@@ -153,7 +153,7 @@ for line in sys.stdin:
 		});
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, _date?: string): Promise<boolean> {
 		const result = await this.sendCommand({ op: "add", content });
 		return result?.ok === true;
 	}

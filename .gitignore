@@ -6,6 +6,21 @@ dist/
 /tmp/
 .env
 .env.local
-# generated benchmark output (not committed — too large)
-# 생성된 벤치마크 raw output은 커밋하지 않음
+
+# generated benchmark output (not committed u2014 too large)
 *.raw.txt
+
+# benchmark runtime artifacts
+reports/checkpoint-*.json
+reports/encode-checkpoint-*.json
+reports/log-*.txt
+reports/memory-comparison-*.json
+reports/naia-*.json
+reports/st-*.json
+reports/disputes.json
+reports/dispute*.txt
+reports/runs/
+
+# misc
+urllib.request
+task_summary.md

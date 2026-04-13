@@ -240,7 +240,7 @@ async function callGlmApi(prompt: string): Promise<string> {
 	const apiKey = process.env.GLM_API_KEY ?? "";
 	if (!apiKey) return "";
 
-	const url = "https://api.z.ai/api/paas/v4/chat/completions";
+	const url = "https://api.z.ai/api/coding/paas/v4/chat/completions";
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
 			const res = await fetch(url, {
@@ -252,7 +252,7 @@ async function callGlmApi(prompt: string): Promise<string> {
 				body: JSON.stringify({
 					model: "glm-5.1",
 					messages: [{ role: "user", content: prompt }],
-					max_tokens: 2000,
+					max_tokens: 8000,
 					temperature: 0.3,
 				}),
 			});
@@ -262,7 +262,13 @@ async function callGlmApi(prompt: string): Promise<string> {
 				continue;
 			}
 			const data = (await res.json()) as any;
-			return data.choices?.[0]?.message?.content ?? "";
+			const content = data.choices?.[0]?.message?.content ?? "";
+			if (!content.trim()) {
+				console.warn(`    ⚠ glm-api empty content, attempt ${attempt + 1}`);
+				await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+				continue;
+			}
+			return content;
 		} catch {
 			await new Promise((r) => setTimeout(r, 2000));
 		}

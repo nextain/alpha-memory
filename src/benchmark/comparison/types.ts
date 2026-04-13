@@ -19,7 +19,7 @@ export interface BenchmarkAdapter {
 	init(cacheId?: string): Promise<void>;
 
 	/** Store a fact. Returns true if stored, false if filtered/gated. */
-	addFact(content: string): Promise<boolean>;
+	addFact(content: string, date?: string): Promise<boolean>;
 
 	/** Search for relevant memories. Returns plain text strings. */
 	search(query: string, topK: number): Promise<string[]>;

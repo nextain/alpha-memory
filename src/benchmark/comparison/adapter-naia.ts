@@ -18,7 +18,7 @@ const GATEWAY_KEY = process.env.GATEWAY_MASTER_KEY ?? "";
 const GATEWAY_USER = "benchmark";
 const UPSTAGE_BASE = "https://api.upstage.ai/v1/";
 const OLLAMA_BASE = "http://localhost:11434/v1/";
-const THROTTLE_MS = 2000;
+// THROTTLE_MS removed — Vertex AI gateway has no rate limit
 
 export type EmbeddingBackend = "gemini" | "solar" | "qwen3" | "bge-m3";
 
@@ -35,8 +35,7 @@ function getEmbedderConfig(
 	switch (backend) {
 		case "gemini":
 			// Use gateway (Vertex AI) if available, else direct AI Studio
-			// Note: OpenAI SDK truncates text-embedding-004 to 192d by default,
-			// so we set dimension to match (or pass dimensions param explicitly)
+			// Gateway (Vertex AI) returns 768d for text-embedding-004
 			return GATEWAY_KEY
 				? {
 						provider: "openai",
@@ -46,7 +45,7 @@ function getEmbedderConfig(
 							model: "vertexai:text-embedding-004",
 							user: GATEWAY_USER,
 						},
-						dimension: 192,
+						dimension: 768,
 					}
 				: {
 						provider: "openai",
@@ -102,9 +101,9 @@ export class NaiaAdapter implements BenchmarkAdapter {
 	}
 
 	async init(cacheId?: string): Promise<void> {
-		const dbPath = cacheId
-			? `/tmp/mem0-bench-${this.name}-${cacheId}`
-			: `/tmp/mem0-bench-${this.name}-${randomUUID()}`;
+		const id = cacheId ?? "stable";
+		const dbPath = `./memory-naia-${this.name}-${id}`;
+		console.log(`    [Naia] Initializing memory system with persistent store: ${dbPath}`);
 		const embedder = getEmbedderConfig(this.embedBackend, this.apiKey);
 		const mem0Config = {
 			embedder: {
@@ -152,11 +151,11 @@ export class NaiaAdapter implements BenchmarkAdapter {
 		this.system = new MemorySystem({ adapter });
 	}
 
-	async addFact(content: string): Promise<boolean> {
+	async addFact(content: string, date?: string): Promise<boolean> {
 		if (!this.system) throw new Error("Not initialized");
-		await new Promise((r) => setTimeout(r, THROTTLE_MS));
+		const timestamp = date ? new Date(date).getTime() : undefined;
 		const episode = await this.system.encode(
-			{ content, role: "user" },
+			{ content, role: "user", timestamp },
 			{ project: "benchmark" },
 		);
 		return episode !== null;
@@ -164,7 +163,6 @@ export class NaiaAdapter implements BenchmarkAdapter {
 
 	async search(query: string, topK: number): Promise<string[]> {
 		if (!this.system) throw new Error("Not initialized");
-		await new Promise((r) => setTimeout(r, THROTTLE_MS));
 		const result = await this.system.recall(query, {
 			project: "benchmark",
 			topK,
