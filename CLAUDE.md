@@ -172,13 +172,13 @@ reports/
 | 6 | openclaw | 14.8% | 43.3% | -29pp |
 | 7 | open-llm-vtuber | 14.4% | 85.2% | -71pp |
 | 8 | sap | 12.9% | 74.1% | -61pp |
-| — | graphiti | DNF | 55.8% | — |
+| 9 | graphiti | **4%** | 55.8% | -52pp |
 
 **Key Findings:**
 - Korean language barrier: most systems drop 50-70pp vs EN — EN-optimized LLM pipeline is the bottleneck
 - letta alone retains meaningful KO performance — internal multilingual LLM processing
 - airi(no-memory) outperforms openclaw/open-llm-vtuber/sap — memory systems don't beat baseline in KO
-- graphiti DNF at query 156/240 due to Neo4j 500 errors
+- graphiti KO 4% (15/240): bug-fixed complete run — only irrelevant_isolation 100%, all other 11 categories 0%. Search returns nothing in KO. EN→KO -52pp
 - naia: cacheId bug fixed (c77990f) + per-query consolidation O(n²) removed; KO result: 24.7% (keyword) / 24.0% (GLM-5.1)
 
 **Bug Fixes (R6):**
