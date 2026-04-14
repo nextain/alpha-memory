@@ -99,8 +99,12 @@ export interface MemorySystemOptions {
 
 // Placeholder for heuristicFactExtractor and related functions
 // In a real scenario, these would be properly implemented or replaced by LLM calls.
+let _heuristicWarnOnce = false;
 async function heuristicFactExtractor(episodes: Episode[]): Promise<ExtractedFact[]> {
-    console.warn("Using placeholder heuristicFactExtractor. Implement a proper fact extractor for production.");
+    if (!_heuristicWarnOnce) {
+        console.warn("[MemorySystem] Using heuristic fact extractor (no LLM). Inject factExtractor option for production.");
+        _heuristicWarnOnce = true;
+    }
     return episodes.map(ep => ({
         content: ep.content,
         entities: [],
