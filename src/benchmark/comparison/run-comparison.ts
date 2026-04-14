@@ -23,6 +23,7 @@ import { StarnionAdapter } from "./adapter-starnion.js";
 import { LettaAdapter } from "./adapter-letta.js";
 import { Mem0Adapter } from "./adapter-mem0.js";
 import { type EmbeddingBackend, NaiaAdapter } from "./adapter-naia.js";
+import { NaiaLocalAdapter } from "./adapter-naia-local.js";
 import { NoMemoryAdapter } from "./adapter-no-memory.js";
 import { OpenClawAdapter } from "./adapter-openclaw.js";
 import { OpenLLMVTuberAdapter } from "./adapter-open-llm-vtuber.js";
@@ -74,6 +75,8 @@ function createAdapter(name: string, apiKey: string, embedder?: string): Benchma
 	switch (name) {
 		case "naia":
 			return new NaiaAdapter(apiKey, (embedder ?? "gemini") as EmbeddingBackend);
+		case "naia-local":
+			return new NaiaLocalAdapter(apiKey);
 		case "mem0":
 			return new Mem0Adapter(apiKey);
 		case "letta":

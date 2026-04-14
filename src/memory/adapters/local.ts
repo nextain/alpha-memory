@@ -32,6 +32,7 @@ import {
 	KnowledgeGraph,
 	emptyKGState,
 } from "../knowledge-graph.js";
+import type { EmbeddingProvider } from "../embeddings.js";
 import type {
 	BackupCapable,
 	ConsolidationResult,
@@ -56,6 +57,9 @@ interface MemoryStore {
 	associations: Record<string, number>;
 	/** Knowledge graph state (Phase 2) */
 	knowledgeGraph?: KGState;
+	/** Vector embeddings: id → float[] (optional, populated when EmbeddingProvider is set) */
+	factEmbeddings?: Record<string, number[]>;
+	episodeEmbeddings?: Record<string, number[]>;
 }
 
 function emptyStore(): MemoryStore {
@@ -66,7 +70,38 @@ function emptyStore(): MemoryStore {
 		skills: [],
 		reflections: [],
 		associations: {},
+		factEmbeddings: {},
+		episodeEmbeddings: {},
 	};
+}
+
+/** Cosine similarity between two equal-length vectors.
+ * Returns 0 for degenerate inputs (zero vectors, NaN, mismatched dims).
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+	if (a.length !== b.length || a.length === 0) return 0;
+	let dot = 0;
+	let normA = 0;
+	let normB = 0;
+	for (let i = 0; i < a.length; i++) {
+		dot += a[i] * b[i];
+		normA += a[i] * a[i];
+		normB += b[i] * b[i];
+	}
+	const denom = Math.sqrt(normA) * Math.sqrt(normB);
+	if (!isFinite(denom) || denom === 0) return 0;
+	const sim = dot / denom;
+	return isNaN(sim) ? 0 : sim;
+}
+
+/** LocalAdapter constructor options */
+export interface LocalAdapterOptions {
+	/** Path to the JSON store file (default: ~/.naia/memory/alpha-memory.json) */
+	storePath?: string;
+	/** Optional embedding provider for vector search.
+	 *  When set, facts and episodes are embedded on write and retrieved by cosine similarity.
+	 *  When absent, falls back to keyword search. */
+	embeddingProvider?: EmbeddingProvider;
 }
 
 /** Normalize association key (alphabetical order for consistency) */
@@ -112,8 +147,15 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	private readonly storePath: string;
 	private dirty = false;
 	private kg: KnowledgeGraph;
+	/** Optional vector embedding provider (null = keyword-only mode) */
+	private readonly embedder: EmbeddingProvider | null;
 
-	constructor(storePath?: string) {
+	constructor(options?: string | LocalAdapterOptions) {
+		const storePath =
+			typeof options === "string" ? options :
+			options?.storePath;
+		this.embedder =
+			typeof options === "object" ? (options.embeddingProvider ?? null) : null;
 		this.storePath =
 			storePath ?? join(homedir(), ".naia", "memory", "alpha-memory.json");
 		this.store = this.load();
@@ -121,6 +163,9 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		if (!this.store.knowledgeGraph) {
 			this.store.knowledgeGraph = emptyKGState();
 		}
+		// Initialize embedding maps if missing (backward-compat with old store files)
+		if (!this.store.factEmbeddings) this.store.factEmbeddings = {};
+		if (!this.store.episodeEmbeddings) this.store.episodeEmbeddings = {};
 		this.kg = new KnowledgeGraph(this.store.knowledgeGraph);
 	}
 
@@ -158,6 +203,15 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	episode = {
 		store: async (event: Episode): Promise<void> => {
 			this.store.episodes.push(event);
+			// Embed content if provider is available (async, non-blocking for disk write)
+			if (this.embedder) {
+				try {
+					const vec = await this.embedder.embed(event.content);
+					this.store.episodeEmbeddings![event.id] = vec;
+				} catch {
+					// Embedding failure is non-fatal — keyword fallback still works
+				}
+			}
 			this.markDirty();
 			this.save();
 		},
@@ -169,8 +223,17 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const now = Date.now();
 			const topK = context.topK ?? 5;
 			const minStrength = context.minStrength ?? 0.05;
-
 			const deepRecall = context.deepRecall ?? false;
+
+			// Vector search path: embed query and use cosine similarity
+			let queryVec: number[] | null = null;
+			if (this.embedder) {
+				try {
+					queryVec = await this.embedder.embed(query);
+				} catch {
+					// Fall back to keyword
+				}
+			}
 
 			const scored = this.store.episodes
 				.map((ep) => {
@@ -186,8 +249,11 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					// deepRecall: skip strength filter to retrieve old memories
 					if (!deepRecall && strength < minStrength) return null;
 
-					// Keyword relevance
-					const textScore = keywordScore(query, `${ep.content} ${ep.summary}`);
+					// Relevance: vector similarity when available, else keyword
+					const epVec = queryVec ? this.store.episodeEmbeddings?.[ep.id] : null;
+					const textScore = epVec && queryVec
+						? cosineSimilarity(queryVec, epVec)
+						: keywordScore(query, `${ep.content} ${ep.summary}`);
 
 					// Context bonus (encoding specificity)
 					let contextBonus = 0;
@@ -263,6 +329,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		upsert: async (fact: Fact): Promise<void> => {
 			const now = Date.now();
 			const existing = this.store.facts.find((f) => f.id === fact.id);
+			const contentChanged = !existing || existing.content !== fact.content;
 			if (existing) {
 				// Reconsolidation: update content, merge entities/topics, refresh timestamp
 				existing.content = fact.content;
@@ -291,6 +358,16 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				}
 			}
 
+			// Embed fact content for vector search (only if content changed or new fact)
+			if (this.embedder && contentChanged) {
+				try {
+					const vec = await this.embedder.embed(fact.content);
+					this.store.factEmbeddings![fact.id] = vec;
+				} catch {
+					// Non-fatal — keyword search still works
+				}
+			}
+
 			this.markDirty();
 			this.save();
 		},
@@ -301,6 +378,59 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			deepRecall = false,
 		): Promise<Fact[]> => {
 			const now = Date.now();
+
+			// Vector search path: embed query and use cosine similarity
+			let queryVec: number[] | null = null;
+			if (this.embedder) {
+				try {
+					queryVec = await this.embedder.embed(query);
+				} catch {
+					// Fall back to keyword
+				}
+			}
+
+			if (queryVec) {
+				// Per-fact hybrid: use vector if embedding stored, else keyword per fact
+				// This matches episode.recall() behavior and avoids zero-result edge case.
+				const scored = this.store.facts
+					.map((fact) => {
+						const strength = calculateStrength(
+							fact.importance,
+							fact.createdAt,
+							fact.recallCount,
+							fact.lastAccessed,
+							now,
+						);
+						const factVec = this.store.factEmbeddings?.[fact.id];
+						const textScore = factVec
+							? cosineSimilarity(queryVec!, factVec)
+							: keywordScore(
+									query,
+									[fact.content, ...fact.entities, ...fact.topics].join(" "),
+								);
+						const finalScore = deepRecall ? textScore : textScore * strength;
+						return { fact, score: finalScore, strength };
+					})
+					.filter((x) => x.score > 0)
+					.sort((a, b) => b.score - a.score)
+					.slice(0, topK);
+
+				for (const { fact } of scored) {
+					fact.recallCount++;
+					fact.lastAccessed = now;
+					fact.strength = calculateStrength(
+						fact.importance,
+						fact.createdAt,
+						fact.recallCount,
+						fact.lastAccessed,
+						now,
+					);
+				}
+				if (scored.length > 0) { this.markDirty(); this.save(); }
+				return scored.map((s) => s.fact);
+			}
+
+			// Keyword search fallback (no embedder or embed failed)
 			const queryTokens = tokenize(query);
 
 			// Spreading activation: find related entities via knowledge graph
