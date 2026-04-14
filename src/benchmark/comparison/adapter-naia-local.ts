@@ -29,8 +29,10 @@ const GATEWAY_USER = "benchmark";
 function buildEmbedder(apiKey: string): OpenAICompatEmbeddingProvider {
 	if (GATEWAY_KEY) {
 		// Use any-llm gateway → Vertex AI
+		// Note: OpenAICompatEmbeddingProvider appends /v1/embeddings to baseUrl,
+		// so pass GATEWAY_BASE without /v1 suffix.
 		return new OpenAICompatEmbeddingProvider(
-			`${GATEWAY_BASE}/v1/`,
+			GATEWAY_BASE,
 			GATEWAY_KEY,
 			"vertexai:gemini-embedding-001",
 			3072,

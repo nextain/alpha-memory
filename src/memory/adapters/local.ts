@@ -149,6 +149,12 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	private kg: KnowledgeGraph;
 	/** Optional vector embedding provider (null = keyword-only mode) */
 	private readonly embedder: EmbeddingProvider | null;
+	/**
+	 * In-memory embedding cache — avoids duplicate API calls for the same text.
+	 * Key: text content. Value: embedding vector.
+	 * Cache is intentionally unbounded (benchmark: ~1000 unique texts).
+	 */
+	private readonly embedCache = new Map<string, number[]>();
 
 	constructor(options?: string | LocalAdapterOptions) {
 		const storePath =
@@ -194,6 +200,20 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		this.dirty = false;
 	}
 
+	/** Embed text with in-memory cache to avoid redundant API calls. */
+	private async embedWithCache(text: string): Promise<number[] | null> {
+		if (!this.embedder) return null;
+		const cached = this.embedCache.get(text);
+		if (cached) return cached;
+		try {
+			const vec = await this.embedder.embed(text);
+			this.embedCache.set(text, vec);
+			return vec;
+		} catch {
+			return null; // Non-fatal — keyword fallback still works
+		}
+	}
+
 	private markDirty(): void {
 		this.dirty = true;
 	}
@@ -203,15 +223,9 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	episode = {
 		store: async (event: Episode): Promise<void> => {
 			this.store.episodes.push(event);
-			// Embed content if provider is available (async, non-blocking for disk write)
-			if (this.embedder) {
-				try {
-					const vec = await this.embedder.embed(event.content);
-					this.store.episodeEmbeddings![event.id] = vec;
-				} catch {
-					// Embedding failure is non-fatal — keyword fallback still works
-				}
-			}
+			// Embed content if provider is available (cached to avoid redundant API calls)
+			const epVec = await this.embedWithCache(event.content);
+			if (epVec) this.store.episodeEmbeddings![event.id] = epVec;
 			this.markDirty();
 			this.save();
 		},
@@ -226,14 +240,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const deepRecall = context.deepRecall ?? false;
 
 			// Vector search path: embed query and use cosine similarity
-			let queryVec: number[] | null = null;
-			if (this.embedder) {
-				try {
-					queryVec = await this.embedder.embed(query);
-				} catch {
-					// Fall back to keyword
-				}
-			}
+			// Vector search path: embed query and use cosine similarity
+			const queryVec = await this.embedWithCache(query);
+
+
+
+
+
+
 
 			const scored = this.store.episodes
 				.map((ep) => {
@@ -359,14 +373,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			}
 
 			// Embed fact content for vector search (only if content changed or new fact)
-			if (this.embedder && contentChanged) {
-				try {
-					const vec = await this.embedder.embed(fact.content);
-					this.store.factEmbeddings![fact.id] = vec;
-				} catch {
-					// Non-fatal — keyword search still works
-				}
+			// Embed fact content for vector search (only if content changed or new fact)
+			if (contentChanged) {
+				const fVec = await this.embedWithCache(fact.content);
+				if (fVec) this.store.factEmbeddings![fact.id] = fVec;
 			}
+
+
+
 
 			this.markDirty();
 			this.save();
@@ -379,15 +393,15 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		): Promise<Fact[]> => {
 			const now = Date.now();
 
+
 			// Vector search path: embed query and use cosine similarity
-			let queryVec: number[] | null = null;
-			if (this.embedder) {
-				try {
-					queryVec = await this.embedder.embed(query);
-				} catch {
-					// Fall back to keyword
-				}
-			}
+			const queryVec = await this.embedWithCache(query);
+
+
+
+
+
+
 
 			if (queryVec) {
 				// Per-fact hybrid: use vector if embedding stored, else keyword per fact
