@@ -2,7 +2,28 @@
 
 **Cognitive memory architecture for AI agents** — importance-gated encoding, vector retrieval, knowledge graph, Ebbinghaus decay, and a head-to-head benchmark suite against popular memory systems.
 
-Part of the [Naia OS](https://github.com/nextain/naia-os) project. | [한국어](README.ko.md)
+[English](README.md) | [한국어](README.ko.md)
+
+## Place in the Naia ecosystem
+
+Alpha Memory is one of four repos in the Naia open-source AI platform:
+
+| Repo | Role |
+|------|------|
+| [naia-os](https://github.com/nextain/naia-os) | Desktop shell + OS image (host) |
+| [naia-agent](https://github.com/nextain/naia-agent) | Runtime engine (loop · tools · compaction) |
+| [naia-adk](https://github.com/nextain/naia-adk) | Workspace format + skills library |
+| **alpha-memory** (this) | Memory implementation |
+
+### Interfaces, not dependencies
+
+Alpha Memory is **one implementation of the `MemoryProvider` contract** specified in `@naia-agent/types`:
+
+- **Transparent** — the contract is public. Any memory system that implements it can replace Alpha Memory without touching runtime code.
+- **Non-binding** — alpha-memory does not depend on naia-agent's runtime. naia-agent treats this package as a black box behind the interface.
+- **Abstracted** — swap Alpha Memory for another implementation (mem0, Letta, custom) and nothing else in the Naia ecosystem changes.
+
+Part of the broader Naia principle: repos couple through **published interfaces**, not runtime dependencies. See [naia-agent README](https://github.com/nextain/naia-agent) for the full picture.
 
 ---
 

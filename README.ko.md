@@ -2,7 +2,28 @@
 
 **AI 에이전트용 인지 메모리 아키텍처** — 중요도 게이팅 인코딩, 벡터 검색, 지식 그래프, 에빙하우스 망각 곡선, 그리고 주요 메모리 시스템과의 헤드투헤드 벤치마크를 포함합니다.
 
-[Naia OS](https://github.com/nextain/naia-os) 프로젝트의 일부입니다. | [English](README.md)
+[English](README.md) | [한국어](README.ko.md)
+
+## Naia 생태계에서의 위치
+
+Alpha Memory는 Naia 오픈소스 AI 플랫폼 4개 레포 중 하나입니다:
+
+| 레포 | 역할 |
+|------|------|
+| [naia-os](https://github.com/nextain/naia-os) | 데스크톱 셸 + OS 이미지 (호스트) |
+| [naia-agent](https://github.com/nextain/naia-agent) | 런타임 엔진 (루프·툴·compaction) |
+| [naia-adk](https://github.com/nextain/naia-adk) | 워크스페이스 포맷 + 스킬 라이브러리 |
+| **alpha-memory** (이 레포) | 메모리 구현체 |
+
+### 의존이 아닌 인터페이스
+
+Alpha Memory는 `@naia-agent/types`에 명세된 **`MemoryProvider` 계약의 한 구현체**입니다:
+
+- **투명** — 계약은 공개됩니다. 같은 계약을 구현하는 어떤 메모리 시스템이든 런타임 코드 수정 없이 Alpha Memory를 대체할 수 있습니다.
+- **묶이지 않음** — alpha-memory는 naia-agent의 런타임에 의존하지 않습니다. naia-agent는 이 패키지를 인터페이스 뒤의 블랙박스로 취급합니다.
+- **추상화됨** — Alpha Memory를 다른 구현체(mem0, Letta, 자체 제작)로 교체해도 Naia 생태계의 나머지는 그대로 돕니다.
+
+Naia 생태계의 더 큰 원칙의 일부: 레포들은 **런타임 의존이 아닌 공개 인터페이스**로 연결됩니다. 전체 그림은 [naia-agent README](https://github.com/nextain/naia-agent) 참고.
 
 ---
 
