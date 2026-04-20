@@ -338,9 +338,10 @@ async function callGeminiCLI(
 		const stderr = error.stderr?.toString() ?? "";
 		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
 			console.error(
-				"\n[STOP] Gemini CLI Quota Exceeded. Please switch accounts and resume.",
+				"\n[RATE LIMIT] Gemini CLI rate limited. Waiting 60s and retrying...",
 			);
-			process.exit(1);
+			await new Promise((r) => setTimeout(r, 60000));
+			return callGeminiCLI(messages, model, retry + 1);
 		}
 		console.error(`Gemini CLI Error: ${stderr}`);
 		return { content: "", promptTokens: 0, completionTokens: 0 };
@@ -400,9 +401,10 @@ function callGeminiCli(prompt: string): string {
 		const stderr = e.stderr?.toString() ?? "";
 		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
 			console.error(
-				"\n[STOP] Gemini CLI Judge Quota Exceeded. Please switch accounts and resume.",
+				"\n[RATE LIMIT] Gemini CLI Judge rate limited. Waiting 60s...",
 			);
-			process.exit(1);
+			execSync("sleep 60");
+			return callGeminiCli(prompt);
 		}
 		return "";
 	}
