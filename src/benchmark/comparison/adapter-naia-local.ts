@@ -1,73 +1,84 @@
 /**
  * Naia MemorySystem(LocalAdapter) benchmark adapter — R7 target.
- *
- * Unlike adapter-naia.ts (Mem0Adapter), this uses LocalAdapter directly with
- * vector search via gemini-embedding-001 (3072d, MTEB multilingual #1).
- *
- * Key differences from Mem0Adapter path:
- * - No LLM dedup: facts stored as-is without English-optimized normalization
- * - Vector search: cosine similarity on 3072d embeddings (vs keyword fallback)
- * - Simpler pipeline: encode → episode → consolidate → fact → vector search
- *
- * Expected improvement (R7 hypothesis): KO 24% → 55%+
+ * Supports multiple embedding backends including Google and Microsoft E5.
  */
 import { LocalAdapter } from "../../memory/adapters/local.js";
-import { OpenAICompatEmbeddingProvider } from "../../memory/embeddings.js";
+import {
+	type EmbeddingProvider,
+	OfflineEmbeddingProvider,
+	OpenAICompatEmbeddingProvider,
+} from "../../memory/embeddings.js";
 import { MemorySystem } from "../../memory/index.js";
+import { buildLLMFactExtractor } from "../../memory/llm-fact-extractor.js";
 import type { BenchmarkAdapter } from "./types.js";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const GATEWAY_BASE = process.env.GATEWAY_URL ?? "";
 const GATEWAY_KEY = process.env.GATEWAY_MASTER_KEY ?? "";
-const GATEWAY_USER = "benchmark";
-
-/**
- * gemini-embedding-001 via Gemini API (direct or gateway).
- * Direct: 3072d, MTEB multilingual #1.
- * Gateway (Vertex AI): falls back to text-embedding-004 (768d) if 001 not available.
- */
-function buildEmbedder(apiKey: string): OpenAICompatEmbeddingProvider {
-	if (GATEWAY_KEY) {
-		// Use any-llm gateway → Vertex AI
-		// Note: OpenAICompatEmbeddingProvider appends /v1/embeddings to baseUrl,
-		// so pass GATEWAY_BASE without /v1 suffix.
-		return new OpenAICompatEmbeddingProvider(
-			GATEWAY_BASE,
-			GATEWAY_KEY,
-			"vertexai:gemini-embedding-001",
-			3072,
-		);
-	}
-	// Direct Gemini AI Studio API
-	return new OpenAICompatEmbeddingProvider(
-		GEMINI_BASE,
-		apiKey,
-		"gemini-embedding-001",
-		3072,
-	);
-}
 
 export class NaiaLocalAdapter implements BenchmarkAdapter {
 	readonly name = "naia-local";
-	readonly description =
-		"MemorySystem(LocalAdapter) + gemini-embedding-001 (3072d) — no LLM dedup";
+	private _description = "MemorySystem(LocalAdapter)";
+
+	get description() {
+		return `${this._description} + ${this.embedderName} + LLM atomic fact extraction`;
+	}
 
 	private system: MemorySystem | null = null;
 	private apiKey: string;
+	private embedderName: string;
 
-	constructor(apiKey: string) {
+	constructor(apiKey: string, embedderName = "gemini") {
 		this.apiKey = apiKey;
+		this.embedderName = embedderName;
+	}
+
+	private buildEmbedder(): EmbeddingProvider {
+		if (this.embedderName === "offline-e5") {
+			return new OfflineEmbeddingProvider("multilingual-e5-large");
+		}
+
+		if (this.embedderName === "ollama") {
+			return new OpenAICompatEmbeddingProvider(
+				"http://127.0.0.1:11434",
+				"ollama",
+				"mxbai-embed-large",
+				1024,
+			);
+		}
+
+		// Default: Gemini (Direct or Gateway)
+		if (GATEWAY_KEY) {
+			return new OpenAICompatEmbeddingProvider(
+				GATEWAY_BASE,
+				GATEWAY_KEY,
+				"vertexai:gemini-embedding-001",
+				3072,
+			);
+		}
+		return new OpenAICompatEmbeddingProvider(
+			GEMINI_BASE,
+			this.apiKey,
+			"gemini-embedding-001",
+			3072,
+		);
 	}
 
 	async init(cacheId?: string): Promise<void> {
 		const id = cacheId ?? "stable";
-		const storePath = `./memory-naia-local-${id}.json`;
+		const storePath = `./memory-naia-local-${id}-${this.embedderName}.json`;
+		const embedder = this.buildEmbedder();
+
 		console.log(
-			`    [NaiaLocal] Initializing LocalAdapter: ${storePath} + gemini-embedding-001`,
+			`    [NaiaLocal] Initializing: ${storePath} with ${this.embedderName} (${embedder.dims}d)`,
 		);
-		const embedder = buildEmbedder(this.apiKey);
-		const adapter = new LocalAdapter({ storePath, embeddingProvider: embedder });
-		this.system = new MemorySystem({ adapter });
+
+		const adapter = new LocalAdapter({
+			storePath,
+			embeddingProvider: embedder,
+		});
+		const factExtractor = buildLLMFactExtractor({ apiKey: this.apiKey });
+		this.system = new MemorySystem({ adapter, factExtractor });
 	}
 
 	async addFact(content: string, date?: string): Promise<boolean> {

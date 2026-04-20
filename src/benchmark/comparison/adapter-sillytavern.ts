@@ -43,11 +43,15 @@ export class SillyTavernAdapter implements BenchmarkAdapter {
 	async init(cacheId?: string): Promise<void> {
 		// Dynamic imports — optional benchmark deps
 		const vectra = await import("vectra");
-		const { pipeline: createPipeline } = await import("@huggingface/transformers");
+		const { pipeline: createPipeline } = await import(
+			"@huggingface/transformers"
+		);
 
 		const id = cacheId ?? "stable";
 		this.indexPath = `./memory-sillytavern-${id}`;
-		console.log(`    [SillyTavern] Initializing memory system with persistent store: ${this.indexPath}`);
+		console.log(
+			`    [SillyTavern] Initializing memory system with persistent store: ${this.indexPath}`,
+		);
 		this.store = new vectra.LocalIndex(this.indexPath);
 
 		if (!(await this.store.isIndexCreated())) {

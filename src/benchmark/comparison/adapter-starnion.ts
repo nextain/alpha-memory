@@ -41,7 +41,9 @@ export class StarnionAdapter implements BenchmarkAdapter {
 			false,
 		);
 		if (!reg?.token)
-			throw new Error(`Failed to register Starnion user: ${JSON.stringify(reg)}`);
+			throw new Error(
+				`Failed to register Starnion user: ${JSON.stringify(reg)}`,
+			);
 
 		this.token = reg.token;
 		this.userId = reg.user_id;
@@ -51,9 +53,7 @@ export class StarnionAdapter implements BenchmarkAdapter {
 			title: `benchmark-${Date.now()}`,
 		});
 		if (!session?.id)
-			throw new Error(
-				`Failed to create session: ${JSON.stringify(session)}`,
-			);
+			throw new Error(`Failed to create session: ${JSON.stringify(session)}`);
 		this.sessionId = session.id;
 	}
 
@@ -89,10 +89,7 @@ export class StarnionAdapter implements BenchmarkAdapter {
 		// Best effort cleanup
 		if (this.sessionId) {
 			try {
-				await this.fetchJson(
-					"DELETE",
-					`/api/v1/sessions/${this.sessionId}`,
-				);
+				await this.fetchJson("DELETE", `/api/v1/sessions/${this.sessionId}`);
 			} catch {}
 		}
 	}

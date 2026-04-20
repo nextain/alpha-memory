@@ -17,19 +17,25 @@ import { execSync } from "node:child_process";
  *
  * Requires: GEMINI_API_KEY env var
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { StarnionAdapter } from "./adapter-starnion.js";
+import { GraphitiAdapter } from "./adapter-graphiti.js";
 import { LettaAdapter } from "./adapter-letta.js";
 import { Mem0Adapter } from "./adapter-mem0.js";
-import { type EmbeddingBackend, NaiaAdapter } from "./adapter-naia.js";
 import { NaiaLocalAdapter } from "./adapter-naia-local.js";
+import { type EmbeddingBackend, NaiaAdapter } from "./adapter-naia.js";
 import { NoMemoryAdapter } from "./adapter-no-memory.js";
-import { OpenClawAdapter } from "./adapter-openclaw.js";
 import { OpenLLMVTuberAdapter } from "./adapter-open-llm-vtuber.js";
+import { OpenClawAdapter } from "./adapter-openclaw.js";
 import { SapAdapter } from "./adapter-sap.js";
 import { SillyTavernAdapter } from "./adapter-sillytavern.js";
-import { GraphitiAdapter } from "./adapter-graphiti.js";
+import { StarnionAdapter } from "./adapter-starnion.js";
 import type {
 	BenchmarkAdapter,
 	ComparisonResult,
@@ -48,10 +54,13 @@ function parseArgs() {
 	let judge: "claude-cli" | "keyword" | "gemini-pro" | "glm-api" = "claude-cli";
 	let runs = 1;
 	let categories: string[] | null = null;
-	let llm: "gemini" | "qwen3" | "gemini-cli" | "gemini-flash-lite" = "gemini-flash-lite";
+	let llm: "gemini" | "qwen3" | "gemini-cli" | "gemini-flash-lite" =
+		"gemini-flash-lite";
 	let skipEncode = false;
 	let lang = "ko";
 	let embedder = "gemini";
+	let topK = 10;
+	let v2 = false;
 
 	for (const arg of args) {
 		if (arg.startsWith("--adapters="))
@@ -65,18 +74,112 @@ function parseArgs() {
 		if (arg === "--skip-encode") skipEncode = true;
 		if (arg.startsWith("--lang=")) lang = arg.split("=")[1];
 		if (arg.startsWith("--embedder=")) embedder = arg.split("=")[1];
+		if (arg.startsWith("--topK="))
+			topK = Number.parseInt(arg.split("=")[1], 10);
+		if (arg === "--v2") v2 = true;
 	}
-	return { adapterNames, judge, runs, categories, llm, skipEncode, lang, embedder };
+	return {
+		adapterNames,
+		judge,
+		runs,
+		categories,
+		llm,
+		skipEncode,
+		lang,
+		embedder,
+		topK,
+		v2,
+	};
+}
+
+// ─── V2 → V1 Template Converter ──────────────────────────────────────────────
+
+function convertV2ToV1(v2: any): any {
+	const capabilities: Record<string, any> = {};
+	for (const q of v2.queries) {
+		const cat = q.category;
+		if (!capabilities[cat]) {
+			capabilities[cat] = {
+				description: cat,
+				weight: q.weight ?? (cat === "semantic_search" || cat === "multi_fact_synthesis" ? 2 : 1),
+				queries: [],
+			};
+		}
+		const entry: Record<string, any> = { query: q.query };
+
+		if (Array.isArray(q.fact_ref)) {
+			entry.facts = q.fact_ref;
+			if (q.expected_any) entry.expected_any = q.expected_any;
+			if (q.min_expected) entry.min_expected = q.min_expected;
+		} else if (q.fact_ref && q.fact_ref !== "NONE") {
+			entry.fact = q.fact_ref;
+		}
+
+		if (q.expected_not_contains) entry.expected_not_contains = q.expected_not_contains;
+		if (q.setup) entry.setup = q.setup;
+		if (q.update) entry.update = q.update;
+		if (q.verify) entry.verify = q.verify;
+		if (q.noisy_input) entry.noisy_input = q.noisy_input;
+		if (q.expected_pattern) entry.expected_pattern = q.expected_pattern;
+		if (q.hallucination_keywords) entry.hallucination_keywords = q.hallucination_keywords;
+		if (q.context) entry.context = q.context;
+		if (q.min_facts) entry.min_facts = q.min_facts;
+		if (q.is_reasoning) entry.is_reasoning = q.is_reasoning;
+
+		// Convert 0-3 scoring to v1 expected_contains
+		if (q.scoring) {
+			if (q.scoring.score_3 && q.scoring.score_3.length > 0) {
+				entry.expected_contains = q.scoring.score_3;
+			}
+			if (q.scoring.score_0 && q.scoring.score_0.length > 0 && !entry.expected_not_contains) {
+				entry.expected_not_contains = q.scoring.score_0;
+			}
+		}
+
+		// Abstention: no fact ref, has expected_pattern
+		if (cat === "abstention" && !entry.fact) {
+			delete entry.fact;
+		}
+
+		// Irrelevant isolation: no fact ref
+		if (cat === "irrelevant_isolation" && !entry.fact) {
+			delete entry.fact;
+		}
+
+		capabilities[cat].queries.push(entry);
+	}
+
+	// Mark abstention as mandatory
+	if (capabilities.abstention) {
+		capabilities.abstention.mandatory_pass = true;
+		capabilities.abstention.weight = 2;
+	}
+
+	return {
+		$schema: v2.$schema,
+		capabilities,
+		scoring: v2.scoring || {
+			mandatory_pass: ["abstention"],
+			grades: { A: "core >= 90%", B: "core >= 75%", C: "core >= 60%", F: "core < 60%" },
+		},
+	};
 }
 
 // ─── Adapter Factory ────────────────────────────────────────────────────────
 
-function createAdapter(name: string, apiKey: string, embedder?: string): BenchmarkAdapter {
+function createAdapter(
+	name: string,
+	apiKey: string,
+	embedder?: string,
+): BenchmarkAdapter {
 	switch (name) {
 		case "naia":
-			return new NaiaAdapter(apiKey, (embedder ?? "gemini") as EmbeddingBackend);
+			return new NaiaAdapter(
+				apiKey,
+				(embedder ?? "gemini") as EmbeddingBackend,
+			);
 		case "naia-local":
-			return new NaiaLocalAdapter(apiKey);
+			return new NaiaLocalAdapter(apiKey, embedder);
 		case "mem0":
 			return new Mem0Adapter(apiKey);
 		case "letta":
@@ -111,7 +214,11 @@ async function callOllama(
 	model: string,
 	messages: Array<{ role: string; content: string }>,
 	maxTokens: number,
-): Promise<string> {
+): Promise<{
+	content: string;
+	promptTokens: number;
+	completionTokens: number;
+}> {
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
 			const res = await fetch(`${OLLAMA_BASE}chat/completions`, {
@@ -128,12 +235,16 @@ async function callOllama(
 				continue;
 			}
 			const data = (await res.json()) as any;
-			return data.choices?.[0]?.message?.content ?? "";
+			return {
+				content: data.choices?.[0]?.message?.content ?? "",
+				promptTokens: data.usage?.prompt_tokens ?? 0,
+				completionTokens: data.usage?.completion_tokens ?? 0,
+			};
 		} catch {
 			await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
 		}
 	}
-	return "";
+	return { content: "", promptTokens: 0, completionTokens: 0 };
 }
 
 /**
@@ -144,7 +255,11 @@ async function callGemini(
 	apiKey: string,
 	messages: Array<{ role: string; content: string }>,
 	maxTokens: number,
-): Promise<string> {
+): Promise<{
+	content: string;
+	promptTokens: number;
+	completionTokens: number;
+}> {
 	const gwUrl = process.env.GATEWAY_URL;
 	const gwKey = process.env.GATEWAY_MASTER_KEY;
 	const useGateway = !!(gwUrl && gwKey);
@@ -153,7 +268,9 @@ async function callGemini(
 		? `${gwUrl}/v1/chat/completions`
 		: `${GEMINI_BASE}chat/completions`;
 	const authKey = useGateway ? gwKey : apiKey;
-	const model = useGateway ? "vertexai:gemini-2.5-flash-lite" : "gemini-2.5-flash-lite-preview";
+	const model = useGateway
+		? "vertexai:gemini-2.5-flash-lite"
+		: "gemini-2.5-flash-lite";
 
 	for (let attempt = 0; attempt < 3; attempt++) {
 		await new Promise((r) => setTimeout(r, THROTTLE_MS));
@@ -177,10 +294,13 @@ async function callGemini(
 			}
 			const data = (await res.json()) as any;
 			const content = data.choices?.[0]?.message?.content ?? "";
-			if (content.length > 0) return content;
+			const promptTokens = data.usage?.prompt_tokens ?? 0;
+			const completionTokens = data.usage?.completion_tokens ?? 0;
+			if (content.length > 0)
+				return { content, promptTokens, completionTokens };
 		} catch {}
 	}
-	return "";
+	return { content: "", promptTokens: 0, completionTokens: 0 };
 }
 
 /**
@@ -189,8 +309,12 @@ async function callGemini(
  */
 async function callGeminiCLI(
 	messages: Array<{ role: string; content: string }>,
-	model: string = "gemini-2.5-flash",
-): Promise<string> {
+	model = "gemini-2.5-flash",
+): Promise<{
+	content: string;
+	promptTokens: number;
+	completionTokens: number;
+}> {
 	// Format prompt for CLI
 	const fullPrompt = messages
 		.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
@@ -203,15 +327,23 @@ async function callGeminiCLI(
 			encoding: "utf-8",
 			stdio: ["pipe", "pipe", "pipe"],
 		});
-		return output.trim();
+		const content = output.trim();
+		return {
+			content,
+			// Estimated tokens for CLI usage (roughly 4 chars per token for Korean/English mix)
+			promptTokens: Math.ceil(fullPrompt.length / 4),
+			completionTokens: Math.ceil(content.length / 4),
+		};
 	} catch (error: any) {
 		const stderr = error.stderr?.toString() ?? "";
 		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
-			console.error("\n[STOP] Gemini CLI Quota Exceeded. Please switch accounts and resume.");
+			console.error(
+				"\n[STOP] Gemini CLI Quota Exceeded. Please switch accounts and resume.",
+			);
 			process.exit(1);
 		}
 		console.error(`Gemini CLI Error: ${stderr}`);
-		return "";
+		return { content: "", promptTokens: 0, completionTokens: 0 };
 	}
 }
 
@@ -225,8 +357,12 @@ function printTokenUsage(): void {
 	console.log(`\n  ─── Token Usage ───`);
 	console.log(`    Judge calls: ${judgeCallCount}`);
 	console.log(`    Prompt tokens: ${totalPromptTokens.toLocaleString()}`);
-	console.log(`    Completion tokens: ${totalCompletionTokens.toLocaleString()}`);
-	console.log(`    Total tokens: ${(totalPromptTokens + totalCompletionTokens).toLocaleString()}`);
+	console.log(
+		`    Completion tokens: ${totalCompletionTokens.toLocaleString()}`,
+	);
+	console.log(
+		`    Total tokens: ${(totalPromptTokens + totalCompletionTokens).toLocaleString()}`,
+	);
 }
 
 // ─── Gemini CLI Batch Judge ──────────────────────────────────────────────────
@@ -253,7 +389,7 @@ function buildBatchJudgePrompt(items: BatchJudgeItem[]): string {
 /** Call gemini CLI (gemini-3.1-pro-preview) to judge */
 function callGeminiCli(prompt: string): string {
 	try {
-		return execSync("gemini -p \"\" -m gemini-3.1-pro-preview -o text", {
+		return execSync('gemini -p "" -m gemini-3.1-pro-preview -o text', {
 			input: prompt,
 			timeout: 120000,
 			encoding: "utf-8",
@@ -263,7 +399,9 @@ function callGeminiCli(prompt: string): string {
 	} catch (e: any) {
 		const stderr = e.stderr?.toString() ?? "";
 		if (stderr.includes("Quota exceeded") || stderr.includes("429")) {
-			console.error("\n[STOP] Gemini CLI Judge Quota Exceeded. Please switch accounts and resume.");
+			console.error(
+				"\n[STOP] Gemini CLI Judge Quota Exceeded. Please switch accounts and resume.",
+			);
 			process.exit(1);
 		}
 		return "";
@@ -279,7 +417,9 @@ async function callGlmApi(prompt: string): Promise<string> {
 	}
 
 	const url = "https://api.z.ai/api/coding/paas/v4/chat/completions";
-	for (let attempt = 0; attempt < 3; attempt++) {
+	for (let attempt = 0; attempt < 5; attempt++) {
+		// Mandatory wait to respect RPM (Coding Plan might have tight limits)
+		await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
 		try {
 			const res = await fetch(url, {
 				method: "POST",
@@ -291,32 +431,42 @@ async function callGlmApi(prompt: string): Promise<string> {
 					model: "glm-5.1",
 					messages: [{ role: "user", content: prompt }],
 					max_tokens: 2000,
-					temperature: 0.3,
+					temperature: 0.1,
 				}),
 			});
+			if (res.status === 429) {
+				console.warn(
+					`    ⚠ glm-api 429 (Rate Limit), retrying... (attempt ${attempt + 1})`,
+				);
+				await new Promise((r) => setTimeout(r, 10000 * (attempt + 1))); // Wait 10s+ on 429
+				continue;
+			}
 			if (!res.ok) {
-				console.warn(`    ⚠ glm-api error ${res.status}, attempt ${attempt + 1}`);
-				await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+				console.warn(
+					`    ⚠ glm-api error ${res.status}, attempt ${attempt + 1}`,
+				);
 				continue;
 			}
 			const data = (await res.json()) as any;
 			return data.choices?.[0]?.message?.content ?? "";
 		} catch {
-			await new Promise((r) => setTimeout(r, 2000));
+			await new Promise((r) => setTimeout(r, 5000));
 		}
 	}
 	return "";
 }
 
-function geminiProBatchJudgeSync(
-	items: BatchJudgeItem[],
-): JudgeResult[] {
+function geminiProBatchJudgeSync(items: BatchJudgeItem[]): JudgeResult[] {
 	const prompt = buildBatchJudgePrompt(items);
 	console.log(`    🤖 gemini-pro batch: judging ${items.length} items...`);
 	const raw = callGeminiCli(prompt);
 	if (!raw) {
-		console.warn("    ⚠ gemini cli judge returned empty, falling back to keyword");
-		return items.map((item) => keywordJudge(item.response, item.q, item.capName));
+		console.warn(
+			"    ⚠ gemini cli judge returned empty, falling back to keyword",
+		);
+		return items.map((item) =>
+			keywordJudge(item.response, item.q, item.capName),
+		);
 	}
 	judgeCallCount++;
 	// Rough token estimate for CLI budgeting (~4 chars per token)
@@ -327,14 +477,25 @@ function geminiProBatchJudgeSync(
 
 function parseBatchVerdict(raw: string, count: number): JudgeResult[] {
 	const results: JudgeResult[] = [];
-	const blocks = raw.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
+	// More robust parsing: look for lines starting with [N] or N. or just number at start of line
+	const blocks = raw
+		.split(/(?=\n\s*\[?\d+[\]\.]\s+)/)
+		.filter((b: string) => b.trim().length > 0);
+
+	// If the split didn't yield enough blocks, fallback to double newline but more carefully
+	const finalBlocks =
+		blocks.length >= count
+			? blocks
+			: raw.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
+
 	for (let i = 0; i < count; i++) {
-		const block = blocks[i]?.trim() ?? "";
-		results.push(parseVerdict(block));
+		const block = finalBlocks[i]?.trim() ?? "";
+		// Strip the index prefix [N] or N. if present
+		const cleanBlock = block.replace(/^\[?\d+[\]\.]\s+/, "").trim();
+		results.push(parseVerdict(cleanBlock));
 	}
 	return results;
 }
-
 
 function callClaudeCli(prompt: string): string {
 	try {
@@ -352,40 +513,64 @@ async function askWithMemory(
 	apiKey: string,
 	memories: string[],
 	question: string,
-	llm: "gemini" | "qwen3" | "gemini-cli" = "gemini",
-): Promise<string> {
+	llm:
+		| "gemini"
+		| "qwen3"
+		| "gemini-cli"
+		| "gemini-flash-lite" = "gemini-flash-lite",
+): Promise<{
+	content: string;
+	promptTokens: number;
+	completionTokens: number;
+	latencyMs: number;
+}> {
+	const start = Date.now();
 	const memCtx =
 		memories.length > 0
-			? `<recalled_memories>\n${memories.map((m) => `- ${m}`).join("\n")}\n</recalled_memories>`
-			: "(관련 기억 없음)";
+			? `The following is information from your long-term memory. Use it to answer the user's request.
+
+<recalled_memories>
+${memories.map((m) => `- ${m}`).join("\n")}
+</recalled_memories>`
+			: "(No relevant memories found)";
 
 	const messages = [
 		{
 			role: "system",
 			content: `You are the user's personal AI companion. Respond in the same language as the user's message.
 
-## Rules
-1. Only use memories that are **directly relevant** to the user's question. Ignore unrelated memories.
-2. When the user asks for help, **don't ask back** — immediately apply their preferences and environment from memory.
-3. If the user asks about a **specific personal fact** and no memory **directly matches**, you MUST reply "I don't have that in my memory" (English) or "기억에 없습니다" (Korean).
-4. NEVER fabricate facts. Do NOT guess or infer from loosely related memories.
-5. If multiple memories can be combined to answer, synthesize them.
-6. For confirmation questions ("Did I say...?"), if no memory directly matches, reply that you don't recall. Do NOT substitute with a different memory.
-
-${memCtx}`,
+## CORE RULES
+1. **Faithfulness**: For questions about the user's life, identity, preferences, or past interactions, you MUST ONLY answer based on the provided <recalled_memories>.
+2. **Abstention**: If the specific personal fact requested is not found in the memories, you MUST reply that you don't recall it (e.g., "기억에 없습니다" or "I don't have that in my memory") in the same language as the user's message.
+3. **Conflict Resolution**: If memories provide contradictory information, prioritize the one with the most recent date if available, or mention the contradiction to the user.
+4. **No Hallucination**: Do not fabricate names, dates, preferences, or events not present in the memories.
+5. **General Knowledge**: You may use your general knowledge for non-personal questions (e.g., science, history), but never mix it with personal facts or use it to "fill in the blanks" for personal memories.
+6. **Synthesis**: If multiple memory fragments are relevant, synthesize them into a coherent and comprehensive answer.
+7. **Preference Alignment**: When the user expresses a preference or asks for help, prioritize using known information from their memory to provide a personalized response.
+8. **Honesty over Guessing**: If memories are present but don't address the specific question, prioritize honesty over guessing.`,
 		},
-		{ role: "user", content: question },
+		{ role: "user", content: `${memCtx}\n\nUser Question: ${question}` },
 	];
 
+	let result: {
+		content: string;
+		promptTokens: number;
+		completionTokens: number;
+	};
 	if (llm === "gemini-cli") {
-		return callGeminiCLI(messages, "gemini-2.5-flash");
+		result = await callGeminiCLI(messages, "gemini-2.5-flash");
+	} else if (llm === "qwen3") {
+		result = await callOllama("qwen3:8b", messages, 500);
+	} else {
+		result = await callGemini(apiKey, messages, 500);
 	}
-	if (llm === "qwen3") {
-		return callOllama("qwen3:8b", messages, 500);
-	}
-	return callGemini(apiKey, messages, 500); // gemini-flash-lite (default) and gemini both use API
-}
 
+	// Track global token usage
+	totalPromptTokens += result.promptTokens;
+	totalCompletionTokens += result.completionTokens;
+
+	return { ...result, latencyMs: Date.now() - start };
+}
 // ─── Judge ───────────────────────────────────────────────────────────────────
 
 interface JudgeResult {
@@ -393,7 +578,12 @@ interface JudgeResult {
 	reason: string;
 }
 
-function buildJudgePrompt(q: any, capName: string, response: string, lang: string = "ko"): string {
+function buildJudgePrompt(
+	q: any,
+	capName: string,
+	response: string,
+	lang = "ko",
+): string {
 	if (lang === "en") {
 		if (capName === "abstention") {
 			return `[Judge] abstention (Hallucination Prevention)
@@ -572,9 +762,7 @@ function judgeResponse(
 ): JudgeResult {
 	if (mode === "keyword") return keywordJudge(response, q, capName);
 	if (mode === "gemini-pro") {
-		const results = geminiProBatchJudgeSync([
-			{ idx: 0, q, capName, response },
-		]);
+		const results = geminiProBatchJudgeSync([{ idx: 0, q, capName, response }]);
 		return results[0] ?? keywordJudge(response, q, capName);
 	}
 
@@ -597,11 +785,19 @@ async function batchJudgeGlmApi(
 			...item,
 		}));
 		const prompt = buildBatchJudgePrompt(batch);
-		console.log(`    🤖 glm-5.1 batch ${Math.floor(i / batchSize) + 1}: judging ${batch.length} items...`);
+		console.log(
+			`    🤖 glm-5.1 batch ${Math.floor(i / batchSize) + 1}: judging ${batch.length} items...`,
+		);
 		const raw = await callGlmApi(prompt);
 		if (!raw) {
-			console.warn("    ⚠ glm api judge returned empty, falling back to keyword");
-			results.push(...batch.map((item) => keywordJudge(item.response, item.q, item.capName)));
+			console.warn(
+				"    ⚠ glm api judge returned empty, falling back to keyword",
+			);
+			results.push(
+				...batch.map((item) =>
+					keywordJudge(item.response, item.q, item.capName),
+				),
+			);
 		} else {
 			judgeCallCount++;
 			totalPromptTokens += Math.ceil(prompt.length / 4);
@@ -629,16 +825,16 @@ function batchJudgeGeminiProSync(
 	return results;
 }
 
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
 	const config = parseArgs();
 
 	const apiKey = process.env.GEMINI_API_KEY ?? "";
-	const hasGateway = !!(process.env.GATEWAY_URL && process.env.GATEWAY_MASTER_KEY);
-	const needsGemini =
-		config.embedder === "gemini" || config.llm === "gemini";
+	const hasGateway = !!(
+		process.env.GATEWAY_URL && process.env.GATEWAY_MASTER_KEY
+	);
+	const needsGemini = config.embedder === "gemini" || config.llm === "gemini";
 	// Gateway (Vertex AI) can replace direct Gemini API key
 	if (needsGemini && !apiKey && !hasGateway) {
 		console.error(
@@ -654,14 +850,29 @@ async function main() {
 	console.log(`║  Runs: ${String(config.runs).padEnd(48)}║`);
 	console.log(`║  Lang: ${config.lang.padEnd(48)}║`);
 	console.log(`║  Embedder: ${config.embedder.padEnd(44)}║`);
-	if (config.skipEncode) console.log("║  ⚡ Skip-encode mode (using cached DB)              ║");
+	if (config.skipEncode)
+		console.log("║  ⚡ Skip-encode mode (using cached DB)              ║");
 	console.log("╚══════════════════════════════════════════════════════════╝\n");
 
 	const langSuffix = config.lang === "ko" ? "" : `.${config.lang}`;
-	const factBankPath = join(import.meta.dirname, "..", `fact-bank${langSuffix}.json`);
-	const templatesPath = join(import.meta.dirname, "..", `query-templates${langSuffix}.json`);
+	const v2Suffix = config.v2 ? "-v2" : "";
+	const factBankPath = join(
+		import.meta.dirname,
+		"..",
+		`fact-bank${v2Suffix}${langSuffix}.json`,
+	);
+	const templatesPath = join(
+		import.meta.dirname,
+		"..",
+		`query-templates${v2Suffix}${langSuffix}.json`,
+	);
 	const factBank = JSON.parse(readFileSync(factBankPath, "utf-8"));
-	const templates = JSON.parse(readFileSync(templatesPath, "utf-8"));
+	const templatesRaw = JSON.parse(readFileSync(templatesPath, "utf-8"));
+
+	// Convert v2 flat queries to v1 capabilities structure
+	const templates = templatesRaw.version === 2 && templatesRaw.queries
+		? convertV2ToV1(templatesRaw)
+		: templatesRaw;
 
 	const timestampStr = new Date().toISOString().replace(/[:.]/g, "-");
 	const runId = `run-${timestampStr}`;
@@ -671,7 +882,9 @@ async function main() {
 
 	const historyLogPath = join(reportsDir, "EXECUTION_HISTORY.md");
 	const startInfo = `\n### 🚀 Run Started: ${new Date().toLocaleString()}\n- Run ID: \`${runId}\`\n- Adapters: ${config.adapterNames.join(", ")}\n- Language: ${config.lang}\n- LLM: ${config.llm}\n- Judge: ${config.judge}\n`;
-	try { appendFileSync(historyLogPath, startInfo); } catch (e) {}
+	try {
+		appendFileSync(historyLogPath, startInfo);
+	} catch (e) {}
 
 	console.log(`  📂 Artifacts will be saved to: ${runDir}\n`);
 
@@ -702,13 +915,24 @@ async function main() {
 			} else {
 				console.log("  Phase 1: Init + Encode\n");
 				const encodeLogPath = join(runDir, `encoding-${adapterName}.json`);
-				const encodeCheckpointPath = join(import.meta.dirname, "..", "..", "..", "reports", `encode-checkpoint-${adapterName}-${config.lang}.json`);
+				const encodeCheckpointPath = join(
+					import.meta.dirname,
+					"..",
+					"..",
+					"..",
+					"reports",
+					`encode-checkpoint-${adapterName}-${config.lang}.json`,
+				);
 				let processedIds: string[] = [];
-				let encodingLogs: any[] = [];
+				const encodingLogs: any[] = [];
 				try {
-					processedIds = JSON.parse(readFileSync(encodeCheckpointPath, "utf-8"));
+					processedIds = JSON.parse(
+						readFileSync(encodeCheckpointPath, "utf-8"),
+					);
 					if (processedIds.length > 0) {
-						console.log(`    🔄 Resuming from checkpoint: ${processedIds.length} facts already stored.\n`);
+						console.log(
+							`    🔄 Resuming from checkpoint: ${processedIds.length} facts already stored.\n`,
+						);
 					}
 				} catch (e) {}
 
@@ -717,7 +941,9 @@ async function main() {
 				for (const fact of factBank.facts) {
 					if (processedIds.includes(fact.id)) {
 						stored++;
-						console.log(`    ⏭️ [SKIP] ${fact.id}: Already processed in checkpoint.`);
+						console.log(
+							`    ⏭️ [SKIP] ${fact.id}: Already processed in checkpoint.`,
+						);
 						continue;
 					}
 					let retryCount = 0;
@@ -727,46 +953,74 @@ async function main() {
 					while (retryCount < MAX_RETRIES && !success) {
 						const startTime = Date.now();
 						try {
-							console.log(`    💸 [COST] ${fact.id}: Calling API for embedding/extraction...`);
-							const ok = await adapter.addFact(fact.statement, (fact as any).date);
+							console.log(
+								`    💸 [COST] ${fact.id}: Calling API for embedding/extraction...`,
+							);
+							const ok = await adapter.addFact(
+								fact.statement,
+								(fact as any).date,
+							);
 							const duration = Date.now() - startTime;
-							
+
 							const logEntry = {
 								id: fact.id,
 								statement: fact.statement,
 								date: (fact as any).date,
 								timestamp: new Date().toISOString(),
 								duration_ms: duration,
-								status: ok ? "stored" : "gated"
+								status: ok ? "stored" : "gated",
 							};
 							encodingLogs.push(logEntry);
-							try { writeFileSync(encodeLogPath, JSON.stringify(encodingLogs, null, 2)); } catch (e) {}
+							try {
+								writeFileSync(
+									encodeLogPath,
+									JSON.stringify(encodingLogs, null, 2),
+								);
+							} catch (e) {}
 
 							if (ok) {
 								stored++;
-								console.log(`    ✅ [DONE] ${fact.id}: Stored successfully (${duration}ms).`);
+								console.log(
+									`    ✅ [DONE] ${fact.id}: Stored successfully (${duration}ms).`,
+								);
 								processedIds.push(fact.id);
-								try { writeFileSync(encodeCheckpointPath, JSON.stringify(processedIds)); } catch (e) {}
+								try {
+									writeFileSync(
+										encodeCheckpointPath,
+										JSON.stringify(processedIds),
+									);
+								} catch (e) {}
 							} else {
 								gated++;
 								console.log(`    ⛔ [GATE] ${fact.id}: GATED (not stored)`);
 								processedIds.push(fact.id);
-								try { writeFileSync(encodeCheckpointPath, JSON.stringify(processedIds)); } catch (e) {}
+								try {
+									writeFileSync(
+										encodeCheckpointPath,
+										JSON.stringify(processedIds),
+									);
+								} catch (e) {}
 							}
 							success = true;
 						} catch (err: any) {
 							retryCount++;
 							if (retryCount < MAX_RETRIES) {
-								console.warn(`    ⚠️ ${fact.id}: Retry ${retryCount}/${MAX_RETRIES} due to error: ${err.message?.slice(0, 50)}`);
+								console.warn(
+									`    ⚠️ ${fact.id}: Retry ${retryCount}/${MAX_RETRIES} due to error: ${err.message?.slice(0, 50)}`,
+								);
 								await new Promise((r) => setTimeout(r, 2000 * retryCount)); // Exponential backoff
 							} else {
-								console.error(`    ❌ ${fact.id}: Failed after ${MAX_RETRIES} attempts: ${err.message?.slice(0, 60)}`);
+								console.error(
+									`    ❌ ${fact.id}: Failed after ${MAX_RETRIES} attempts: ${err.message?.slice(0, 60)}`,
+								);
 							}
 						}
 					}
 				}
 				const summary = `  - [Phase 1] ${adapterName}: Stored: ${stored}/${factBank.facts.length} (New: ${stored - processedIds.length}, Skipped: ${processedIds.length})\n`;
-				try { appendFileSync(historyLogPath, summary); } catch (e) {}
+				try {
+					appendFileSync(historyLogPath, summary);
+				} catch (e) {}
 				console.log(
 					`\n    Stored: ${stored}/${factBank.facts.length} (gated: ${gated})\n`,
 				);
@@ -780,19 +1034,33 @@ async function main() {
 			// Phase 2: Query + Respond + Judge
 			console.log("  Phase 2: Query + Judge\n");
 			const details: TestDetail[] = [];
-			const checkpointPath = join(import.meta.dirname, "..", "..", "..", "reports", `checkpoint-${adapterName}-${config.lang}.json`);
+			const checkpointPath = join(
+				import.meta.dirname,
+				"..",
+				"..",
+				"..",
+				"reports",
+				`checkpoint-${adapterName}-${config.lang}.json`,
+			);
 			let existingDetails: TestDetail[] = [];
 			if (existsSync(checkpointPath)) {
 				try {
 					existingDetails = JSON.parse(readFileSync(checkpointPath, "utf-8"));
-					console.log(`    ↻ Resuming from checkpoint: ${existingDetails.length} items already completed.`);
+					console.log(
+						`    ↻ Resuming from checkpoint: ${existingDetails.length} items already completed.`,
+					);
 				} catch (e) {
 					console.warn("    ⚠ Failed to load checkpoint, starting fresh.");
 				}
 			}
 
 			let testNum = 0;
-				const pendingJudge: Array<{ q: any; capName: string; response: string; detailIdx: number }> = [];
+			const pendingJudge: Array<{
+				q: any;
+				capName: string;
+				response: string;
+				detailIdx: number;
+			}> = [];
 
 			// Explicit execution order — do NOT rely on JSON key order.
 			// Pre-update tests first, then contradiction (which mutates), then post-update tests.
@@ -843,10 +1111,12 @@ async function main() {
 					if (!query) continue;
 
 					// RESUME LOGIC: Check if already completed
-					const existing = existingDetails.find(d => d.id === id);
+					const existing = existingDetails.find((d) => d.id === id);
 					if (existing) {
 						details.push(existing);
-						console.log(`      ⏩ ${id} "${query.slice(0, 30)}..." [Skipped - Already completed]`);
+						console.log(
+							`      ⏩ ${id} "${query.slice(0, 30)}..." [Skipped - Already completed]`,
+						);
 						continue;
 					}
 
@@ -875,18 +1145,29 @@ async function main() {
 
 					// Search memories
 					let memories: string[] = [];
+					const searchStart = Date.now();
 					try {
-						memories = await adapter.search(query, 10);
+						memories = await adapter.search(query, config.topK);
 					} catch (err: any) {
 						console.error(`      ⚠ search: ${err.message?.slice(0, 60)}`);
 					}
+					const searchLatency = Date.now() - searchStart;
 
 					// Generate response with memories
-					let lastResponse = await askWithMemory(apiKey, memories, query, config.llm);
+					const askResult = await askWithMemory(
+						apiKey,
+						memories,
+						query,
+						config.llm,
+					);
+					let lastResponse = askResult.content;
 					let passCount = 0;
 					let lastReason = "";
 
-					if ((config.judge === "gemini-pro" || config.judge === "glm-api") && config.runs === 1) {
+					if (
+						(config.judge === "gemini-pro" || config.judge === "glm-api") &&
+						config.runs === 1
+					) {
 						// Defer judge to batch — push placeholder detail
 						details.push({
 							id,
@@ -898,14 +1179,40 @@ async function main() {
 							reason: "(pending judge)",
 							memories,
 							response: lastResponse.slice(0, 400),
+							latencyMs: searchLatency + askResult.latencyMs,
+							tokens: {
+								prompt: askResult.promptTokens,
+								completion: askResult.completionTokens,
+								total: askResult.promptTokens + askResult.completionTokens,
+							},
 						});
-						pendingJudge.push({ q, capName, response: lastResponse, detailIdx: details.length - 1 });
+						pendingJudge.push({
+							q,
+							capName,
+							response: lastResponse,
+							detailIdx: details.length - 1,
+						});
 						console.log(
 							`      ⏳ ${id} "${query.slice(0, 30)}..." [${memories.length} mem] (pending judge)`,
 						);
 					} else {
+						let totalPromptTokens = askResult.promptTokens;
+						let totalCompletionTokens = askResult.completionTokens;
+						let totalLatency = searchLatency + askResult.latencyMs;
+
 						for (let run = 0; run < config.runs; run++) {
-							if (run > 0) lastResponse = await askWithMemory(apiKey, memories, query, config.llm);
+							if (run > 0) {
+								const r = await askWithMemory(
+									apiKey,
+									memories,
+									query,
+									config.llm,
+								);
+								lastResponse = r.content;
+								totalPromptTokens += r.promptTokens;
+								totalCompletionTokens += r.completionTokens;
+								totalLatency += r.latencyMs;
+							}
 							const verdict = judgeResponse(
 								apiKey,
 								config.judge,
@@ -921,7 +1228,7 @@ async function main() {
 						const reason =
 							config.runs > 1
 								? `${passCount}/${config.runs} → ${pass ? "PASS" : "FAIL"} | ${lastReason.slice(0, 60)}`
-							: lastReason;
+								: lastReason;
 
 						details.push({
 							id,
@@ -933,6 +1240,13 @@ async function main() {
 							reason,
 							memories,
 							response: lastResponse.slice(0, 400),
+							latencyMs: totalLatency / config.runs,
+							tokens: {
+								prompt: totalPromptTokens / config.runs,
+								completion: totalCompletionTokens / config.runs,
+								total:
+									(totalPromptTokens + totalCompletionTokens) / config.runs,
+							},
 						});
 						console.log(
 							`      ${pass ? "✅" : "❌"} ${id} "${query.slice(0, 30)}..." [${memories.length} mem] ${reason.slice(0, 50)}`,
@@ -947,40 +1261,49 @@ async function main() {
 				console.log();
 			}
 
+			// Phase 2.5: Batch judge (gemini-pro or glm-api mode)
+			if (
+				(config.judge === "gemini-pro" || config.judge === "glm-api") &&
+				pendingJudge.length > 0
+			) {
+				console.log(
+					`\n  Phase 2.5: Batch judging ${pendingJudge.length} items with ${config.judge === "gemini-pro" ? "Gemini 2.5 Pro" : "GLM-5.1"}\n`,
+				);
 
-				// Phase 2.5: Batch judge (gemini-pro or glm-api mode)
-				if ((config.judge === "gemini-pro" || config.judge === "glm-api") && pendingJudge.length > 0) {
-					console.log(`\n  Phase 2.5: Batch judging ${pendingJudge.length} items with ${config.judge === "gemini-pro" ? "Gemini 2.5 Pro" : "GLM-5.1"}\n`);
-
-					const verdicts = config.judge === "gemini-pro" 
+				const verdicts =
+					config.judge === "gemini-pro"
 						? batchJudgeGeminiProSync(pendingJudge)
 						: await batchJudgeGlmApi(pendingJudge);
 
-					for (let i = 0; i < pendingJudge.length; i++) {
-						const v = verdicts[i];
-						const d = details[pendingJudge[i].detailIdx];
-						if (d && v) {
-							d.pass = v.pass;
-							d.reason = v.reason;
-						}
+				for (let i = 0; i < pendingJudge.length; i++) {
+					const v = verdicts[i];
+					const d = details[pendingJudge[i].detailIdx];
+					if (d && v) {
+						d.pass = v.pass;
+						d.reason = v.reason;
 					}
-
-					// Save intermediate judgments for verification
-					try {
-						const judgmentsPath = join(runDir, `judgments-${adapterName}.json`);
-						writeFileSync(judgmentsPath, JSON.stringify(verdicts, null, 2));
-						console.log(`    💾 Saved intermediate judgments to: ${judgmentsPath}`);
-					} catch (e) {}
-
-					// Print resolved results
-
-					for (const d of details) {
-						if (d.reason === "(pending judge)") {
-							console.log(`      ${d.pass ? "✅" : "❌"} ${d.id} (resolved) ${d.reason.slice(0, 50)}`);
-						}
-					}
-					printTokenUsage();
 				}
+
+				// Save intermediate judgments for verification
+				try {
+					const judgmentsPath = join(runDir, `judgments-${adapterName}.json`);
+					writeFileSync(judgmentsPath, JSON.stringify(verdicts, null, 2));
+					console.log(
+						`    💾 Saved intermediate judgments to: ${judgmentsPath}`,
+					);
+				} catch (e) {}
+
+				// Print resolved results
+
+				for (const d of details) {
+					if (d.reason === "(pending judge)") {
+						console.log(
+							`      ${d.pass ? "✅" : "❌"} ${d.id} (resolved) ${d.reason.slice(0, 50)}`,
+						);
+					}
+				}
+				printTokenUsage();
+			}
 
 			// Phase 3: Score (weighted)
 			const core = details.filter((d) => !d.isBonus);
@@ -990,10 +1313,7 @@ async function main() {
 				(sum, d) => sum + (d.pass ? d.weight : 0),
 				0,
 			);
-			const coreWeightedTotal = core.reduce(
-				(sum, d) => sum + d.weight,
-				0,
-			);
+			const coreWeightedTotal = core.reduce((sum, d) => sum + d.weight, 0);
 			const corePassed = core.filter((d) => d.pass).length;
 			const bonusPassed = bonus.filter((d) => d.pass).length;
 			const coreRate =
@@ -1023,6 +1343,27 @@ async function main() {
 				if (d.pass) byCapability[d.capability].passed++;
 			}
 
+			const validDetails = details.filter((d) => d.latencyMs !== undefined);
+			const totalTokens = validDetails.reduce(
+				(sum, d) => sum + (d.tokens?.total ?? 0),
+				0,
+			);
+			const avgLatencyMs =
+				validDetails.length > 0
+					? validDetails.reduce((sum, d) => sum + (d.latencyMs ?? 0), 0) /
+						validDetails.length
+					: 0;
+			const inputTokens = validDetails.reduce(
+				(sum, d) => sum + (d.tokens?.prompt ?? 0),
+				0,
+			);
+			const outputTokens = validDetails.reduce(
+				(sum, d) => sum + (d.tokens?.completion ?? 0),
+				0,
+			);
+			// Cost calculation: vertexai:gemini-2.5-flash-lite pricing (approx)
+			const costUsd = (inputTokens * 0.075 + outputTokens * 0.3) / 1_000_000;
+
 			allResults.push({
 				adapter: adapter.name,
 				description: adapter.description,
@@ -1031,6 +1372,11 @@ async function main() {
 				grade,
 				byCapability,
 				details,
+				metrics: {
+					avgLatencyMs,
+					totalTokens,
+					costUsd,
+				},
 			});
 
 			console.log(`    ─── ${adapter.name} Result ───`);
@@ -1038,7 +1384,11 @@ async function main() {
 				`    Core: ${corePassed}/${core.length} items, weighted ${Math.round(coreRate * 100)}% (${coreWeightedPass}/${coreWeightedTotal} pts)`,
 			);
 			console.log(`    Bonus: ${bonusPassed}/${bonus.length}`);
-			console.log(`    Grade: ${grade}\n`);
+			console.log(`    Grade: ${grade}`);
+			console.log(`    Avg Latency: ${avgLatencyMs.toFixed(0)}ms`);
+			console.log(
+				`    Total Tokens: ${totalTokens.toLocaleString()} ($${costUsd.toFixed(4)})\n`,
+			);
 		} catch (err: any) {
 			console.error(`  ❌ ${adapterName} failed: ${err.message}`);
 			allResults.push({
@@ -1101,10 +1451,7 @@ async function main() {
 
 	// Save report — per-adapter files in the run directory
 	for (const result of allResults) {
-		const adapterPath = join(
-			runDir,
-			`report-${result.adapter}.json`,
-		);
+		const adapterPath = join(runDir, `report-${result.adapter}.json`);
 		writeFileSync(
 			adapterPath,
 			JSON.stringify(
@@ -1125,8 +1472,27 @@ async function main() {
 	}
 
 	// Also save a global summary in the main reports dir for convenience
-	const summaryPath = join(import.meta.dirname, "../../../..", "reports", `summary-${runId}.json`);
-	writeFileSync(summaryPath, JSON.stringify({ runId, summary: allResults.map(r => ({ adapter: r.adapter, score: r.core.rate, grade: r.grade })) }, null, 2));
+	const summaryPath = join(
+		import.meta.dirname,
+		"../../../..",
+		"reports",
+		`summary-${runId}.json`,
+	);
+	writeFileSync(
+		summaryPath,
+		JSON.stringify(
+			{
+				runId,
+				summary: allResults.map((r) => ({
+					adapter: r.adapter,
+					score: r.core.rate,
+					grade: r.grade,
+				})),
+			},
+			null,
+			2,
+		),
+	);
 
 	// Also save combined report
 	const date = new Date().toISOString().slice(0, 10);

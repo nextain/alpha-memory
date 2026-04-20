@@ -27,12 +27,12 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { calculateStrength, shouldPrune } from "../decay.js";
+import type { EmbeddingProvider } from "../embeddings.js";
 import {
 	type KGState,
 	KnowledgeGraph,
 	emptyKGState,
 } from "../knowledge-graph.js";
-import type { EmbeddingProvider } from "../embeddings.js";
 import type {
 	BackupCapable,
 	ConsolidationResult,
@@ -102,6 +102,9 @@ export interface LocalAdapterOptions {
 	 *  When set, facts and episodes are embedded on write and retrieved by cosine similarity.
 	 *  When absent, falls back to keyword search. */
 	embeddingProvider?: EmbeddingProvider;
+	/** Cosine similarity threshold for filtering noise (default: 0.7).
+	 *  Higher values reduce hallucinations but may skip relevant context. */
+	similarityThreshold?: number;
 }
 
 /** Normalize association key (alphabetical order for consistency) */
@@ -158,8 +161,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 
 	constructor(options?: string | LocalAdapterOptions) {
 		const storePath =
-			typeof options === "string" ? options :
-			options?.storePath;
+			typeof options === "string" ? options : options?.storePath;
 		this.embedder =
 			typeof options === "object" ? (options.embeddingProvider ?? null) : null;
 		this.storePath =
@@ -243,12 +245,6 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			// Vector search path: embed query and use cosine similarity
 			const queryVec = await this.embedWithCache(query);
 
-
-
-
-
-
-
 			const scored = this.store.episodes
 				.map((ep) => {
 					// Recalculate strength with current time
@@ -265,9 +261,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 
 					// Relevance: vector similarity when available, else keyword
 					const epVec = queryVec ? this.store.episodeEmbeddings?.[ep.id] : null;
-					const textScore = epVec && queryVec
-						? cosineSimilarity(queryVec, epVec)
-						: keywordScore(query, `${ep.content} ${ep.summary}`);
+					const textScore =
+						epVec && queryVec
+							? cosineSimilarity(queryVec, epVec)
+							: keywordScore(query, `${ep.content} ${ep.summary}`);
 
 					// Context bonus (encoding specificity)
 					let contextBonus = 0;
@@ -379,9 +376,6 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				if (fVec) this.store.factEmbeddings![fact.id] = fVec;
 			}
 
-
-
-
 			this.markDirty();
 			this.save();
 		},
@@ -392,62 +386,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			deepRecall = false,
 		): Promise<Fact[]> => {
 			const now = Date.now();
+			// Lowered baseline threshold to reduce "stifling" (Gemini critique)
+			const BASE_THRESHOLD = 0.65;
 
-
-			// Vector search path: embed query and use cosine similarity
+			// Vector search path
 			const queryVec = await this.embedWithCache(query);
 
-
-
-
-
-
-
-			if (queryVec) {
-				// Per-fact hybrid: use vector if embedding stored, else keyword per fact
-				// This matches episode.recall() behavior and avoids zero-result edge case.
-				const scored = this.store.facts
-					.map((fact) => {
-						const strength = calculateStrength(
-							fact.importance,
-							fact.createdAt,
-							fact.recallCount,
-							fact.lastAccessed,
-							now,
-						);
-						const factVec = this.store.factEmbeddings?.[fact.id];
-						const textScore = factVec
-							? cosineSimilarity(queryVec!, factVec)
-							: keywordScore(
-									query,
-									[fact.content, ...fact.entities, ...fact.topics].join(" "),
-								);
-						const finalScore = deepRecall ? textScore : textScore * strength;
-						return { fact, score: finalScore, strength };
-					})
-					.filter((x) => x.score > 0)
-					.sort((a, b) => b.score - a.score)
-					.slice(0, topK);
-
-				for (const { fact } of scored) {
-					fact.recallCount++;
-					fact.lastAccessed = now;
-					fact.strength = calculateStrength(
-						fact.importance,
-						fact.createdAt,
-						fact.recallCount,
-						fact.lastAccessed,
-						now,
-					);
-				}
-				if (scored.length > 0) { this.markDirty(); this.save(); }
-				return scored.map((s) => s.fact);
-			}
-
-			// Keyword search fallback (no embedder or embed failed)
+			// Prepare keyword scoring
 			const queryTokens = tokenize(query);
-
-			// Spreading activation: find related entities via knowledge graph
 			const activatedEntities = this.kg.spreadingActivation(
 				queryTokens,
 				2,
@@ -468,34 +414,37 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 						now,
 					);
 
-					// Keyword match on content + entities + topics
+					const factVec = this.store.factEmbeddings?.[fact.id];
+					const vectorScore =
+						factVec && queryVec ? cosineSimilarity(queryVec, factVec) : 0;
+
 					const searchText = [
 						fact.content,
 						...fact.entities,
 						...fact.topics,
 					].join(" ");
-					const textScore = keywordScore(query, searchText);
+					const kScore = keywordScore(query, searchText);
 
-					// Entity exact match bonus
 					let entityBonus = 0;
 					for (const qt of queryTokens) {
 						if (fact.entities.some((e) => e.toLowerCase().includes(qt))) {
-							entityBonus += 0.15;
+							entityBonus += 0.3; // Increased from 0.2 (GLM critique)
 						}
 					}
 
-					// Spreading activation bonus: boost facts with associated entities
-					let activationBonus = 0;
-					for (const entity of fact.entities) {
-						const act = activationMap.get(entity.toLowerCase());
-						if (act) activationBonus += act * 0.1;
-					}
+					// 4. Relevance Filter
+					const isRelevant =
+						vectorScore >= 0.15 || kScore >= 0.2 || entityBonus >= 0.3;
 
-					// deepRecall: ignore decay, use pure text relevance
-					const finalScore = deepRecall
-						? textScore + entityBonus + activationBonus
-						: (textScore + entityBonus + activationBonus) * strength;
-					return { fact, score: finalScore, strength };
+					if (!isRelevant && !deepRecall)
+						return { fact, score: 0, strength, vectorScore: 0 };
+
+					// 5. Revised Hybrid Weights
+					const hybridScore =
+						vectorScore * 0.5 + kScore * 0.2 + entityBonus * 0.3;
+					const finalScore = deepRecall ? hybridScore : hybridScore * strength;
+
+					return { fact, score: finalScore, strength, vectorScore };
 				})
 				.filter((x) => x.score > 0)
 				.sort((a, b) => b.score - a.score)

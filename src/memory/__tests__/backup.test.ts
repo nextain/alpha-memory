@@ -3,10 +3,10 @@
  * Tests AES-256-GCM + PBKDF2-SHA256 encryption, magic header, rollback safety.
  */
 
-import { describe, it, expect } from "vitest";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { describe, expect, it } from "vitest";
 import { LocalAdapter } from "../adapters/local.js";
 import { MemorySystem } from "../index.js";
 import type { BackupCapable, Episode, Fact } from "../index.js";
@@ -91,9 +91,9 @@ describe("LocalAdapter backup", () => {
 		const blob = await adapter.export("correct-password");
 
 		const target = makeTmpAdapter();
-		await expect(
-			target.import(blob, "wrong-password"),
-		).rejects.toThrow("Decryption failed");
+		await expect(target.import(blob, "wrong-password")).rejects.toThrow(
+			"Decryption failed",
+		);
 	});
 
 	it("throws on empty password (export)", async () => {
@@ -138,8 +138,7 @@ describe("LocalAdapter backup", () => {
 
 		// Set storePath to an invalid location BEFORE import so the disk write fails
 		// after in-memory state has been updated, triggering the rollback path.
-		(adapter as any).storePath =
-			"/nonexistent-root/cannot/write/here.json";
+		(adapter as any).storePath = "/nonexistent-root/cannot/write/here.json";
 
 		// import() should throw because save() fails
 		await expect(adapter.import(blob, "password")).rejects.toThrow();
@@ -194,7 +193,10 @@ describe("LocalAdapter backup", () => {
 
 describe("MemorySystem backup delegation", () => {
 	function makeTmpSystem(): MemorySystem {
-		const path = join(tmpdir(), `alpha-memory-system-test-${randomUUID()}.json`);
+		const path = join(
+			tmpdir(),
+			`alpha-memory-system-test-${randomUUID()}.json`,
+		);
 		return new MemorySystem({ adapter: new LocalAdapter(path) });
 	}
 
@@ -206,9 +208,24 @@ describe("MemorySystem backup delegation", () => {
 	it("supportsBackup() returns false when adapter lacks export/import", () => {
 		// A minimal adapter stub without BackupCapable methods
 		const stub = {
-			episode: { store: async () => {}, getRecent: async () => [], search: async () => [] },
-			semantic: { upsert: async () => {}, getAll: async () => [], search: async () => [], delete: async () => {} },
-			procedural: { storeSkill: async () => {}, getSkill: async () => null, listSkills: async () => [], storeReflection: async () => {}, getReflections: async () => [] },
+			episode: {
+				store: async () => {},
+				getRecent: async () => [],
+				search: async () => [],
+			},
+			semantic: {
+				upsert: async () => {},
+				getAll: async () => [],
+				search: async () => [],
+				delete: async () => {},
+			},
+			procedural: {
+				storeSkill: async () => {},
+				getSkill: async () => null,
+				listSkills: async () => [],
+				storeReflection: async () => {},
+				getReflections: async () => [],
+			},
 			close: async () => {},
 		} as unknown as import("../types.js").MemoryAdapter;
 		const system = new MemorySystem({ adapter: stub });
@@ -226,7 +243,10 @@ describe("MemorySystem backup delegation", () => {
 	it("importBackup() restores data through MemorySystem", async () => {
 		const source = makeTmpSystem();
 		// Encode a fact via MemorySystem so it is stored
-		const path = join(tmpdir(), `alpha-memory-system-import-test-${randomUUID()}.json`);
+		const path = join(
+			tmpdir(),
+			`alpha-memory-system-import-test-${randomUUID()}.json`,
+		);
 		const srcAdapter = new LocalAdapter(path);
 		await srcAdapter.semantic.upsert(makeFact("MemorySystem import test fact"));
 		const blob = await srcAdapter.export("password");
@@ -236,14 +256,34 @@ describe("MemorySystem backup delegation", () => {
 
 		// Read back via MemorySystem adapter
 		const facts = await (target as any).adapter.semantic.getAll();
-		expect(facts.some((f: { content: string }) => f.content === "MemorySystem import test fact")).toBe(true);
+		expect(
+			facts.some(
+				(f: { content: string }) =>
+					f.content === "MemorySystem import test fact",
+			),
+		).toBe(true);
 	});
 
 	it("exportBackup() throws when adapter does not support backup", async () => {
 		const stub = {
-			episode: { store: async () => {}, getRecent: async () => [], search: async () => [] },
-			semantic: { upsert: async () => {}, getAll: async () => [], search: async () => [], delete: async () => {} },
-			procedural: { storeSkill: async () => {}, getSkill: async () => null, listSkills: async () => [], storeReflection: async () => {}, getReflections: async () => [] },
+			episode: {
+				store: async () => {},
+				getRecent: async () => [],
+				search: async () => [],
+			},
+			semantic: {
+				upsert: async () => {},
+				getAll: async () => [],
+				search: async () => [],
+				delete: async () => {},
+			},
+			procedural: {
+				storeSkill: async () => {},
+				getSkill: async () => null,
+				listSkills: async () => [],
+				storeReflection: async () => {},
+				getReflections: async () => [],
+			},
 			close: async () => {},
 		} as unknown as import("../types.js").MemoryAdapter;
 		const system = new MemorySystem({ adapter: stub });
@@ -254,14 +294,29 @@ describe("MemorySystem backup delegation", () => {
 
 	it("importBackup() throws when adapter does not support backup", async () => {
 		const stub = {
-			episode: { store: async () => {}, getRecent: async () => [], search: async () => [] },
-			semantic: { upsert: async () => {}, getAll: async () => [], search: async () => [], delete: async () => {} },
-			procedural: { storeSkill: async () => {}, getSkill: async () => null, listSkills: async () => [], storeReflection: async () => {}, getReflections: async () => [] },
+			episode: {
+				store: async () => {},
+				getRecent: async () => [],
+				search: async () => [],
+			},
+			semantic: {
+				upsert: async () => {},
+				getAll: async () => [],
+				search: async () => [],
+				delete: async () => {},
+			},
+			procedural: {
+				storeSkill: async () => {},
+				getSkill: async () => null,
+				listSkills: async () => [],
+				storeReflection: async () => {},
+				getReflections: async () => [],
+			},
 			close: async () => {},
 		} as unknown as import("../types.js").MemoryAdapter;
 		const system = new MemorySystem({ adapter: stub });
-		await expect(system.importBackup(new Uint8Array(10), "password")).rejects.toThrow(
-			"Current memory adapter does not support backup import",
-		);
+		await expect(
+			system.importBackup(new Uint8Array(10), "password"),
+		).rejects.toThrow("Current memory adapter does not support backup import");
 	});
 });

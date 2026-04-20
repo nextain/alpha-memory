@@ -50,9 +50,7 @@ export class GraphitiAdapter implements BenchmarkAdapter {
 		this.groupId = cacheId
 			? `bench-graphiti-${cacheId}`
 			: `bench-graphiti-${Date.now()}`;
-		console.log(
-			`    [Graphiti] Initialized with group: ${this.groupId}`,
-		);
+		console.log(`    [Graphiti] Initialized with group: ${this.groupId}`);
 	}
 
 	async addFact(content: string, date?: string): Promise<boolean> {
@@ -89,7 +87,9 @@ export class GraphitiAdapter implements BenchmarkAdapter {
 	 */
 	async consolidate(): Promise<void> {
 		if (!this.groupId) return;
-		console.log("    [Graphiti] Waiting for async processing queue to drain...");
+		console.log(
+			"    [Graphiti] Waiting for async processing queue to drain...",
+		);
 
 		// Poll search until we get results, indicating processing has completed.
 		// The async worker processes messages one at a time (~3s each).

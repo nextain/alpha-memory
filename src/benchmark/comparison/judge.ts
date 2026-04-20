@@ -74,14 +74,24 @@ function printTokenUsage(mode: string): void {
 	console.log(`    Judge calls: ${judgeCallCount}`);
 	console.log(`    Est. prompt tokens: ${estPrompt.toLocaleString()}`);
 	console.log(`    Est. completion tokens: ${estCompletion.toLocaleString()}`);
-	console.log(`    Est. total tokens: ${(estPrompt + estCompletion).toLocaleString()}`);
+	console.log(
+		`    Est. total tokens: ${(estPrompt + estCompletion).toLocaleString()}`,
+	);
 	console.log(`    Elapsed: ${elapsed}s`);
 }
 
 // ─── Judge Prompt Builder ───────────────────────────────────────────────────────
 
 function buildJudgePrompt(
-	q: { query?: string; verify?: string; expected_contains?: string[]; expected_any?: string[]; expected_not_contains?: string[]; fail_signal?: string[]; min_expected?: number },
+	q: {
+		query?: string;
+		verify?: string;
+		expected_contains?: string[];
+		expected_any?: string[];
+		expected_not_contains?: string[];
+		fail_signal?: string[];
+		min_expected?: number;
+	},
 	capName: string,
 	response: string,
 ): string {
@@ -136,23 +146,29 @@ AI 응답: "${response}"
 // ─── Verdict Parsing ────────────────────────────────────────────────────────────
 
 function parseVerdict(raw: string): JudgeResult {
-	const first = raw.split("\n")[0].trim().toUpperCase();
+	const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+	const first = (lines[0] ?? "").toUpperCase();
 	const pass = first === "PASS" || first.startsWith("PASS");
-	return { pass, reason: raw.slice(0, 120) || "EMPTY" };
+	return { pass, reason: lines.slice(0, 2).join(" | ") || "EMPTY" };
 }
 
 function parseBatchVerdict(raw: string, count: number): JudgeResult[] {
 	const results: JudgeResult[] = [];
 	// Split by numbered markers: [1], [2], etc.
-	let blocks = raw.split(/\n\s*\[(\d+)\]\s*\n/).filter((b: string) => b.trim().length > 0 && !/^\d+$/.test(b.trim()));
+	let blocks = raw
+		.split(/\n\s*\[(\d+)\]\s*\n/)
+		.filter((b: string) => b.trim().length > 0 && !/^\d+$/.test(b.trim()));
 	// Fallback: split by --- separator
 	if (blocks.length < count) {
-		blocks = raw.split(/\n\s*---+\s*\n/).filter((b: string) => b.trim().length > 0);
+		blocks = raw
+			.split(/\n\s*---+\s*\n/)
+			.filter((b: string) => b.trim().length > 0);
 	}
 	// Fallback: split by blank lines
-	const items = blocks.length >= count
-		? blocks
-		: raw.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
+	const items =
+		blocks.length >= count
+			? blocks
+			: raw.split(/\n\s*\n/).filter((b: string) => b.trim().length > 0);
 	for (let i = 0; i < count; i++) {
 		let block = items[i]?.trim() ?? "";
 		// Strip leading [N] marker if present
@@ -168,12 +184,29 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	const lower = response.toLowerCase();
 	if (capName === "abstention") {
 		const refusals = [
-			"말씀하신 적", "기억에 없", "모르", "없는 것 같", "언급하신 적",
-			"기억이 없", "알 수 없", "말한 적", "정보가 없", "없습니다",
-			"아닙니다", "죄송",
-			"don't have", "don't recall", "no memory", "not in my memory",
-			"no record", "don't remember", "i'm not aware", "haven't mentioned",
-			"no information", "didn't mention", "not something",
+			"말씀하신 적",
+			"기억에 없",
+			"모르",
+			"없는 것 같",
+			"언급하신 적",
+			"기억이 없",
+			"알 수 없",
+			"말한 적",
+			"정보가 없",
+			"없습니다",
+			"아닙니다",
+			"죄송",
+			"don't have",
+			"don't recall",
+			"no memory",
+			"not in my memory",
+			"no record",
+			"don't remember",
+			"i'm not aware",
+			"haven't mentioned",
+			"no information",
+			"didn't mention",
+			"not something",
 		];
 		return refusals.some((p) => lower.includes(p))
 			? { pass: true, reason: "PASS(kw): refusal" }
@@ -194,7 +227,10 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 		);
 		return found.length >= min
 			? { pass: true, reason: `PASS(kw): [${found}]` }
-			: { pass: false, reason: `FAIL(kw): ${found.length}/${q.expected_any.length}` };
+			: {
+					pass: false,
+					reason: `FAIL(kw): ${found.length}/${q.expected_any.length}`,
+				};
 	}
 	if (q.expected_contains) {
 		const found = q.expected_contains.filter((k: string) =>
@@ -221,7 +257,10 @@ function callClaudeCli(prompt: string): string {
 	}
 }
 
-function callGeminiCli(prompt: string, model = "gemini-3.1-pro-preview"): string {
+function callGeminiCli(
+	prompt: string,
+	model = "gemini-3.1-pro-preview",
+): string {
 	try {
 		return execSync(`gemini -p "" -m ${model} -o text 2>/dev/null`, {
 			input: prompt,
@@ -257,7 +296,9 @@ async function callGlmApi(prompt: string): Promise<string> {
 				}),
 			});
 			if (!res.ok) {
-				console.warn(`    ⚠ glm-api error ${res.status}, attempt ${attempt + 1}`);
+				console.warn(
+					`    ⚠ glm-api error ${res.status}, attempt ${attempt + 1}`,
+				);
 				await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
 				continue;
 			}
@@ -278,9 +319,12 @@ async function callGlmApi(prompt: string): Promise<string> {
 
 // ─── Batch Judge ────────────────────────────────────────────────────────────────
 
-function buildBatchPrompt(items: Array<{ q: any; capName: string; response: string }>): string {
+function buildBatchPrompt(
+	items: Array<{ q: any; capName: string; response: string }>,
+): string {
 	const parts = items.map(
-		(item, i) => `[${i + 1}] ${buildJudgePrompt(item.q, item.capName, item.response)}`,
+		(item, i) =>
+			`[${i + 1}] ${buildJudgePrompt(item.q, item.capName, item.response)}`,
 	);
 	return `공정한 채점 기준 (반드시 준수):
 1. 의미 기반 평가: exact match가 아닌 semantic matching 우선 (예: "코딩합니다"=developer, "영어"=English)
@@ -301,11 +345,18 @@ ${parts.join("\n\n---\n\n")}
 
 async function batchJudge(
 	mode: string,
-	items: Array<{ detailIdx: number; q: any; capName: string; response: string }>,
+	items: Array<{
+		detailIdx: number;
+		q: any;
+		capName: string;
+		response: string;
+	}>,
 	batchSize: number,
 ): Promise<JudgeResult[]> {
 	if (mode === "keyword") {
-		return items.map((item) => keywordJudge(item.response, item.q, item.capName));
+		return items.map((item) =>
+			keywordJudge(item.response, item.q, item.capName),
+		);
 	}
 
 	const results: JudgeResult[] = [];
@@ -314,7 +365,9 @@ async function batchJudge(
 		const batch = items.slice(i, i + batchSize);
 		const prompt = buildBatchPrompt(batch);
 
-		console.log(`    🤖 ${mode} batch ${Math.floor(i / batchSize) + 1}: ${batch.length} items...`);
+		console.log(
+			`    🤖 ${mode} batch ${Math.floor(i / batchSize) + 1}: ${batch.length} items...`,
+		);
 
 		let raw: string;
 		if (mode === "gemini-pro-cli") {
@@ -324,7 +377,11 @@ async function batchJudge(
 		} else {
 			// claude-cli: no batching, one by one
 			for (const item of batch) {
-				const singlePrompt = buildJudgePrompt(item.q, item.capName, item.response);
+				const singlePrompt = buildJudgePrompt(
+					item.q,
+					item.capName,
+					item.response,
+				);
 				const singleRaw = callClaudeCli(singlePrompt);
 				if (!singleRaw) {
 					results.push(keywordJudge(item.response, item.q, item.capName));
@@ -361,26 +418,41 @@ function rescore(details: Detail[]): {
 	core: { total: number; passed: number; rate: number };
 	bonus: { total: number; passed: number };
 	grade: string;
-	byCapability: Record<string, { passed: number; total: number; weight: number }>;
+	byCapability: Record<
+		string,
+		{ passed: number; total: number; weight: number }
+	>;
 } {
 	const core = details.filter((d) => !d.isBonus);
 	const bonus = details.filter((d) => d.isBonus);
-	const coreWeightedPass = core.reduce((sum, d) => sum + (d.pass ? d.weight : 0), 0);
+	const coreWeightedPass = core.reduce(
+		(sum, d) => sum + (d.pass ? d.weight : 0),
+		0,
+	);
 	const coreWeightedTotal = core.reduce((sum, d) => sum + d.weight, 0);
 	const corePassed = core.filter((d) => d.pass).length;
 	const bonusPassed = bonus.filter((d) => d.pass).length;
-	const coreRate = coreWeightedTotal > 0 ? coreWeightedPass / coreWeightedTotal : 0;
-	const abstentionFail = details.some((d) => d.capability === "abstention" && !d.pass);
+	const coreRate =
+		coreWeightedTotal > 0 ? coreWeightedPass / coreWeightedTotal : 0;
+	const abstentionFail = details.some(
+		(d) => d.capability === "abstention" && !d.pass,
+	);
 
 	let grade: string;
 	if (abstentionFail) grade = "F (abstention fail)";
-	else if (coreRate >= 0.9 && (bonus.length === 0 || (bonusPassed / bonus.length) >= 0.5))
+	else if (
+		coreRate >= 0.9 &&
+		(bonus.length === 0 || bonusPassed / bonus.length >= 0.5)
+	)
 		grade = "A";
 	else if (coreRate >= 0.75) grade = "B";
 	else if (coreRate >= 0.6) grade = "C";
 	else grade = "F";
 
-	const byCapability: Record<string, { passed: number; total: number; weight: number }> = {};
+	const byCapability: Record<
+		string,
+		{ passed: number; total: number; weight: number }
+	> = {};
 	for (const d of details) {
 		if (!byCapability[d.capability])
 			byCapability[d.capability] = { passed: 0, total: 0, weight: d.weight };
@@ -401,7 +473,8 @@ function rescore(details: Detail[]): {
 async function main() {
 	const args = process.argv.slice(2);
 	let inputPath = "";
-	let judgeMode: "keyword" | "claude-cli" | "gemini-pro-cli" | "glm-api" = "gemini-pro-cli";
+	let judgeMode: "keyword" | "claude-cli" | "gemini-pro-cli" | "glm-api" =
+		"gemini-pro-cli";
 	let batchSize = 10;
 	let categories: string[] | null = null;
 	let dryRun = false;
@@ -409,13 +482,17 @@ async function main() {
 	for (const arg of args) {
 		if (arg.startsWith("--input=")) inputPath = arg.split("=")[1];
 		if (arg.startsWith("--judge=")) judgeMode = arg.split("=")[1] as any;
-		if (arg.startsWith("--batch-size=")) batchSize = Number.parseInt(arg.split("=")[1], 10);
-		if (arg.startsWith("--categories=")) categories = arg.split("=")[1].split(",");
+		if (arg.startsWith("--batch-size="))
+			batchSize = Number.parseInt(arg.split("=")[1], 10);
+		if (arg.startsWith("--categories="))
+			categories = arg.split("=")[1].split(",");
 		if (arg === "--dry-run") dryRun = true;
 	}
 
 	if (!inputPath) {
-		console.error("Usage: judge.ts --input=<path> [--judge=gemini-pro-cli|glm-api|claude-cli|keyword] [--batch-size=10] [--categories=a,b] [--dry-run]");
+		console.error(
+			"Usage: judge.ts --input=<path> [--judge=gemini-pro-cli|glm-api|claude-cli|keyword] [--batch-size=10] [--categories=a,b] [--dry-run]",
+		);
 		process.exit(1);
 	}
 
@@ -430,7 +507,8 @@ async function main() {
 	const saved: SavedResult = JSON.parse(readFileSync(inputPath, "utf-8"));
 
 	// Load query templates to get expected_contains etc.
-	const langSuffix = inputPath.includes("-en-") || inputPath.includes(".en.") ? ".en" : "";
+	const langSuffix =
+		inputPath.includes("-en-") || inputPath.includes(".en.") ? ".en" : "";
 	const templatesPath = langSuffix
 		? new URL("../query-templates.en.json", import.meta.url).pathname
 		: new URL("../query-templates.json", import.meta.url).pathname;
@@ -439,7 +517,9 @@ async function main() {
 	try {
 		templates = JSON.parse(readFileSync(templatesPath, "utf-8"));
 	} catch {
-		console.warn("  ⚠ Could not load query templates — will judge from response only");
+		console.warn(
+			"  ⚠ Could not load query templates — will judge from response only",
+		);
 	}
 
 	// Build a lookup: capability → queries with expected values
@@ -454,11 +534,18 @@ async function main() {
 
 	for (const result of saved.results) {
 		console.log(`\n${"═".repeat(60)}`);
-		console.log(`  RE-JUDGING: ${result.adapter} (${result.details.length} items)`);
+		console.log(
+			`  RE-JUDGING: ${result.adapter} (${result.details.length} items)`,
+		);
 		console.log(`${"═".repeat(60)}\n`);
 
 		// Collect items to judge
-		const items: Array<{ detailIdx: number; q: any; capName: string; response: string }> = [];
+		const items: Array<{
+			detailIdx: number;
+			q: any;
+			capName: string;
+			response: string;
+		}> = [];
 
 		for (let i = 0; i < result.details.length; i++) {
 			const d = result.details[i];
@@ -507,7 +594,9 @@ async function main() {
 		result.byCapability = scored.byCapability;
 
 		console.log(`\n    ─── ${result.adapter} Result ───`);
-		console.log(`    Core: ${scored.core.passed}/${scored.core.total}, weighted ${Math.round(scored.core.rate * 100)}%`);
+		console.log(
+			`    Core: ${scored.core.passed}/${scored.core.total}, weighted ${Math.round(scored.core.rate * 100)}%`,
+		);
 		console.log(`    Grade: ${scored.grade}`);
 
 		// Per-category breakdown

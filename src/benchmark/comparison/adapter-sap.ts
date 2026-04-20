@@ -122,7 +122,13 @@ for line in sys.stdin:
 		const workerEmbedDims = useGateway ? "768" : "3072";
 		this.proc = spawn(
 			`${VENV}/bin/python3`,
-			["/tmp/sap-bench-worker.py", workerApiKey, workerBaseUrl, workerEmbedDims, chromaPath ?? ""],
+			[
+				"/tmp/sap-bench-worker.py",
+				workerApiKey,
+				workerBaseUrl,
+				workerEmbedDims,
+				chromaPath ?? "",
+			],
 			{
 				stdio: ["pipe", "pipe", "pipe"],
 				env: { ...process.env, OPENAI_API_KEY: workerApiKey },

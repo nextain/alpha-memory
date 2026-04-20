@@ -34,7 +34,9 @@ export class Mem0Adapter implements BenchmarkAdapter {
 		const { Memory } = await import("mem0ai/oss");
 		const id = cacheId ?? "stable";
 		const dbPath = `./memory-mem0-raw-${id}`;
-		console.log(`    [Mem0] Initializing memory system with persistent store: ${dbPath}`);
+		console.log(
+			`    [Mem0] Initializing memory system with persistent store: ${dbPath}`,
+		);
 
 		const useGateway = !!(GATEWAY_BASE && GATEWAY_KEY);
 
@@ -78,8 +80,8 @@ export class Mem0Adapter implements BenchmarkAdapter {
 							baseURL: GEMINI_BASE,
 							model: "gemini-2.5-flash",
 							// NOTE: mem0ai JS v2.4.2 OpenAILLM constructor ignores `timeout` config —
-						// it only passes apiKey+baseURL to OpenAI client. Real hang protection is
-						// via Promise.race in addFact() below.
+							// it only passes apiKey+baseURL to OpenAI client. Real hang protection is
+							// via Promise.race in addFact() below.
 						}) as any,
 			},
 			historyDbPath: `${dbPath}-hist.db`,
@@ -90,7 +92,11 @@ export class Mem0Adapter implements BenchmarkAdapter {
 		if (!this.mem0) throw new Error("Not initialized");
 		try {
 			const timeout = new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error(`mem0 addFact timeout after ${ADD_TIMEOUT_MS}ms`)), ADD_TIMEOUT_MS),
+				setTimeout(
+					() =>
+						reject(new Error(`mem0 addFact timeout after ${ADD_TIMEOUT_MS}ms`)),
+					ADD_TIMEOUT_MS,
+				),
 			);
 			await Promise.race([
 				this.mem0.add([{ role: "user", content }], { userId: "bench" }),

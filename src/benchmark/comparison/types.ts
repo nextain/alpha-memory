@@ -42,6 +42,11 @@ export interface ComparisonResult {
 		{ passed: number; total: number; weight: number }
 	>;
 	details: TestDetail[];
+	metrics?: {
+		avgLatencyMs: number;
+		totalTokens: number;
+		costUsd: number;
+	};
 }
 
 export interface TestDetail {
@@ -54,4 +59,10 @@ export interface TestDetail {
 	reason: string;
 	memories: string[];
 	response: string;
+	latencyMs?: number;
+	tokens?: {
+		prompt: number;
+		completion: number;
+		total: number;
+	};
 }

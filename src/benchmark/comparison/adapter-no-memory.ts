@@ -18,7 +18,6 @@ export class NoMemoryAdapter implements BenchmarkAdapter {
 	async init(): Promise<void> {}
 
 	async addFact(content: string, _date?: string): Promise<boolean> {
-
 		return true; // Accept but don't store
 	}
 

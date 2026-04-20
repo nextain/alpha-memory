@@ -1,0 +1,4308 @@
+{
+	"$schema": "Query Templates v2 — 241 queries across 12 categories",
+	"version": 2,
+	"scoring_scale": {
+		"0": "Hallucination — fabricated info not in memory",
+		"1": "Relevant but wrong — context correct but key info error",
+		"2": "Core correct but detail error — main fact right, partial errors",
+		"3": "Perfect match — all key info accurate"
+	},
+	"total_queries": 241,
+	"reasoning_queries": 9,
+	"category_distribution": {
+		"direct_recall": 49,
+		"semantic_search": 18,
+		"proactive_recall": 18,
+		"abstention": 20,
+		"irrelevant_isolation": 15,
+		"multi_fact_synthesis": 15,
+		"entity_disambiguation": 20,
+		"contradiction_direct": 20,
+		"contradiction_indirect": 15,
+		"unchanged_persistence": 11,
+		"temporal": 20,
+		"noise_resilience": 20
+	},
+	"scoring": {
+		"mandatory_pass": [
+			"abstention"
+		],
+		"grades": {
+			"A": "core >= 90% + bonus 50%+",
+			"B": "core >= 75%",
+			"C": "core >= 60%",
+			"F": "core < 60% OR abstention ANY fail"
+		}
+	},
+	"queries": [
+		{
+			"category": "direct_recall",
+			"fact_ref": "F048",
+			"query": "내 취향 알려줘",
+			"scoring": {
+				"score_3": [
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F048",
+			"query": "나한테 \"음주 여부\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F048d",
+			"distractor_note": "Distractor: 술 자주 drink"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F139",
+			"query": "알레르기 have?",
+			"scoring": {
+				"score_3": [
+					"아침"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F190",
+			"query": "취미 뭐야?",
+			"scoring": {
+				"score_3": [
+					"한 달에 책 2권 읽어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F117",
+			"query": "업무 스타일이 어때?",
+			"scoring": {
+				"score_3": [
+					"174명"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F117",
+			"query": "나한테 \"DAU 목표\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"174명"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F117d",
+			"distractor_note": "Distractor: DAU 목표는 174명(아님)이야"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F157",
+			"query": "모임 do?",
+			"scoring": {
+				"score_3": [
+					"맛집 Siwoo랑 자주 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F125",
+			"query": "Gun강 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"6시간"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F125",
+			"query": "나한테 \"수면\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"6시간"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F125d",
+			"distractor_note": "Distractor: 수면은 6시간(아님) do"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F114",
+			"query": "업무 스타일이 어때?",
+			"scoring": {
+				"score_3": [
+					"Medium에 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F137",
+			"query": "알레르기 have?",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F137",
+			"query": "나한테 \"흡연 여부\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F137d",
+			"distractor_note": "Distractor: 담배 펴"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F035",
+			"query": "내 기술 스택 뭐야?",
+			"scoring": {
+				"score_3": [
+					"에이우에스 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F175",
+			"query": "투자 do?",
+			"scoring": {
+				"score_3": [
+					"none"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F175",
+			"query": "나한테 \"대출 여부\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"none"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F175d",
+			"distractor_note": "Distractor: 대출 2748만원 have"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F113",
+			"query": "업무 스타일이 어때?",
+			"scoring": {
+				"score_3": [
+					"Amplitude로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F095",
+			"query": "일정 알려줘",
+			"scoring": {
+				"score_3": [
+					"매월 마지막 주"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F067",
+			"query": "반려동물 have?",
+			"scoring": {
+				"score_3": [
+					"Quantum City에 살았어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F067",
+			"query": "나한테 \"이사하기 전에\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"Quantum City에 살았어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F067d",
+			"distractor_note": "Distractor: 이사하기 전에는 Quantum City에 살았어(아님)"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F158",
+			"query": "모임 do?",
+			"scoring": {
+				"score_3": [
+					"친구들이랑 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F158",
+			"query": "나한테 \"여행\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"친구들이랑 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F158d",
+			"distractor_note": "Distractor: 여행은 Jungang-gu"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F121",
+			"query": "Gun강 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"peanut"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F121",
+			"query": "나한테 \"알레르기\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"peanut"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F121d",
+			"distractor_note": "Distractor: peach 알레르기 have"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F071",
+			"query": "반려동물 have?",
+			"scoring": {
+				"score_3": [
+					"안 친함"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F071",
+			"query": "나한테 \"이웃 관계\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"안 친함"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F071d",
+			"distractor_note": "Distractor: 이웃이랑 친do"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F170",
+			"query": "투자 do?",
+			"scoring": {
+				"score_3": [
+					"구독 서비스 3개 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F196",
+			"query": "관심사 알려줘",
+			"scoring": {
+				"score_3": [
+					"반사 99mm"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F196",
+			"query": "나한테 \"망원경\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"반사 99mm"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F196d",
+			"distractor_note": "Distractor: 망원경은 반사 99mm(아님)야"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F127",
+			"query": "Gun강 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"체지방률 16%야"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F164",
+			"query": "투자 do?",
+			"scoring": {
+				"score_3": [
+					"Samsung Card 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F040",
+			"query": "에디터 뭐 써?",
+			"scoring": {
+				"score_3": [
+					"70%"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F040",
+			"query": "나한테 \"코드 커버리지 목표\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"70%"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F040d",
+			"distractor_note": "Distractor: 코드 커버리지 목표는 70%(아님)야"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F130",
+			"query": "Gun강 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"매년"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F167",
+			"query": "재정 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"529만원"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F060",
+			"query": "내 취향 알려줘",
+			"scoring": {
+				"score_3": [
+					"브랜드는 포맨트"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F060",
+			"query": "나한테 \"좋아하\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"브랜드는 포맨트"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F060d",
+			"distractor_note": "Distractor: 좋아하는 브랜드는 포맨트(아님)야"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F061",
+			"query": "나 어디 살아?",
+			"scoring": {
+				"score_3": [
+					"Storm City Nam-gu"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F061",
+			"query": "나한테 \"같은 도시 다른 구\" 관련do서 기억나는 거 have?",
+			"scoring": {
+				"score_3": [
+					"Storm City Nam-gu"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"distractor_ref": "F061d",
+			"distractor_note": "Distractor: Storm City Bada-gu에 살아"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F169",
+			"query": "투자 do?",
+			"scoring": {
+				"score_3": [
+					"11만원"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F132",
+			"query": "Gun강 상태 어때?",
+			"scoring": {
+				"score_3": [
+					"치과 8개월마다 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F013",
+				"F009",
+				"F008"
+			],
+			"query": "내 기본 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"름은 Luna",
+					"Peanut Town",
+					"010-1650-8545"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"름은 Luna",
+				"Peanut Town",
+				"010-1650-8545"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F023",
+				"F031",
+				"F037"
+			],
+			"query": "내 개발 환경 알려줘",
+			"scoring": {
+				"score_3": [
+					"Zepton7",
+					"PostgreSQL 써",
+					"Winston"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"Zepton7",
+				"PostgreSQL 써",
+				"Winston"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F049",
+				"F048"
+			],
+			"query": "내 취향 알려줘",
+			"scoring": {
+				"score_3": [
+					"안 감",
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"안 감",
+				"안 마심"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F085",
+				"F087",
+				"F088",
+				"F081"
+			],
+			"query": "내 관련 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"2023년 3월 7일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"2023년 3월 7일"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F137",
+				"F133"
+			],
+			"query": "내 Gun강 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"don't do"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F158",
+				"F141"
+			],
+			"query": "내 인간관계 알려줘",
+			"scoring": {
+				"score_3": [
+					"친구들이랑 가",
+					"Ian"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"친구들이랑 가",
+				"Ian"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F175",
+				"F166"
+			],
+			"query": "내 재정 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"none"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"none"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F194",
+				"F183",
+				"F181"
+			],
+			"query": "내 취미 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"3.81위",
+					"Kirami"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"3.81위",
+				"Kirami"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F013",
+				"F019"
+			],
+			"query": "내 기본 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"름은 Luna",
+					"왼손"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"름은 Luna",
+				"왼손"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F040",
+				"F026",
+				"F034"
+			],
+			"query": "내 개발 환경 알려줘",
+			"scoring": {
+				"score_3": [
+					"70%",
+					"Bash",
+					"CIcl"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"70%",
+				"Bash",
+				"CIcl"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F056",
+				"F046",
+				"F047",
+				"F058"
+			],
+			"query": "내 취향 알려줘",
+			"scoring": {
+				"score_3": [
+					"싫어함",
+					"집에서 책 읽기"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"싫어함",
+				"집에서 책 읽기"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F070",
+				"F061",
+				"F072",
+				"F074"
+			],
+			"query": "내 개인 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"있음 (지하)",
+					"Storm City Nam-gu",
+					"매주 월요일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"있음 (지하)",
+				"Storm City Nam-gu",
+				"매주 월요일"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F092",
+				"F100"
+			],
+			"query": "내 관련 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"QuantumLeap였어",
+					"기로 했어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"QuantumLeap였어",
+				"기로 했어"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F110",
+				"F117",
+				"F113"
+			],
+			"query": "내 회사 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"Discord",
+					"174명",
+					"Amplitude로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"Discord",
+				"174명",
+				"Amplitude로"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F122",
+				"F126"
+			],
+			"query": "내 Gun강 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"Melatonin-X 41mg",
+					"있음"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"Melatonin-X 41mg",
+				"있음"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F158",
+				"F142",
+				"F153",
+				"F149"
+			],
+			"query": "내 인간관계 알려줘",
+			"scoring": {
+				"score_3": [
+					"친구들이랑 가",
+					"2022년",
+					"말 없는 편",
+					"자주 안 바꿈"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"친구들이랑 가",
+				"2022년",
+				"말 없는 편",
+				"자주 안 바꿈"
+			],
+			"min_expected": 2,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F168",
+				"F173"
+			],
+			"query": "내 재정 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"월 46만원",
+					"씀"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"월 46만원",
+				"씀"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "semantic_search",
+			"fact_ref": [
+				"F187",
+				"F193"
+			],
+			"query": "내 취미 정보 알려줘",
+			"scoring": {
+				"score_3": [
+					"소니 A7C",
+					"요리는 파스타"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"소니 A7C",
+				"요리는 파스타"
+			],
+			"min_expected": 1,
+			"weight": 2
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F065",
+			"query": "이거 어떻crab do? 집 관련으로",
+			"scoring": {
+				"score_3": [
+					"50번길 161 1487호"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "집 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F137",
+			"query": "이거 어떻crab do? 흡연 관련으로",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "흡연 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F098",
+			"query": "이거 어떻crab do? 연차 관련으로",
+			"scoring": {
+				"score_3": [
+					"12일 남았어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "연차 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F182",
+			"query": "이거 어떻crab do? 장소 관련으로",
+			"scoring": {
+				"score_3": [
+					"Iron Square"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "장소 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F045",
+			"query": "이거 어떻crab do? 좋아하는 음악 관련으로",
+			"scoring": {
+				"score_3": [
+					"R&B"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "좋아하는 음악 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F021",
+			"query": "에디터 설정 좀 도와줘",
+			"scoring": {
+				"score_3": [
+					"PinScript"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "에디터 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F136",
+			"query": "이거 어떻crab do? 명상 관련으로",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "명상 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F002",
+			"query": "이거 어떻crab do? older sister 관련으로",
+			"scoring": {
+				"score_3": [
+					"Jun"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "older sister 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F066",
+			"query": "이거 어떻crab do? 거주기간 관련으로",
+			"scoring": {
+				"score_3": [
+					"3년"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "거주기간 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F138",
+			"query": "이거 어떻crab do? 병원등록번호 관련으로",
+			"scoring": {
+				"score_3": [
+					"MC-2862-OM"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "병원등록번호 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F090",
+			"query": "이거 어떻crab do? OKR 체크 관련으로",
+			"scoring": {
+				"score_3": [
+					"분기별"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "OKR 체크 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F103",
+			"query": "이거 어떻crab do? 내선번호 관련으로",
+			"scoring": {
+				"score_3": [
+					"2247"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "내선번호 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F091",
+			"query": "이거 어떻crab do? 이사 관련으로",
+			"scoring": {
+				"score_3": [
+					"작년"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "이사 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F142",
+			"query": "이거 어떻crab do? 알crab 된 do 관련으로",
+			"scoring": {
+				"score_3": [
+					"2022년"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "알crab 된 do 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F178",
+			"query": "이거 어떻crab do? 프리미엄 서비스 관련으로",
+			"scoring": {
+				"score_3": [
+					"하나만 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "프리미엄 서비스 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F041",
+			"query": "이거 어떻crab do? 좋아하는 과일 관련으로",
+			"scoring": {
+				"score_3": [
+					"rambutan"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "좋아하는 과일 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F197",
+			"query": "이거 어떻crab do? hiking도 관련으로",
+			"scoring": {
+				"score_3": [
+					"끔 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "hiking도 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "proactive_recall",
+			"fact_ref": "F026",
+			"query": "이거 어떻crab do? 셸 관련으로",
+			"scoring": {
+				"score_3": [
+					"Bash"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "셸 관련 요청 — 기억 기반으로 답do야 함"
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 쿠버네티스 관련do서 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"Kubernetes",
+				"k8s",
+				"클러스터"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 좋아하는 crab임 뭐였지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": []
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내 차가 뭐였지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": []
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 일본어 할 줄 안다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": []
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 유튜브 채널 운영한다고 했지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"유튜브",
+				"채널"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 Angular 쓴다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"Angular"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 자전거 탄다고 했었지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"자전거"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 서핑 배운다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"서핑"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 석사 학위 있다고 했지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"석사",
+				"대학원"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 MongoDB 쓴다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"MongoDB"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 와인 좋아한다고 했지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"와인"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 서핑 배운다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"서핑"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 테니스 친다고 했었지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"테니스"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 스카이다이빙 do봤다고 했나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"스카이다이빙"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 기타 친다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"기타"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 골프 친다고 했지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"골프"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 GraphQL 쓴다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"GraphQL"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 딸 키운다고 했지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": []
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "내가 트위터 많이 한다고 했었나?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"트위터",
+				"X"
+			]
+		},
+		{
+			"category": "abstention",
+			"fact_ref": "NONE",
+			"query": "나 hiking 좋아한다고 했었지?",
+			"scoring": {
+				"score_3": [
+					"모르",
+					"없",
+					"기억에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_pattern": "없|모르|기억에|말씀하신",
+			"hallucination_keywords": [
+				"hiking"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "오늘 날씨 어때?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "파이썬에서 리스트 컴프리헨션 문법이 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "HTTP 상태코드 404가 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "TCP와 UDP의 차이가 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "세계에서 가장 높은 산이 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "CSS flexbox 사용법 알려줘",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "양자역학에서 슈뢰딩거 방정식이 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "SQL에서 JOIN 종류가 뭐가 have?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "React와 Vue의 차이점 알려줘",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "파이 값이 얼마야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "리눅스에서 chmod 명령어 사용법 알려줘",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "2024년 올림픽 어디서 열려?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "자바스크립트에서 Promise.all 사용법 알려줘",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "Git rebase와 merge 차이가 뭐야?",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "irrelevant_isolation",
+			"fact_ref": "NONE",
+			"query": "코틀린에서 코루틴 사용법 알려줘",
+			"scoring": {
+				"score_3": [],
+				"score_2": [],
+				"score_1": [],
+				"score_0": [
+					"Lua",
+					"Lua",
+					"BlueMoon City",
+					"Seonno-gu"
+				]
+			},
+			"expected_not_contains": [
+				"Lua",
+				"Lua",
+				"BlueMoon City",
+				"Seonno-gu"
+			]
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F105",
+				"F107",
+				"F102",
+				"F113"
+			],
+			"query": "우리 회사 소개서 초don't use줘",
+			"scoring": {
+				"score_3": [
+					"랑 점심 먹어",
+					"8층",
+					"Amplitude로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"랑 점심 먹어",
+				"8층",
+				"Amplitude로"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F084",
+				"F091",
+				"F093"
+			],
+			"query": "내 일정 정리do줘",
+			"scoring": {
+				"score_3": [
+					"가",
+					"작년",
+					"회사 다녔어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"가",
+				"작년",
+				"회사 다녔어"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F013",
+				"F015",
+				"F007"
+			],
+			"query": "내 소개 한 줄로 써줘",
+			"scoring": {
+				"score_3": [
+					"름은 Luna",
+					"포항공과대학교 나왔어",
+					"NX-6601-LC"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"름은 Luna",
+				"포항공과대학교 나왔어",
+				"NX-6601-LC"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F039",
+				"F023",
+				"F030",
+				"F024"
+			],
+			"query": "우리 기술 스택 정리do줘",
+			"scoring": {
+				"score_3": [
+					"Nx로 관리",
+					"Zepton7",
+					"CLI",
+					"다크모드"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"Nx로 관리",
+				"Zepton7",
+				"CLI",
+				"다크모드"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F183",
+				"F192",
+				"F198",
+				"F188",
+				"F186"
+			],
+			"query": "내 취미 소개 글 써줘",
+			"scoring": {
+				"score_3": [
+					"3.81위",
+					"24-70mm",
+					"것도 좋아"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"3.81위",
+				"24-70mm",
+				"것도 좋아"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F145",
+				"F159",
+				"F148"
+			],
+			"query": "내 인간관계 요약do줘",
+			"scoring": {
+				"score_3": [
+					"주 1회",
+					"4월 17일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"주 1회",
+				"4월 17일"
+			],
+			"min_expected": 1,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F127",
+				"F124",
+				"F140"
+			],
+			"query": "내 Gun강 관리 루틴 정리do줘",
+			"scoring": {
+				"score_3": [
+					"swimming 위주로",
+					"규칙적으로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"swimming 위주로",
+				"규칙적으로"
+			],
+			"min_expected": 1,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F119",
+				"F120",
+				"F107",
+				"F113"
+			],
+			"query": "우리 회사 소개서 초don't use줘",
+			"scoring": {
+				"score_3": [
+					"금요일에",
+					"랑 점심 먹어",
+					"Amplitude로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"금요일에",
+				"랑 점심 먹어",
+				"Amplitude로"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F103",
+				"F106",
+				"F112",
+				"F120"
+			],
+			"query": "우리 회사 소개서 초don't use줘",
+			"scoring": {
+				"score_3": [
+					"2247",
+					"12시에 먹어",
+					"Linear로",
+					"금요일에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"2247",
+				"12시에 먹어",
+				"Linear로",
+				"금요일에"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F122",
+				"F137",
+				"F125",
+				"F123"
+			],
+			"query": "내 Gun강 관리 루틴 정리do줘",
+			"scoring": {
+				"score_3": [
+					"Melatonin-X 41mg",
+					"don't do",
+					"6시간",
+					"주 5회"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"Melatonin-X 41mg",
+				"don't do",
+				"6시간",
+				"주 5회"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F100",
+				"F095",
+				"F099",
+				"F092"
+			],
+			"query": "내 일정 정리do줘",
+			"scoring": {
+				"score_3": [
+					"기로 했어",
+					"매월 마지막 주",
+					"프로젝트 런칭",
+					"QuantumLeap였어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"기로 했어",
+				"매월 마지막 주",
+				"프로젝트 런칭",
+				"QuantumLeap였어"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F053",
+				"F043",
+				"F051"
+			],
+			"query": "내 취향 프로필 만들어줘",
+			"scoring": {
+				"score_3": [
+					"동물은 dog",
+					"coral pink",
+					"안 먹음"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"동물은 dog",
+				"coral pink",
+				"안 먹음"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F162",
+				"F167",
+				"F174"
+			],
+			"query": "내 재정 요약do줘",
+			"scoring": {
+				"score_3": [
+					"4900000원/월",
+					"529만원"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"4900000원/월",
+				"529만원"
+			],
+			"min_expected": 1,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F017",
+				"F006",
+				"F004",
+				"F020",
+				"F011"
+			],
+			"query": "내 소개 한 줄로 써줘",
+			"scoring": {
+				"score_3": [
+					"즈는 239mm",
+					"12월 7일",
+					"ABolder brother",
+					"있음 (왼팔)",
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"즈는 239mm",
+				"12월 7일",
+				"ABolder brother",
+				"있음 (왼팔)",
+				"안 마심"
+			],
+			"min_expected": 3,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "multi_fact_synthesis",
+			"fact_ref": [
+				"F117",
+				"F101",
+				"F113",
+				"F112"
+			],
+			"query": "우리 회사 소개서 초don't use줘",
+			"scoring": {
+				"score_3": [
+					"174명",
+					"StormBase",
+					"Amplitude로",
+					"Linear로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"expected_any": [
+				"174명",
+				"StormBase",
+				"Amplitude로",
+				"Linear로"
+			],
+			"min_expected": 2,
+			"min_facts": 3,
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F186",
+			"query": "내 사진 찍 뭐야?",
+			"scoring": {
+				"score_3": [
+					"것도 좋아"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"사진 찍는 것도 좋아(아님)do\"라고 했어",
+			"distractor_ref": "F186d",
+			"distractor_note": "Distractor: 사진 찍는 것도 좋아(아님)do",
+			"expected_not_contains": [
+				"좋아(아님)do"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F051",
+			"query": "내 야식 뭐야?",
+			"scoring": {
+				"score_3": [
+					"안 먹음"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"야식 자주 먹어\"라고 했어",
+			"distractor_ref": "F051d",
+			"distractor_note": "Distractor: 야식 자주 먹어",
+			"expected_not_contains": [
+				"먹어"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F146",
+			"query": "내 Gun 뭐야?",
+			"scoring": {
+				"score_3": [
+					"부산에 살아"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"Gun는 부산에 살아(아님)\"라고 했어",
+			"distractor_ref": "F146d",
+			"distractor_note": "Distractor: Gun는 부산에 살아(아님)",
+			"expected_not_contains": [
+				"살아(아님)"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F039",
+			"query": "내 모노레포 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Nx로 관리"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"모노레포는 Nx로 관리(아님)do\"라고 했어",
+			"distractor_ref": "F039d",
+			"distractor_note": "Distractor: 모노레포는 Nx로 관리(아님)do",
+			"expected_not_contains": [
+				"관리(아님)do"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F033",
+			"query": "내 컨테 뭐야?",
+			"scoring": {
+				"score_3": [
+					"너는 Docker 써"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"컨테이너는 Docker 써(아님)\"라고 했어",
+			"distractor_ref": "F033d",
+			"distractor_note": "Distractor: 컨테이너는 Docker 써(아님)",
+			"expected_not_contains": [
+				"써(아님)"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F061",
+			"query": "내 거주지 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Storm City Nam-gu"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"Storm City Bada-gu에 살아\"라고 했어",
+			"distractor_ref": "F061d",
+			"distractor_note": "Distractor: Storm City Bada-gu에 살아",
+			"expected_not_contains": [
+				"살아"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F028",
+			"query": "내 패키지 매니저 뭐야?",
+			"scoring": {
+				"score_3": [
+					"bun"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"패키지 매니저는 yarn야\"라고 했어",
+			"distractor_ref": "F028d",
+			"distractor_note": "Distractor: 패키지 매니저는 yarn야",
+			"expected_not_contains": [
+				"yarn야"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F175",
+			"query": "내 대출 뭐야?",
+			"scoring": {
+				"score_3": [
+					"none"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"대출 2748만원 have\"라고 했어",
+			"distractor_ref": "F175d",
+			"distractor_note": "Distractor: 대출 2748만원 have",
+			"expected_not_contains": [
+				"have"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F125",
+			"query": "내 수면 뭐야?",
+			"scoring": {
+				"score_3": [
+					"6시간"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"수면은 6시간(아님) do\"라고 했어",
+			"distractor_ref": "F125d",
+			"distractor_note": "Distractor: 수면은 6시간(아님) do",
+			"expected_not_contains": [
+				"do"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F189",
+			"query": "내 독서 뭐야?",
+			"scoring": {
+				"score_3": [
+					"SF 좋아"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"독서는 SF 좋아(아님)do\"라고 했어",
+			"distractor_ref": "F189d",
+			"distractor_note": "Distractor: 독서는 SF 좋아(아님)do",
+			"expected_not_contains": [
+				"좋아(아님)do"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F048",
+			"query": "내 술 뭐야?",
+			"scoring": {
+				"score_3": [
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"술 자주 drink\"라고 했어",
+			"distractor_ref": "F048d",
+			"distractor_note": "Distractor: 술 자주 drink",
+			"expected_not_contains": [
+				"drink"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F010",
+			"query": "내 기상 뭐야?",
+			"scoring": {
+				"score_3": [
+					"새벽 6시"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"나는 올빼미older brother이야. 보통 새벽 2시에 자\"라고 했어",
+			"distractor_ref": "F010d",
+			"distractor_note": "Distractor: 나는 올빼미older brother이야. 보통 새벽 2시에 자",
+			"expected_not_contains": [
+				"자"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F023",
+			"query": "내 프레임워크 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Zepton7"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"프레임워크는 NovaCode야\"라고 했어",
+			"distractor_ref": "F023d",
+			"distractor_note": "Distractor: 프레임워크는 NovaCode야",
+			"expected_not_contains": [
+				"NovaCode야"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F083",
+			"query": "내 급여일 뭐야?",
+			"scoring": {
+				"score_3": [
+					"매월 13일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"매월 13일(아님)에 급여 받아\"라고 했어",
+			"distractor_ref": "F083d",
+			"distractor_note": "Distractor: 매월 13일(아님)에 급여 받아",
+			"expected_not_contains": [
+				"받아"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F062",
+			"query": "내 반려동물 뭐야?",
+			"scoring": {
+				"score_3": [
+					"hamster \"Barley\""
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"반려동물은 hamster \"Barley\"(아님)이야\"라고 했어",
+			"distractor_ref": "F062d",
+			"distractor_note": "Distractor: 반려동물은 hamster \"Barley\"(아님)이야",
+			"expected_not_contains": [
+				"\"Barley\"(아님)이야"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F032",
+			"query": "내 OS 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Ubuntu"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"OS는 Ubuntu(아님)야\"라고 했어",
+			"distractor_ref": "F032d",
+			"distractor_note": "Distractor: OS는 Ubuntu(아님)야",
+			"expected_not_contains": [
+				"Ubuntu(아님)야"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F014",
+			"query": "내 군대 뭐야?",
+			"scoring": {
+				"score_3": [
+					"공군 나왔어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"군대는 공군 나왔어(아님)\"라고 했어",
+			"distractor_ref": "F014d",
+			"distractor_note": "Distractor: 군대는 공군 나왔어(아님)",
+			"expected_not_contains": [
+				"나왔어(아님)"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F005",
+			"query": "내 MBTI 뭐야?",
+			"scoring": {
+				"score_3": [
+					"ENTP"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"MBTI는 INTJ야\"라고 했어",
+			"distractor_ref": "F005d",
+			"distractor_note": "Distractor: MBTI는 INTJ야",
+			"expected_not_contains": [
+				"INTJ야"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F050",
+			"query": "내 아침 뭐야?",
+			"scoring": {
+				"score_3": [
+					"챙겨 먹음"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"아침은 꼭 챙겨 먹어\"라고 했어",
+			"distractor_ref": "F050d",
+			"distractor_note": "Distractor: 아침은 꼭 챙겨 먹어",
+			"expected_not_contains": [
+				"먹어"
+			],
+			"weight": 2
+		},
+		{
+			"category": "entity_disambiguation",
+			"fact_ref": "F078",
+			"query": "내 샤워 뭐야?",
+			"scoring": {
+				"score_3": [
+					"아침"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"setup": "다른 사람은 \"아침(아님)에 샤워do\"라고 했어",
+			"distractor_ref": "F078d",
+			"distractor_note": "Distractor: 아침(아님)에 샤워do",
+			"expected_not_contains": [
+				"샤워do"
+			],
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F128",
+			"query": "내 혈압 뭐야?",
+			"scoring": {
+				"score_3": [
+					"정상(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"정상"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 혈압 정상(변경)(으)로 바꿨어",
+			"verify": "내 혈압 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F101",
+			"query": "내 회사 뭐야?",
+			"scoring": {
+				"score_3": [
+					"StormBase(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"StormBase"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 회사 StormBase(변경)(으)로 바꿨어",
+			"verify": "내 회사 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F097",
+			"query": "내 리포트 뭐야?",
+			"scoring": {
+				"score_3": [
+					"매월 28일까지 작성(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"매월 28일까지 작성"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 리포트 매월 28일까지 작성(변경)(으)로 바꿨어",
+			"verify": "내 리포트 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F022",
+			"query": "내 주 언어 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Glint"
+				],
+				"score_2": [],
+				"score_1": [
+					"SilverShell"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 주 언어 Glint(으)로 바꿨어",
+			"verify": "내 주 언어 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F059",
+			"query": "내 디지털 미니멀리즘 지향do 뭐야?",
+			"scoring": {
+				"score_3": [
+					"디지털 미니멀리즘 지향do(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"디지털 미니멀리즘 지향do"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 디지털 미니멀리즘 지향do 디지털 미니멀리즘 지향do(변경)(으)로 바꿨어",
+			"verify": "내 디지털 미니멀리즘 지향do 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F144",
+			"query": "내 SNS 뭐야?",
+			"scoring": {
+				"score_3": [
+					"don't do(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"don't do"
+				],
+				"score_0": []
+			},
+			"update": "아 참, SNS don't do(변경)(으)로 바꿨어",
+			"verify": "내 SNS 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F031",
+			"query": "내 DB 뭐야?",
+			"scoring": {
+				"score_3": [
+					"PostgreSQL 써(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"PostgreSQL 써"
+				],
+				"score_0": []
+			},
+			"update": "아 참, DB PostgreSQL 써(변경)(으)로 바꿨어",
+			"verify": "내 DB 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F187",
+			"query": "내 카메라 뭐야?",
+			"scoring": {
+				"score_3": [
+					"소니 A7C(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"소니 A7C"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 카메라 소니 A7C(변경)(으)로 바꿨어",
+			"verify": "내 카메라 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F032",
+			"query": "내 OS 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Ubuntu(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"Ubuntu"
+				],
+				"score_0": []
+			},
+			"update": "아 참, OS Ubuntu(변경)(으)로 바꿨어",
+			"verify": "내 OS 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F037",
+			"query": "내 로깅 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Winston(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"Winston"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 로깅 Winston(변경)(으)로 바꿨어",
+			"verify": "내 로깅 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F048",
+			"query": "내 술 뭐야?",
+			"scoring": {
+				"score_3": [
+					"안 마심(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"안 마심"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 술 안 마심(변경)(으)로 바꿨어",
+			"verify": "내 술 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F136",
+			"query": "내 명상 뭐야?",
+			"scoring": {
+				"score_3": [
+					"don't do(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"don't do"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 명상 don't do(변경)(으)로 바꿨어",
+			"verify": "내 명상 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F110",
+			"query": "내 사내 메신저 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Discord(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"Discord"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 사내 메신저 Discord(변경)(으)로 바꿨어",
+			"verify": "내 사내 메신저 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F181",
+			"query": "내 취미 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Kirami(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"Kirami"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 취미 Kirami(변경)(으)로 바꿨어",
+			"verify": "내 취미 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F193",
+			"query": "내 잘하 뭐야?",
+			"scoring": {
+				"score_3": [
+					"요리는 파스타(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"요리는 파스타"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 잘하 요리는 파스타(변경)(으)로 바꿨어",
+			"verify": "내 잘하 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F108",
+			"query": "내 PR 리뷰어 3명 필수야 뭐야?",
+			"scoring": {
+				"score_3": [
+					"PR 리뷰어 3명 필수야(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"PR 리뷰어 3명 필수야"
+				],
+				"score_0": []
+			},
+			"update": "아 참, PR 리뷰어 3명 필수야 PR 리뷰어 3명 필수야(변경)(으)로 바꿨어",
+			"verify": "내 PR 리뷰어 3명 필수야 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F137",
+			"query": "내 흡연 뭐야?",
+			"scoring": {
+				"score_3": [
+					"don't do(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"don't do"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 흡연 don't do(변경)(으)로 바꿨어",
+			"verify": "내 흡연 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F039",
+			"query": "내 모노레포 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Nx로 관리(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"Nx로 관리"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 모노레포 Nx로 관리(변경)(으)로 바꿨어",
+			"verify": "내 모노레포 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F140",
+			"query": "내 식사 뭐야?",
+			"scoring": {
+				"score_3": [
+					"규칙적으로(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"규칙적으로"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 식사 규칙적으로(변경)(으)로 바꿨어",
+			"verify": "내 식사 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_direct",
+			"fact_ref": "F006",
+			"query": "내 생일 뭐야?",
+			"scoring": {
+				"score_3": [
+					"12월 7일(변경)"
+				],
+				"score_2": [],
+				"score_1": [
+					"12월 7일"
+				],
+				"score_0": []
+			},
+			"update": "아 참, 생일 12월 7일(변경)(으)로 바꿨어",
+			"verify": "내 생일 뭐야?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F091",
+			"query": "이사 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"작년"
+				],
+				"score_2": [
+					"작년"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 작년에 관심 생겼어. 작년보다 좋은 것 같아",
+			"verify": "이사 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F120",
+			"query": "팀 회고 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"금요일에"
+				],
+				"score_2": [
+					"금요일에"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 금요일에에 관심 생겼어. 금요일에보다 좋은 것 같아",
+			"verify": "팀 회고 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F051",
+			"query": "야식 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"안 먹음"
+				],
+				"score_2": [
+					"안 먹음"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 안 먹음에 관심 생겼어. 안 먹음보다 좋은 것 같아",
+			"verify": "야식 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F034",
+			"query": "CI 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"CIcl"
+				],
+				"score_2": [
+					"CIcl"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 CIcl에 관심 생겼어. CIcl보다 좋은 것 같아",
+			"verify": "CI 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F150",
+			"query": "생일 선물 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"직접 만들어줘"
+				],
+				"score_2": [
+					"직접 만들어줘"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 직접 만들어줘에 관심 생겼어. 직접 만들어줘보다 좋은 것 같아",
+			"verify": "생일 선물 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F030",
+			"query": "Git 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"CLI"
+				],
+				"score_2": [
+					"CLI"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 CLI에 관심 생겼어. CLI보다 좋은 것 같아",
+			"verify": "Git 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F002",
+			"query": "older sister 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"Jun"
+				],
+				"score_2": [
+					"Jun"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 Jun에 관심 생겼어. Jun보다 좋은 것 같아",
+			"verify": "older sister 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F014",
+			"query": "군대 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"공군 나왔어"
+				],
+				"score_2": [
+					"공군 나왔어"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 공군 나왔어에 관심 생겼어. 공군 나왔어보다 좋은 것 같아",
+			"verify": "군대 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F110",
+			"query": "사내 메신저 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"Discord"
+				],
+				"score_2": [
+					"Discord"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 Discord에 관심 생겼어. Discord보다 좋은 것 같아",
+			"verify": "사내 메신저 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F059",
+			"query": "디지털 미니멀리즘 지향do 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"디지털 미니멀리즘 지향do"
+				],
+				"score_2": [
+					"디지털 미니멀리즘 지향do"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 디지털 미니멀리즘 지향do에 관심 생겼어. 디지털 미니멀리즘 지향do보다 좋은 것 같아",
+			"verify": "디지털 미니멀리즘 지향do 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F178",
+			"query": "프리미엄 서비스 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"하나만 써"
+				],
+				"score_2": [
+					"하나만 써"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 하나만 써에 관심 생겼어. 하나만 써보다 좋은 것 같아",
+			"verify": "프리미엄 서비스 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F159",
+			"query": "Yuna 생일 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"4월 17일"
+				],
+				"score_2": [
+					"4월 17일"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 4월 17일에 관심 생겼어. 4월 17일보다 좋은 것 같아",
+			"verify": "Yuna 생일 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F145",
+			"query": "모임 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"주 1회"
+				],
+				"score_2": [
+					"주 1회"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 주 1회에 관심 생겼어. 주 1회보다 좋은 것 같아",
+			"verify": "모임 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F144",
+			"query": "SNS 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"don't do"
+				],
+				"score_2": [
+					"don't do"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 don't do에 관심 생겼어. don't do보다 좋은 것 같아",
+			"verify": "SNS 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "contradiction_indirect",
+			"fact_ref": "F035",
+			"query": "클라우드 관련do서 요즘 어때?",
+			"scoring": {
+				"score_3": [
+					"에이우에스 써"
+				],
+				"score_2": [
+					"에이우에스 써"
+				],
+				"score_1": [],
+				"score_0": []
+			},
+			"update": "요즘 에이우에스 써에 관심 생겼어. 에이우에스 써보다 좋은 것 같아",
+			"verify": "클라우드 관련do서 요즘 어때?",
+			"weight": 2
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F054",
+			"query": "내 취향 알려줘",
+			"scoring": {
+				"score_3": [
+					"숫자는 72"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F029",
+			"query": "내 개발 환경 알려줘",
+			"scoring": {
+				"score_3": [
+					"1.7.96"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F097",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"매월 28일까지 작성"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F025",
+			"query": "에디터 뭐 써?",
+			"scoring": {
+				"score_3": [
+					"탭"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F122",
+			"query": "알레르기 have?",
+			"scoring": {
+				"score_3": [
+					"Melatonin-X 41mg"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F186",
+			"query": "주말에 뭐 do?",
+			"scoring": {
+				"score_3": [
+					"것도 좋아"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F096",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"2주"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F006",
+			"query": "내 이름이 뭐야?",
+			"scoring": {
+				"score_3": [
+					"12월 7일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F012",
+			"query": "나 누구야?",
+			"scoring": {
+				"score_3": [
+					"있음"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F003",
+			"query": "나에 대do 뭐 알아?",
+			"scoring": {
+				"score_3": [
+					"안 마심"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "unchanged_persistence",
+			"fact_ref": "F121",
+			"query": "운동 do?",
+			"scoring": {
+				"score_3": [
+					"peanut"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"context": "다른 항목이 변경되었으나 이 항목은 유지되어야 함"
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F091",
+			"query": "원래 이사 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"작년"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F084",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F087",
+			"query": "일정 알려줘",
+			"scoring": {
+				"score_3": [
+					"23시에 자"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F083",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"매월 13일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F118",
+			"query": "원래 구독 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"격은 19000원"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F086",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"6시에 일어나"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F090",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"분기별"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F029",
+			"query": "원래 에디터 버전 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"1.7.96"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F061",
+			"query": "원래 거주지 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"Storm City Nam-gu"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F026",
+			"query": "원래 셸 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"Bash"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F099",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"프로젝트 런칭"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F088",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"주 3회 운동do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F089",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"첫째 주 월요일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F085",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"7시에 출근do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F082",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"매주 목요일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F094",
+			"query": "미팅 언제야?",
+			"scoring": {
+				"score_3": [
+					"금요일에 코드 리뷰do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F096",
+			"query": "일정 알려줘",
+			"scoring": {
+				"score_3": [
+					"2주"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F023",
+			"query": "원래 프레임워크 뭐였어?",
+			"scoring": {
+				"score_3": [
+					"Zepton7"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F093",
+			"query": "일정 알려줘",
+			"scoring": {
+				"score_3": [
+					"회사 다녔어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "temporal",
+			"fact_ref": "F081",
+			"query": "언제 입사했어?",
+			"scoring": {
+				"score_3": [
+					"2023년 3월 7일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			}
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F088",
+			"query": "내 주 3회 운동do 뭐야?",
+			"scoring": {
+				"score_3": [
+					"주 3회 운동do"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "ㅋㅋ 어제 유튜브에서 웃긴 거 봤어. 아 맞다 주 3회 운동do 관련do서 주 3회 운동do라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F071",
+			"query": "내 이웃 관계 뭐야?",
+			"scoring": {
+				"score_3": [
+					"안 친함"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "아 오늘 진짜 피곤하다. 점심에 뭐 먹지. 아 맞다 이웃 관계 관련do서 안 친함라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F160",
+			"query": "내 멘토 Gun have 뭐야?",
+			"scoring": {
+				"score_3": [
+					"멘토 Gun have"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "어제 친구 만났는데 개웃겨. 아 그리고 아 맞다 멘토 Gun have 관련do서 멘토 Gun have라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F065",
+			"query": "내 집 뭐야?",
+			"scoring": {
+				"score_3": [
+					"50번길 161 1487호"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "배고프다. 아 맞다, 아 맞다 집 관련do서 50번길 161 1487호라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F095",
+			"query": "내 배포 뭐야?",
+			"scoring": {
+				"score_3": [
+					"매월 마지막 주"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "와 대박 이거 진짜 맛있다. 아 맞다 배포 관련do서 매월 마지막 주라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F183",
+			"query": "내 랭킹 뭐야?",
+			"scoring": {
+				"score_3": [
+					"3.81위"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "ㅋㅋ 그Gun 모르겠고. 아 맞다 랭킹 관련do서 3.81위라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F014",
+			"query": "내 군대 뭐야?",
+			"scoring": {
+				"score_3": [
+					"공군 나왔어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "와 대박 이거 진짜 맛있다. 아 맞다 군대 관련do서 공군 나왔어라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F041",
+			"query": "내 좋아하는 과일 뭐야?",
+			"scoring": {
+				"score_3": [
+					"rambutan"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "어제 친구 만났는데 개웃겨. 아 그리고 아 맞다 좋아하는 과일 관련do서 rambutan라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F154",
+			"query": "내 Sungmin 전화번호 뒷자리 6755야 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Sungmin 전화번호 뒷자리 6755야"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "와 대박 이거 진짜 맛있다. 아 맞다 Sungmin 전화번호 뒷자리 6755야 관련do서 Sungmin 전화번호 뒷자리 6755야라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F108",
+			"query": "내 PR 리뷰어 3명 필수야 뭐야?",
+			"scoring": {
+				"score_3": [
+					"PR 리뷰어 3명 필수야"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "ㅋㅋ 어제 유튜브에서 웃긴 거 봤어. 아 맞다 PR 리뷰어 3명 필수야 관련do서 PR 리뷰어 3명 필수야라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F039",
+			"query": "내 모노레포 뭐야?",
+			"scoring": {
+				"score_3": [
+					"Nx로 관리"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "ㅋㅋ 어제 유튜브에서 웃긴 거 봤어. 아 맞다 모노레포 관련do서 Nx로 관리라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F149",
+			"query": "내 전화번호 뭐야?",
+			"scoring": {
+				"score_3": [
+					"자주 안 바꿈"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "지금 커피 마시면서 일하는 중인데 아 맞다 아 맞다 전화번호 관련do서 자주 안 바꿈라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F133",
+			"query": "내 비타민 C 먹어 뭐야?",
+			"scoring": {
+				"score_3": [
+					"비타민 C 먹어"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "어제 친구 만났는데 개웃겨. 아 그리고 아 맞다 비타민 C 먹어 관련do서 비타민 C 먹어라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F056",
+			"query": "내 방 안에 식물 like 뭐야?",
+			"scoring": {
+				"score_3": [
+					"방 안에 식물 like"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "잠깐 전화 왔었어. 아 그리고 아 맞다 방 안에 식물 like 관련do서 방 안에 식물 like라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F120",
+			"query": "내 팀 회고 뭐야?",
+			"scoring": {
+				"score_3": [
+					"금요일에"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "지금 커피 마시면서 일하는 중인데 아 맞다 아 맞다 팀 회고 관련do서 금요일에라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F145",
+			"query": "내 모임 뭐야?",
+			"scoring": {
+				"score_3": [
+					"주 1회"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "배고프다. 아 맞다, 아 맞다 모임 관련do서 주 1회라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F151",
+			"query": "내 친한 친구 5명 have 뭐야?",
+			"scoring": {
+				"score_3": [
+					"친한 친구 5명 have"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "와 대박 이거 진짜 맛있다. 아 맞다 친한 친구 5명 have 관련do서 친한 친구 5명 have라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F157",
+			"query": "내 맛집 Siwoo랑 자주 가 뭐야?",
+			"scoring": {
+				"score_3": [
+					"맛집 Siwoo랑 자주 가"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "ㅋㅋ 어제 유튜브에서 웃긴 거 봤어. 아 맞다 맛집 Siwoo랑 자주 가 관련do서 맛집 Siwoo랑 자주 가라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F083",
+			"query": "내 급여일 뭐야?",
+			"scoring": {
+				"score_3": [
+					"매월 13일"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "어제 친구 만났는데 개웃겨. 아 그리고 아 맞다 급여일 관련do서 매월 13일라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "noise_resilience",
+			"fact_ref": "F036",
+			"query": "내 배포 뭐야?",
+			"scoring": {
+				"score_3": [
+					"ELB로"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"noisy_input": "잠깐 전화 왔었어. 아 그리고 아 맞다 배포 관련do서 ELB로라고 했었지. 근데 배달 왔다.",
+			"weight": 2
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F015",
+			"query": "포항공과대학교 나왔어 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"아니",
+					"안"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"대학은 포항공과대학교 나왔어\" → 포항공과대학교 나왔어에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F137",
+			"query": "don't do 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"안",
+					"없",
+					"싫어",
+					"아니"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"담배 안 펴\" → don't do에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F046",
+			"query": "싫어함 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"아니",
+					"안"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"매운 음식 dislike\" → 싫어함에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F136",
+			"query": "don't do 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"안",
+					"없",
+					"싫어",
+					"아니"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"명상은 don't do\" → don't do에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F011",
+			"query": "안 마심 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"안",
+					"없",
+					"싫어",
+					"아니"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"차는 don't drink. 커피만 drink\" → 안 마심에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F013",
+			"query": "름은 Luna 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"아니",
+					"안"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"영어 이름은 Luna야\" → 름은 Luna에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F062",
+			"query": "hamster \"Barley\" 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"아니",
+					"안"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"반려동물은 hamster \"Barley\"이야\" → hamster \"Barley\"에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": "F071",
+			"query": "안 친함 관련do서 나한테 뭐라고 했었지?",
+			"scoring": {
+				"score_3": [
+					"안",
+					"없",
+					"싫어",
+					"아니"
+				],
+				"score_2": [],
+				"score_1": [],
+				"score_0": []
+			},
+			"is_reasoning": true,
+			"reasoning_note": "부정 팩트 추론: \"이웃이랑은 안 친do\" → 안 친함에 대한 부정적 답변 필요"
+		},
+		{
+			"category": "direct_recall",
+			"fact_ref": [
+				"F010",
+				"F121"
+			],
+			"query": "유older brother peanut 먹어도 돼?",
+			"scoring": {
+				"score_3": [
+					"안 돼",
+					"안되",
+					"알레르기"
+				],
+				"score_2": [
+					"peanut"
+				],
+				"score_1": [],
+				"score_0": [
+					"돼",
+					"괜찮"
+				]
+			},
+			"is_reasoning": true,
+			"reasoning_note": "추론: 유older brother: 아침older brother + 알레르기: peanut → 섭취 가능 여부 판단"
+		}
+	]
+}

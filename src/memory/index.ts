@@ -14,6 +14,9 @@
  */
 
 import crypto, { randomUUID } from "node:crypto";
+import { LocalAdapter } from "./adapters/local.js";
+import { QdrantAdapter } from "./adapters/qdrant.js";
+import type { EmbeddingProvider } from "./embeddings.js";
 import { scoreImportance, shouldStore } from "./importance.js";
 import { findContradictions } from "./reconsolidation.js";
 import type {
@@ -27,9 +30,6 @@ import type {
 	RecallContext,
 	Reflection,
 } from "./types.js";
-import { QdrantAdapter } from "./adapters/qdrant.js";
-import { LocalAdapter } from "./adapters/local.js";
-import type { EmbeddingProvider } from "./embeddings.js";
 
 // Re-exports for package consumers
 export type { EmbeddingProvider };
@@ -55,9 +55,9 @@ export type {
 } from "./types.js";
 
 // Import A/B test algorithm interfaces and implementations
-import type { MemoryAlgorithm } from './algorithms/base.js';
-import { AlgorithmVariantA } from './algorithms/variantA.js';
-import { AlgorithmVariantB } from './algorithms/variantB.js';
+import type { MemoryAlgorithm } from "./algorithms/base.js";
+import { AlgorithmVariantA } from "./algorithms/variantA.js";
+import { AlgorithmVariantB } from "./algorithms/variantB.js";
 
 
 /**
@@ -81,7 +81,8 @@ export interface MemorySystemOptions {
 	/**
 	 * Embedding provider for vector search.
 	 * - Required when adapter = 'qdrant'
-	 * - Ignored for LocalAdapter — LocalAdapter always uses keyword search regardless of this setting.
+	 * - Used by LocalAdapter for vector similarity search when provided.
+	 *   Falls back to keyword-only search when omitted.
 	 */
 	embeddingProvider?: EmbeddingProvider;
 	/** Consolidation interval in ms (default: 30 minutes) */
@@ -100,36 +101,51 @@ export interface MemorySystemOptions {
 // Placeholder for heuristicFactExtractor and related functions
 // In a real scenario, these would be properly implemented or replaced by LLM calls.
 let _heuristicWarnOnce = false;
-async function heuristicFactExtractor(episodes: Episode[]): Promise<ExtractedFact[]> {
-    if (!_heuristicWarnOnce) {
-        console.warn("[MemorySystem] Using heuristic fact extractor (no LLM). Inject factExtractor option for production.");
-        _heuristicWarnOnce = true;
-    }
-    return episodes.map(ep => ({
-        content: ep.content,
-        entities: [],
-        topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
-        importance: ep.importance.utility,
-        sourceEpisodeIds: [ep.id],
-    }));
+async function heuristicFactExtractor(
+	episodes: Episode[],
+): Promise<ExtractedFact[]> {
+	if (!_heuristicWarnOnce) {
+		console.warn(
+			"[MemorySystem] Using heuristic fact extractor (no LLM). Inject factExtractor option for production.",
+		);
+		_heuristicWarnOnce = true;
+	}
+	return episodes.map((ep) => ({
+		content: ep.content,
+		entities: [],
+		topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
+		importance: ep.importance.utility,
+		sourceEpisodeIds: [ep.id],
+	}));
 }
-function contentTokens(text: string): Set<string> { return new Set(); }
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number { return 0; }
+function contentTokens(text: string): Set<string> {
+	return new Set();
+}
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+	return 0;
+}
 const TEMPORAL_GROUP_WINDOW_MS = 30 * 60 * 1000;
 const MAX_EPISODES_PER_CYCLE = 200;
-function mergeRelatedFacts(facts: ExtractedFact[], sourceEpisodes?: Episode[]): ExtractedFact[] { return facts; }
+function mergeRelatedFacts(
+	facts: ExtractedFact[],
+	sourceEpisodes?: Episode[],
+): ExtractedFact[] {
+	return facts;
+}
 
 // Factory function to get the correct memory algorithm variant
 function getMemoryAlgorithm(variant: string): MemoryAlgorithm {
-    switch (variant) {
-        case 'control':
-            return new AlgorithmVariantA();
-        case 'treatment':
-            return new AlgorithmVariantB();
-        default:
-            console.warn(`Unknown memory algorithm variant: ${variant}. Defaulting to 'control'.`);
-            return new AlgorithmVariantA(); // Default to control
-    }
+	switch (variant) {
+		case "control":
+			return new AlgorithmVariantA();
+		case "treatment":
+			return new AlgorithmVariantB();
+		default:
+			console.warn(
+				`Unknown memory algorithm variant: ${variant}. Defaulting to 'control'.`,
+			);
+			return new AlgorithmVariantA(); // Default to control
+	}
 }
 
 export class MemorySystem {
@@ -161,7 +177,9 @@ export class MemorySystem {
 			this.adapter = options.adapter;
 			this._initPromise = Promise.resolve();
 		} else {
-			const localAdapter = new LocalAdapter();
+			const localAdapter = new LocalAdapter({
+				embeddingProvider: options.embeddingProvider,
+			});
 			this.adapter = localAdapter;
 			this._initPromise = Promise.resolve();
 		}
@@ -215,7 +233,12 @@ export class MemorySystem {
 
 		// Reconsolidation: check if new info contradicts existing facts
 		// Runs for all stored messages — contradiction detection is cheap
-		await this.checkAndReconsolidate(input.content, episode.id, score.utility, now);
+		await this.checkAndReconsolidate(
+			input.content,
+			episode.id,
+			score.utility,
+			now,
+		);
 
 		// Strengthen associations between entities in the encoding context
 		if (context.project && context.activeFile) {
@@ -277,7 +300,7 @@ export class MemorySystem {
 		facts: Fact[];
 		reflections: Reflection[];
 	}> {
-		const topK = context.topK ?? 10;
+		const topK = context.topK ?? 20;
 
 		const [episodes, facts, reflections] = await Promise.all([
 			this.adapter.episode.recall(query, { ...context, topK }),
@@ -288,23 +311,28 @@ export class MemorySystem {
 		return { episodes, facts, reflections };
 	}
 
-    /**
-     * A/B Test enabled search method for memory algorithms.
-     * Uses the selected variant of the memory algorithm to perform the search.
-     */
-    async search(query: string, variant: string = 'control', options?: any): Promise<any[]> {
-        console.log(`[MemorySystem] Performing search with variant: ${variant}`);
-        const algorithm = getMemoryAlgorithm(variant);
-        // Log start time
-        const startTime = process.hrtime.bigint();
-        const results = await algorithm.retrieve(query, options);
-        // Log end time and duration
-        const endTime = process.hrtime.bigint();
-        const durationMs = Number(endTime - startTime) / 1_000_000;
-        console.log(`Experiment: memory_algorithm_experiment, Variant: ${variant}, Query: "${query}", Results Count: ${results.length}, Duration: ${durationMs.toFixed(2)}ms`);
-        return results;
-    }
-
+	/**
+	 * A/B Test enabled search method for memory algorithms.
+	 * Uses the selected variant of the memory algorithm to perform the search.
+	 */
+	async search(
+		query: string,
+		variant = "control",
+		options?: any,
+	): Promise<any[]> {
+		console.log(`[MemorySystem] Performing search with variant: ${variant}`);
+		const algorithm = getMemoryAlgorithm(variant);
+		// Log start time
+		const startTime = process.hrtime.bigint();
+		const results = await algorithm.retrieve(query, options);
+		// Log end time and duration
+		const endTime = process.hrtime.bigint();
+		const durationMs = Number(endTime - startTime) / 1_000_000;
+		console.log(
+			`Experiment: memory_algorithm_experiment, Variant: ${variant}, Query: "${query}", Results Count: ${results.length}, Duration: ${durationMs.toFixed(2)}ms`,
+		);
+		return results;
+	}
 
 	/**
 	 * Auto-recall for session init (L6 analog).
@@ -319,7 +347,8 @@ export class MemorySystem {
 			topK: 10,
 		});
 
-		if (facts.length === 0 && reflections.length === 0 && episodes.length === 0) return "";
+		if (facts.length === 0 && reflections.length === 0 && episodes.length === 0)
+			return "";
 
 		const parts: string[] = [];
 
@@ -349,7 +378,9 @@ export class MemorySystem {
 					prefix = "기록";
 				} else {
 					// Unexpected role value (e.g., corrupted stored data) — log for observability
-					console.warn(`[MemorySystem] sessionRecall: unexpected episode role: ${roleStr}`);
+					console.warn(
+						`[MemorySystem] sessionRecall: unexpected episode role: ${roleStr}`,
+					);
 					prefix = "기록";
 				}
 				parts.push(`- ${prefix}: ${ep.content}`);
@@ -467,20 +498,32 @@ export class MemorySystem {
 
 					// Check for exact/near identity to prevent semantic redundancy (#4)
 					const duplicate = existingFacts.find((f) => {
-						const sim = jaccardSimilarity(contentTokens(f.content), contentTokens(ef.content));
+						const sim = jaccardSimilarity(
+							contentTokens(f.content),
+							contentTokens(ef.content),
+						);
 						return sim > 0.85; // High similarity threshold for identity
 					});
 
 					if (duplicate) {
 						// Near-duplicate found — update metadata but don't create new entry
-						const newImportance = Math.max(duplicate.importance, ef.importance, 0.7);
+						const newImportance = Math.max(
+							duplicate.importance,
+							ef.importance,
+							0.7,
+						);
 						await this.adapter.semantic.upsert({
 							...duplicate,
 							updatedAt: now,
 							lastAccessed: now, // Strengthening on reactivation
 							importance: newImportance,
 							strength: newImportance,
-							sourceEpisodes: [...new Set([...duplicate.sourceEpisodes, ...ef.sourceEpisodeIds])],
+							sourceEpisodes: [
+								...new Set([
+									...duplicate.sourceEpisodes,
+									...ef.sourceEpisodeIds,
+								]),
+							],
 						});
 						factsUpdated++;
 						continue;
@@ -493,7 +536,11 @@ export class MemorySystem {
 						// (Partial resolution bug #4 fixed)
 						for (const { fact, result } of contradictions) {
 							if (result.action === "update" && result.updatedContent) {
-								const newImportance = Math.max(fact.importance, ef.importance, 0.7);
+								const newImportance = Math.max(
+									fact.importance,
+									ef.importance,
+									0.7,
+								);
 								await this.adapter.semantic.upsert({
 									...fact,
 									content: result.updatedContent,
@@ -502,7 +549,10 @@ export class MemorySystem {
 									importance: newImportance,
 									strength: newImportance,
 									sourceEpisodes: [
-										...new Set([...fact.sourceEpisodes, ...ef.sourceEpisodeIds]),
+										...new Set([
+											...fact.sourceEpisodes,
+											...ef.sourceEpisodeIds,
+										]),
 									],
 								});
 								factsUpdated++;

@@ -1,14 +1,14 @@
 {
-  "issue": "#1 EN judge 검증 — Gemini 2.5 Flash→Pro 전환, 배치+토큰 측정",
-  "issue_url": "https://github.com/nextain/alpha-memory/issues/1",
-  "current_phase": "investigate",
-  "gates_cleared": ["understand", "scope"],
-  "current_task": "대답로그 없음 확인 → 전체 파이프라인 재실행 필요",
-  "key_decisions": [
-    "대답로그(answer) 파일이 저장되지 않음 — judge만 재실행 불가",
-    "encode는 --skip-encode로 캐시 가능한지 확인 필요",
-    "Gemini 2.5 Pro judge를 위한 스크립트 수정 또는 별도 스크립트 필요",
-    "먼저 Naia만 소규모 테스트(일부 카테고리)로 토큰 소모 측정"
-  ],
-  "token_budget": "25% 사용, 75% 여유"
+	"issue": "#1 EN judge 검증 — Gemini 2.5 Flash→Pro 전환, 배치+토큰 측정",
+	"issue_url": "https://github.com/nextain/alpha-memory/issues/1",
+	"current_phase": "investigate",
+	"gates_cleared": ["understand", "scope"],
+	"current_task": "대답로그 없음 확인 → 전체 파이프라인 재실행 필요",
+	"key_decisions": [
+		"대답로그(answer) 파일이 저장되지 않음 — judge만 재실행 불가",
+		"encode는 --skip-encode로 캐시 가능한지 확인 필요",
+		"Gemini 2.5 Pro judge를 위한 스크립트 수정 또는 별도 스크립트 필요",
+		"먼저 Naia만 소규모 테스트(일부 카테고리)로 토큰 소모 측정"
+	],
+	"token_budget": "25% 사용, 75% 여유"
 }

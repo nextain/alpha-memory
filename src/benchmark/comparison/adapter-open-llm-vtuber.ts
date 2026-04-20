@@ -64,9 +64,7 @@ export class OpenLLMVTuberAdapter implements BenchmarkAdapter {
 		});
 		this.agentId = agent?.id ?? "";
 		if (!this.agentId) {
-			throw new Error(
-				`Failed to create Letta agent: ${JSON.stringify(agent)}`,
-			);
+			throw new Error(`Failed to create Letta agent: ${JSON.stringify(agent)}`);
 		}
 	}
 
@@ -91,7 +89,7 @@ export class OpenLLMVTuberAdapter implements BenchmarkAdapter {
 		if (!result) return false;
 
 		// Check if the agent actually stored it by looking at tool calls in response
-		const messages = Array.isArray(result) ? result : result?.messages ?? [];
+		const messages = Array.isArray(result) ? result : (result?.messages ?? []);
 		const didStore = messages.some(
 			(m: any) =>
 				m.message_type === "tool_call_message" &&
@@ -153,14 +151,13 @@ export class OpenLLMVTuberAdapter implements BenchmarkAdapter {
 
 		const chatMessages = Array.isArray(chatResult)
 			? chatResult
-			: chatResult?.messages ?? [];
+			: (chatResult?.messages ?? []);
 
 		// Extract assistant text responses
 		return chatMessages
 			.filter(
 				(m: any) =>
-					m.message_type === "assistant_message" ||
-					m.role === "assistant",
+					m.message_type === "assistant_message" || m.role === "assistant",
 			)
 			.map((m: any) => m.content ?? m.assistant_message ?? "")
 			.filter((s: string) => s.length > 0)

@@ -46,11 +46,7 @@ export class QdrantAdapter implements MemoryAdapter {
 
 	async initialize(): Promise<void> {
 		const dims = this.options.embeddingProvider.dims;
-		await this.ensureCollectionWithVectors(
-			this.factCollection,
-			dims,
-			"Cosine",
-		);
+		await this.ensureCollectionWithVectors(this.factCollection, dims, "Cosine");
 		await this.ensureCollectionWithVectors(
 			this.episodeCollection,
 			dims,
@@ -106,8 +102,7 @@ export class QdrantAdapter implements MemoryAdapter {
 			query: string,
 			context: RecallContext,
 		): Promise<Episode[]> => {
-			const queryEmbedding =
-				await this.options.embeddingProvider.embed(query);
+			const queryEmbedding = await this.options.embeddingProvider.embed(query);
 			const searchResult = await this.client.search(this.episodeCollection, {
 				vector: queryEmbedding,
 				limit: context.topK ?? 10,
@@ -115,35 +110,29 @@ export class QdrantAdapter implements MemoryAdapter {
 			return searchResult.map((point) => point.payload as Episode);
 		},
 		getRecent: async (n: number): Promise<Episode[]> => {
-			const searchResult = await this.client.scroll(
-				this.episodeCollection,
-				{
-					limit: n,
-					with_payload: true,
-					order_by: {
-						key: "timestamp",
-						direction: "desc",
-					},
+			const searchResult = await this.client.scroll(this.episodeCollection, {
+				limit: n,
+				with_payload: true,
+				order_by: {
+					key: "timestamp",
+					direction: "desc",
 				},
-			);
+			});
 			return searchResult.points.map((point) => point.payload as Episode);
 		},
 		getUnconsolidated: async (): Promise<Episode[]> => {
-			const searchResult = await this.client.scroll(
-				this.episodeCollection,
-				{
-					limit: 1000,
-					with_payload: true,
-					filter: {
-						must: [
-							{
-								key: "consolidated",
-								match: { boolean: false },
-							},
-						],
-					},
+			const searchResult = await this.client.scroll(this.episodeCollection, {
+				limit: 1000,
+				with_payload: true,
+				filter: {
+					must: [
+						{
+							key: "consolidated",
+							match: { boolean: false },
+						},
+					],
 				},
-			);
+			});
 			return searchResult.points.map((point) => point.payload as Episode);
 		},
 		markConsolidated: async (ids: string[]): Promise<void> => {
@@ -179,8 +168,7 @@ export class QdrantAdapter implements MemoryAdapter {
 			topK: number,
 			deepRecall = false,
 		): Promise<Fact[]> => {
-			const queryEmbedding =
-				await this.options.embeddingProvider.embed(query);
+			const queryEmbedding = await this.options.embeddingProvider.embed(query);
 			const searchResult = await this.client.search(this.factCollection, {
 				vector: queryEmbedding,
 				limit: topK,
@@ -196,14 +184,11 @@ export class QdrantAdapter implements MemoryAdapter {
 			const limit = 1000;
 
 			while (true) {
-				const allFactsResponse = await this.client.scroll(
-					this.factCollection,
-					{
-						limit: limit,
-						with_payload: true,
-						offset: offset,
-					},
-				);
+				const allFactsResponse = await this.client.scroll(this.factCollection, {
+					limit: limit,
+					with_payload: true,
+					offset: offset,
+				});
 
 				const factsToPrune: string[] = [];
 				const factsToUpdate: { id: string; payload: Fact }[] = [];
@@ -311,21 +296,18 @@ export class QdrantAdapter implements MemoryAdapter {
 	// ─── Procedural Memory ─────────────────────────────────────────────
 	procedural = {
 		getSkill: async (name: string): Promise<Skill | null> => {
-			const searchResult = await this.client.scroll(
-				this.skillCollection,
-				{
-					limit: 1,
-					with_payload: true,
-					filter: {
-						must: [
-							{
-								key: "name",
-								match: { value: name },
-							},
-						],
-					},
+			const searchResult = await this.client.scroll(this.skillCollection, {
+				limit: 1,
+				with_payload: true,
+				filter: {
+					must: [
+						{
+							key: "name",
+							match: { value: name },
+						},
+					],
 				},
-			);
+			});
 			return searchResult.points.length > 0
 				? (searchResult.points[0].payload as Skill)
 				: null;
@@ -338,8 +320,7 @@ export class QdrantAdapter implements MemoryAdapter {
 				if (success) skill.successCount++;
 				else skill.failureCount++;
 				skill.confidence =
-					skill.successCount /
-					(skill.successCount + skill.failureCount);
+					skill.successCount / (skill.successCount + skill.failureCount);
 			} else {
 				skill = {
 					id: randomUUID(),
@@ -373,15 +354,11 @@ export class QdrantAdapter implements MemoryAdapter {
 			task: string,
 			topK: number,
 		): Promise<Reflection[]> => {
-			const queryEmbedding =
-				await this.options.embeddingProvider.embed(task);
-			const searchResult = await this.client.search(
-				this.reflectionCollection,
-				{
-					vector: queryEmbedding,
-					limit: topK,
-				},
-			);
+			const queryEmbedding = await this.options.embeddingProvider.embed(task);
+			const searchResult = await this.client.search(this.reflectionCollection, {
+				vector: queryEmbedding,
+				limit: topK,
+			});
 			return searchResult.map((point) => point.payload as Reflection);
 		},
 	};

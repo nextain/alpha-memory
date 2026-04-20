@@ -106,7 +106,9 @@ export class Mem0Adapter implements MemoryAdapter {
 			} catch (err: any) {
 				// mem0 internal errors (like 'Memory with ID undefined not found')
 				// are logged but shouldn't crash episodic storage.
-				console.warn(`[Mem0Adapter] episode.store internal error: ${err.message}`);
+				console.warn(
+					`[Mem0Adapter] episode.store internal error: ${err.message}`,
+				);
 			}
 		},
 
@@ -213,9 +215,7 @@ export class Mem0Adapter implements MemoryAdapter {
 				return bScore - aScore;
 			});
 
-			return matchedEpisodes
-				.slice(0, topK)
-				.map(({ _mem0Score, ...ep }) => ep);
+			return matchedEpisodes.slice(0, topK).map(({ _mem0Score, ...ep }) => ep);
 		},
 
 		getRecent: async (n: number): Promise<Episode[]> => {
@@ -253,7 +253,9 @@ export class Mem0Adapter implements MemoryAdapter {
 					},
 				});
 			} catch (err: any) {
-				console.warn(`[Mem0Adapter] semantic.upsert internal error: ${err.message}`);
+				console.warn(
+					`[Mem0Adapter] semantic.upsert internal error: ${err.message}`,
+				);
 			}
 		},
 
@@ -304,7 +306,7 @@ export class Mem0Adapter implements MemoryAdapter {
 					// Scoring strategy:
 					// - Normal mode: relevance × (1 + decay boost) — relevance first, decay adjusts
 					// - Deep recall: pure vector similarity — ignore decay entirely
-					const cosineScore = r.score ?? (1 - idx / resultItems.length);
+					const cosineScore = r.score ?? 1 - idx / resultItems.length;
 					const _score = deepRecall
 						? cosineScore
 						: cosineScore * (1 + strength + kgBoost * 0.1);

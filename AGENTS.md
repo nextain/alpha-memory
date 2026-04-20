@@ -93,7 +93,9 @@ pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge
 | keyword | exact/substring match | instant |
 | gemini-pro-cli | gemini CLI (batch 10) | fast |
 | glm-api | Z.AI API direct (batch 10) | fast |
-| claude-cli | claude CLI via 9router (one-by-one) | slow |
+| claude-opus-cli | claude CLI (batch 10) | fast |
+
+**CRITICAL: 모든 judge(GLM, Gemini, Claude)는 반드시 배치 10개 묶음으로 호출. 절대 문항별 개별 호출 금지. Claude Opus는 $15/MTok(입력) + $75/MTok(출력)으로 개별 호출 시 10배 토큰 낭비 + 10배 느림.**
 
 ## Response LLM
 

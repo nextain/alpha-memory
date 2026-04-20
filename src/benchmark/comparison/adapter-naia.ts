@@ -49,7 +49,11 @@ function getEmbedderConfig(
 					}
 				: {
 						provider: "openai",
-						config: { apiKey, baseURL: GEMINI_BASE, model: "gemini-embedding-001" },
+						config: {
+							apiKey,
+							baseURL: GEMINI_BASE,
+							model: "gemini-embedding-001",
+						},
 						dimension: 3072,
 					};
 		case "solar":
@@ -103,7 +107,9 @@ export class NaiaAdapter implements BenchmarkAdapter {
 	async init(cacheId?: string): Promise<void> {
 		const id = cacheId ?? "stable";
 		const dbPath = `./memory-naia-${this.name}-${id}`;
-		console.log(`    [Naia] Initializing memory system with persistent store: ${dbPath}`);
+		console.log(
+			`    [Naia] Initializing memory system with persistent store: ${dbPath}`,
+		);
 		const embedder = getEmbedderConfig(this.embedBackend, this.apiKey);
 		const mem0Config = {
 			embedder: {
@@ -128,7 +134,7 @@ export class NaiaAdapter implements BenchmarkAdapter {
 							user: GATEWAY_USER,
 						},
 					}
-				: this.embedBackend === "qwen3" || this.embedBackend === "bge-m3"
+				: this.embedBackend === "qwen3"
 					? {
 							provider: "openai",
 							config: {

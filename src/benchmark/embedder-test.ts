@@ -1,0 +1,80 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+async function embed(text: string, provider: "google" | "ollama") {
+	const gwUrl =
+		"https://any-llm-gateway-70423245233.asia-northeast3.run.app/v1/embeddings";
+	const gwKey = "1ecc41ed461d4643b72c31b19b82533f.uLSxYdmhZjKEpyYJ";
+
+	if (provider === "google") {
+		const res = await fetch(gwUrl, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${gwKey}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				model: "vertexai:text-embedding-004",
+				input: [text],
+			}),
+		});
+		const data = (await res.json()) as any;
+		return data.data[0].embedding;
+	} else {
+		const res = await fetch("http://127.0.0.1:11434/api/embeddings", {
+			method: "POST",
+			body: JSON.stringify({ model: "mxbai-embed-large", prompt: text }),
+		});
+		const data = (await res.json()) as any;
+		return data.embedding;
+	}
+}
+
+function cosineSimilarity(a: number[], b: number[]) {
+	let dot = 0,
+		normA = 0,
+		normB = 0;
+	for (let i = 0; i < a.length; i++) {
+		dot += a[i] * b[i];
+		normA += a[i] * a[i];
+		normB += b[i] * b[i];
+	}
+	return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function runTest() {
+	const facts = [
+		"나는 김하늘이야. 스타트업 대표고 풀스택 개발자야",
+		"에디터는 Neovim 쓰고 있어",
+		"요즘은 주로 TypeScript로 개발하고 있어",
+	];
+
+	const queries = ["내 이름이 뭐야?", "나 뭐하는 사람이야?", "내 에디터 뭐야?"];
+
+	console.log("🚀 Comparing Embedders: Google vs Ollama(mxbai)");
+
+	for (let i = 0; i < queries.length; i++) {
+		const q = queries[i];
+		const f = facts[i];
+
+		const simGoogle = cosineSimilarity(
+			await embed(q, "google"),
+			await embed(f, "google"),
+		);
+		const simOllama = cosineSimilarity(
+			await embed(q, "ollama"),
+			await embed(f, "ollama"),
+		);
+
+		console.log(`\nQuery: "${q}"`);
+		console.log(`Fact : "${f}"`);
+		console.log(
+			` - Google Similarity: ${simGoogle.toFixed(4)} ${simGoogle >= 0.7 ? "✅" : "❌ (Blocked at 0.7)"}`,
+		);
+		console.log(
+			` - Ollama Similarity: ${simOllama.toFixed(4)} ${simOllama >= 0.7 ? "✅" : "❌ (Blocked at 0.7)"}`,
+		);
+	}
+}
+
+runTest().catch(console.error);
