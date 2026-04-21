@@ -17,7 +17,7 @@ Alpha Memory is one of four repos in the Naia open-source AI platform:
 
 ### Interfaces, not dependencies
 
-Alpha Memory is **one implementation of the `MemoryProvider` contract** specified in `@naia-agent/types`:
+Alpha Memory is **one implementation of the `MemoryProvider` contract** specified in `@nextain/agent-types`:
 
 - **Transparent** — the contract is public. Any memory system that implements it can replace Alpha Memory without touching runtime code.
 - **Non-binding** — alpha-memory does not depend on naia-agent's runtime. naia-agent treats this package as a black box behind the interface.

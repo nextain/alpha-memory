@@ -7,7 +7,7 @@
 ## `MemoryProvider` contract impact
 
 Alpha Memory is the reference `MemoryProvider` implementation for the Naia
-ecosystem (see `@naia-agent/types`).
+ecosystem (see `@nextain/agent-types`).
 
 - [ ] Changes behavior observable through the `MemoryProvider` façade — consumers may be affected
 - [ ] Changes Capability interface behavior (`BackupCapable`, `EmbeddingCapable`, etc.)

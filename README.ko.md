@@ -17,7 +17,7 @@ Alpha Memory는 Naia 오픈소스 AI 플랫폼 4개 레포 중 하나입니다:
 
 ### 의존이 아닌 인터페이스
 
-Alpha Memory는 `@naia-agent/types`에 명세된 **`MemoryProvider` 계약의 한 구현체**입니다:
+Alpha Memory는 `@nextain/agent-types`에 명세된 **`MemoryProvider` 계약의 한 구현체**입니다:
 
 - **투명** — 계약은 공개됩니다. 같은 계약을 구현하는 어떤 메모리 시스템이든 런타임 코드 수정 없이 Alpha Memory를 대체할 수 있습니다.
 - **묶이지 않음** — alpha-memory는 naia-agent의 런타임에 의존하지 않습니다. naia-agent는 이 패키지를 인터페이스 뒤의 블랙박스로 취급합니다.
