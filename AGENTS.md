@@ -195,6 +195,31 @@ reports/
 
 **Report:** See `reports/r6-ko-benchmark/report-ko.md`
 
+## Implementation Roadmap
+
+### Critical (#5, #12)
+
+- [ ] Wire offline embedding (all-MiniLM-L6-v2) into LocalAdapter — vector search never measured
+- [ ] Switch benchmark + production to LocalAdapter — mem0 LLM dedup kills Korean
+
+### High Priority (#8, #9, #10)
+
+- [ ] Temporal recall — preserve past state on contradiction update (temporal 0% EN / 20% KO)
+- [ ] Abstention gating — cosine similarity threshold for "I don't know" (not retrieval failure)
+- [ ] Unchanged persistence — fix cascade delete on contradiction update
+
+### Token Embedding Gating (Experimental — Post-Patent)
+
+Evaluate replacing keyword heuristic in `importance.ts` with token-embedding-based scoring:
+
+- **Phase 1 (prototype)**: Extract static token embeddings from pre-trained model (all-MiniLM-L6-v2 or LLM embedding layer). Compute cosine similarity between input tokens and pre-defined emotion/importance/surprise seed vectors. Run parallel with existing keyword scorer.
+- **Phase 2 (benchmark)**: Compare keyword vs embedding vs hybrid on R5/R6 identical conditions. Gate: F1 ≥ 5% improvement, latency < 10ms/query.
+- **Phase 3 (integration)**: If Phase 2 passes, add `ScoringProvider` interface to `scoreImportance()` with keyword (default) / embedding / hybrid modes.
+
+**Risk**: Static token embeddings are context-independent (same limitation as keywords). The improvement may be marginal for the added complexity. Benchmark data required before committing.
+
+**Patent note**: Included as "다른 실시예" in patent filing `docs-business/05. 특허/cognitive-memory-system/`. If benchmark proves ≥10% F1 gain, file divisional application or amendment.
+
 ## Conventions
 
 - Language: English for code/docs, Korean for discussions

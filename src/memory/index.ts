@@ -653,10 +653,91 @@ export class MemorySystem {
 		return (this.adapter as unknown as BackupCapable).import(blob, password);
 	}
 
+	// ─── Compaction (naia-agent CompactableCapable) ──────────────────────
+	//
+	// Implements the shape of @nextain/agent-types `CompactableCapable`
+	// structurally — no type-level import of that package is required,
+	// keeping alpha-memory's zero-dep guarantee on external ecosystem
+	// packages.
+	//
+	// v0: deterministic summarizer that compresses a message window into a
+	// synthetic recap paragraph. No LLM call.
+	// v1 (planned): optional summarizer callback that lets a host inject
+	// an LLM for higher-fidelity summaries.
+	// v2 (roadmap #6 CompactionMap): rolling summary maintained during
+	// encode() so compact() returns an already-built summary instantly.
+
+	/**
+	 * Produce a summary of the given message window suitable for replacing
+	 * the head of a conversation when the LLM context approaches its budget.
+	 *
+	 * Structural match for `CompactableCapable.compact()`.
+	 */
+	async compact(input: {
+		messages: readonly { role: string; content: string; timestamp?: number }[];
+		keepTail: number;
+		targetTokens: number;
+		sessionId?: string;
+	}): Promise<{
+		summary: { role: "assistant"; content: string; timestamp?: number };
+		droppedCount: number;
+		realtime?: boolean;
+	}> {
+		const msgs = input.messages;
+
+		// Roll stats
+		let userCount = 0;
+		let assistantCount = 0;
+		let toolCount = 0;
+		const topics = new Set<string>();
+		for (const m of msgs) {
+			if (m.role === "user") userCount++;
+			else if (m.role === "assistant") assistantCount++;
+			else if (m.role === "tool") toolCount++;
+			// Crude topic extraction: first capitalized token sequence.
+			for (const match of m.content.matchAll(/\b[A-Z][\w-]{2,}\b/g)) {
+				topics.add(match[0]);
+				if (topics.size >= 8) break;
+			}
+		}
+
+		const first = msgs[0];
+		const last = msgs[msgs.length - 1];
+
+		const lines: string[] = [
+			`[Conversation recap — ${msgs.length} earlier messages compacted]`,
+			`Turns: ${userCount} user · ${assistantCount} assistant · ${toolCount} tool`,
+		];
+		if (topics.size > 0) {
+			lines.push(`Topics mentioned: ${Array.from(topics).join(", ")}`);
+		}
+		if (first) lines.push(`Started with: "${truncateForRecap(first.content, 120)}"`);
+		if (last && last !== first) {
+			lines.push(`Most recent before recap: "${truncateForRecap(last.content, 120)}"`);
+		}
+		lines.push(`(Follow-up context continues in the ${input.keepTail} messages after this recap.)`);
+
+		return {
+			summary: {
+				role: "assistant",
+				content: lines.join("\n"),
+				timestamp: Date.now(),
+			},
+			droppedCount: msgs.length,
+			realtime: false,
+		};
+	}
+
 	// ─── Lifecycle ────────────────────────────────────────────────────────
 
 	async close(): Promise<void> {
 		this.stopConsolidation();
 		await this.adapter.close();
 	}
+}
+
+function truncateForRecap(s: string, max: number): string {
+	const trimmed = s.trim().replace(/\s+/g, " ");
+	if (trimmed.length <= max) return trimmed;
+	return `${trimmed.slice(0, max - 1)}…`;
 }
