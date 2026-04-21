@@ -1246,3 +1246,40 @@
 - Language: ko
 - LLM: gemini-flash-lite
 - Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 22. 오전 2:16:41
+- Run ID: `run-2026-04-21T17-16-41-009Z`
+- Adapters: airi
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 22. 오전 2:16:48
+- Run ID: `run-2026-04-21T17-16-48-672Z`
+- Adapters: airi
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] airi: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오전 2:22:56
+- Run ID: `run-2026-04-21T17-22-56-062Z`
+- Adapters: airi
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 22. 오전 2:24:01
+- Run ID: `run-2026-04-21T17-24-01-779Z`
+- Adapters: airi
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 22. 오전 2:30:09
+- Run ID: `run-2026-04-21T17-30-09-832Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)

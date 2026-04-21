@@ -28,6 +28,7 @@ import { join } from "node:path";
 interface JudgeResult {
 	pass: boolean;
 	reason: string;
+	score?: number;
 }
 
 interface Detail {
@@ -40,6 +41,9 @@ interface Detail {
 	reason: string;
 	memories: string[];
 	response: string;
+	score?: number;
+	maxScore?: number;
+	scoringV2?: boolean;
 }
 
 interface SavedResult {
@@ -198,63 +202,39 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	const lower = response.toLowerCase();
 	if (capName === "abstention") {
 		const refusals = [
-			"말씀하신 적",
-			"기억에 없",
-			"모르",
-			"없는 것 같",
-			"언급하신 적",
-			"기억이 없",
-			"알 수 없",
-			"말한 적",
-			"정보가 없",
-			"없습니다",
-			"아닙니다",
-			"죄송",
-			"don't have",
-			"don't recall",
-			"no memory",
-			"not in my memory",
-			"no record",
-			"don't remember",
-			"i'm not aware",
-			"haven't mentioned",
-			"no information",
-			"didn't mention",
-			"not something",
+			"말씀하신 적", "기억에 없", "모르", "없는 것 같", "언급하신 적",
+			"기억이 없", "알 수 없", "말한 적", "정보가 없", "없습니다",
+			"아닙니다", "죄송", "don't have", "don't recall", "no memory",
+			"not in my memory", "no record", "don't remember", "i'm not aware",
+			"haven't mentioned", "no information", "didn't mention", "not something",
 		];
-		return refusals.some((p) => lower.includes(p))
-			? { pass: true, reason: "PASS(kw): refusal" }
-			: { pass: false, reason: "FAIL(kw): no refusal" };
+		const refused = refusals.some((p) => lower.includes(p));
+		return { pass: refused, reason: refused ? "PASS(kw): refusal" : "FAIL(kw): no refusal", score: refused ? 3 : 0 };
 	}
 	if (capName === "irrelevant_isolation") {
 		const found = (q.expected_not_contains ?? []).filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
-		return found.length > 0
-			? { pass: false, reason: `FAIL(kw): forbidden [${found}]` }
-			: { pass: true, reason: "PASS(kw)" };
+		const ok = found.length === 0;
+		return { pass: ok, reason: ok ? "PASS(kw)" : `FAIL(kw): forbidden [${found}]`, score: ok ? 3 : 0 };
 	}
 	if (q.expected_any) {
 		const min = q.min_expected ?? 1;
 		const found = q.expected_any.filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
-		return found.length >= min
-			? { pass: true, reason: `PASS(kw): [${found}]` }
-			: {
-					pass: false,
-					reason: `FAIL(kw): ${found.length}/${q.expected_any.length}`,
-				};
+		if (found.length >= min) return { pass: true, reason: `PASS(kw): [${found}]`, score: 3 };
+		if (found.length > 0) return { pass: false, reason: `PARTIAL(kw): ${found.length}/${min}`, score: 1 };
+		return { pass: false, reason: "FAIL(kw): none found", score: 0 };
 	}
 	if (q.expected_contains) {
 		const found = q.expected_contains.filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
-		return found.length > 0
-			? { pass: true, reason: `PASS(kw): [${found}]` }
-			: { pass: false, reason: "FAIL(kw): none found" };
+		if (found.length > 0) return { pass: true, reason: `PASS(kw): [${found}]`, score: 3 };
+		return { pass: false, reason: "FAIL(kw): none found", score: 0 };
 	}
-	return { pass: false, reason: "NO_JUDGE" };
+	return { pass: false, reason: "NO_JUDGE", score: 0 };
 }
 
 // ─── API Callers ────────────────────────────────────────────────────────────────
@@ -665,6 +645,7 @@ async function main() {
 			if (d && finalVerdicts[i]) {
 				d.pass = finalVerdicts[i].pass;
 				d.reason = finalVerdicts[i].reason;
+				if (finalVerdicts[i].score !== undefined) d.score = finalVerdicts[i].score;
 			}
 		}
 		const scored = rescore(result.details);

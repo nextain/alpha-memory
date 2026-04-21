@@ -65,4 +65,7 @@ export interface TestDetail {
 		completion: number;
 		total: number;
 	};
+	score?: number;
+	maxScore?: number;
+	scoringV2?: boolean;
 }

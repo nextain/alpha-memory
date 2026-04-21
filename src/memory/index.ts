@@ -160,6 +160,18 @@ export class MemorySystem {
 	private readonly factExtractor: FactExtractor;
 	private _isConsolidating = false;
 
+	/**
+	 * Rolling summaries keyed by sessionId. Incrementally built by
+	 * `encode()` so `compact()` can return a precomputed digest (and flag
+	 * `realtime: true`). Survives for the lifetime of the MemorySystem.
+	 * Not persisted by default — host can call `snapshotRollingSummaries()`
+	 * if durability is needed.
+	 */
+	private readonly rollingSummaries = new Map<string, RollingSummary>();
+	/** Max messages tracked per rolling summary; older entries are folded
+	 *  into `compressed`. Prevents unbounded growth on long sessions. */
+	private readonly rollingHeadroom = 24;
+
 	constructor(options: MemorySystemOptions) {
 		this.consolidationIntervalMs =
 			options.consolidationIntervalMs ?? 30 * 60 * 1000;
@@ -235,6 +247,11 @@ export class MemorySystem {
 		};
 
 		await this.adapter.episode.store(episode);
+
+		// Rolling-summary incremental update (compact v2 hook).
+		// Keeps a per-session digest live so compact() can return it
+		// without re-reading the conversation window.
+		this.updateRollingSummary(input, context);
 
 		// Reconsolidation: check if new info contradicts existing facts
 		// Runs for all stored messages — contradiction detection is cheap
@@ -658,6 +675,87 @@ export class MemorySystem {
 		return (this.adapter as unknown as BackupCapable).import(blob, password);
 	}
 
+	// ─── Rolling summary (v2 — realtime compaction prep) ──────────────────
+
+	/**
+	 * Incrementally extend the per-session rolling summary when a new
+	 * message is encoded. Drops old raw messages beyond `rollingHeadroom`
+	 * into the `compressed` stem (topic counts + first/last quotes).
+	 */
+	private updateRollingSummary(input: MemoryInput, context: EncodingContext): void {
+		const sessionId = context.sessionId;
+		if (!sessionId) return; // only track when caller provides sessionId
+
+		let rs = this.rollingSummaries.get(sessionId);
+		if (!rs) {
+			rs = {
+				sessionId,
+				started: Date.now(),
+				updated: Date.now(),
+				recent: [],
+				compressed: "",
+				userCount: 0,
+				assistantCount: 0,
+				toolCount: 0,
+				topics: new Set<string>(),
+				firstUser: undefined,
+			};
+			this.rollingSummaries.set(sessionId, rs);
+		}
+
+		if (input.role === "user") {
+			rs.userCount++;
+			if (!rs.firstUser) rs.firstUser = truncateForRecap(input.content, 120);
+		} else if (input.role === "assistant") {
+			rs.assistantCount++;
+		} else if (input.role === "tool") {
+			rs.toolCount++;
+		}
+		for (const match of input.content.matchAll(/\b[A-Z][\w-]{2,}\b/g)) {
+			rs.topics.add(match[0]);
+			if (rs.topics.size >= 12) break;
+		}
+
+		rs.recent.push({
+			role: input.role,
+			content: input.content,
+			timestamp: input.timestamp ?? Date.now(),
+		});
+		if (rs.recent.length > this.rollingHeadroom) {
+			const evicted = rs.recent.splice(0, rs.recent.length - this.rollingHeadroom);
+			if (evicted.length > 0) {
+				// Compress evicted messages into the stem.
+				const compressed = compressEvictedMessages(evicted);
+				rs.compressed = rs.compressed ? `${rs.compressed}\n${compressed}` : compressed;
+			}
+		}
+		rs.updated = Date.now();
+	}
+
+	/**
+	 * Debug / persistence hook — export rolling summaries for host-managed
+	 * durability. Restoration via `loadRollingSummaries()` is planned.
+	 */
+	snapshotRollingSummaries(): RollingSummarySnapshot[] {
+		return Array.from(this.rollingSummaries.values()).map((rs) => ({
+			sessionId: rs.sessionId,
+			started: rs.started,
+			updated: rs.updated,
+			recent: [...rs.recent],
+			compressed: rs.compressed,
+			userCount: rs.userCount,
+			assistantCount: rs.assistantCount,
+			toolCount: rs.toolCount,
+			topics: Array.from(rs.topics),
+			...(rs.firstUser !== undefined ? { firstUser: rs.firstUser } : {}),
+		}));
+	}
+
+	/** Clear a single session's rolling summary (e.g. on session close). */
+	clearRollingSummary(sessionId: string): void {
+		this.rollingSummaries.delete(sessionId);
+	}
+
 	// ─── Compaction (naia-agent CompactableCapable) ──────────────────────
 	//
 	// Implements the shape of @nextain/agent-types `CompactableCapable`
@@ -695,10 +793,19 @@ export class MemorySystem {
 		realtime?: boolean;
 	}> {
 		const msgs = input.messages;
-		const recap = buildDeterministicRecap(msgs, input.keepTail);
+
+		// v2 fast path: if the caller supplied `sessionId` and we have a
+		// rolling summary for it, use that as the seed. compact() becomes
+		// essentially free — realtime=true.
+		const rs = input.sessionId ? this.rollingSummaries.get(input.sessionId) : undefined;
+		const recap = rs
+			? buildRecapFromRollingSummary(rs, msgs.length, input.keepTail)
+			: buildDeterministicRecap(msgs, input.keepTail);
 
 		let finalContent = recap;
-		let realtime = false;
+		// Rolling-summary seed is precomputed → realtime=true unless a
+		// summarizer overwrites the content.
+		let realtime = rs !== undefined;
 		if (this.summarizer) {
 			try {
 				const polished = await this.summarizer({
@@ -784,6 +891,70 @@ function buildDeterministicRecap(
 	}
 	lines.push(`(Follow-up context continues in the ${keepTail} messages after this recap.)`);
 
+	return lines.join("\n");
+}
+
+/** Rolling summary internal shape (lives in memory, not persisted). */
+interface RollingSummary {
+	sessionId: string;
+	started: number;
+	updated: number;
+	/** Raw recent messages up to `rollingHeadroom`. */
+	recent: { role: string; content: string; timestamp: number }[];
+	/** Compressed stem — stats + quotes from evicted older messages. */
+	compressed: string;
+	userCount: number;
+	assistantCount: number;
+	toolCount: number;
+	topics: Set<string>;
+	firstUser?: string;
+}
+
+/** Serializable snapshot of a RollingSummary. */
+export interface RollingSummarySnapshot {
+	sessionId: string;
+	started: number;
+	updated: number;
+	recent: readonly { role: string; content: string; timestamp: number }[];
+	compressed: string;
+	userCount: number;
+	assistantCount: number;
+	toolCount: number;
+	topics: readonly string[];
+	firstUser?: string;
+}
+
+function compressEvictedMessages(
+	msgs: readonly { role: string; content: string; timestamp: number }[],
+): string {
+	const userCount = msgs.filter((m) => m.role === "user").length;
+	const assistantCount = msgs.filter((m) => m.role === "assistant").length;
+	const toolCount = msgs.filter((m) => m.role === "tool").length;
+	const first = msgs[0];
+	const last = msgs[msgs.length - 1];
+	const lines: string[] = [
+		`[evicted ${msgs.length}: ${userCount}u/${assistantCount}a/${toolCount}t]`,
+	];
+	if (first) lines.push(`  first: "${truncateForRecap(first.content, 80)}"`);
+	if (last && last !== first) lines.push(`  last: "${truncateForRecap(last.content, 80)}"`);
+	return lines.join("\n");
+}
+
+function buildRecapFromRollingSummary(
+	rs: RollingSummary,
+	windowSize: number,
+	keepTail: number,
+): string {
+	const lines: string[] = [
+		`[Conversation recap (rolling) — ${windowSize} earlier messages compacted]`,
+		`Session turns (so far): ${rs.userCount} user · ${rs.assistantCount} assistant · ${rs.toolCount} tool`,
+	];
+	if (rs.topics.size > 0) {
+		lines.push(`Topics: ${Array.from(rs.topics).join(", ")}`);
+	}
+	if (rs.firstUser) lines.push(`Session started with: "${rs.firstUser}"`);
+	if (rs.compressed) lines.push(`Earlier: ${rs.compressed}`);
+	lines.push(`(Follow-up context continues in the ${keepTail} messages after this recap.)`);
 	return lines.join("\n");
 }
 

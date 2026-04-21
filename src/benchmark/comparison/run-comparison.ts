@@ -126,8 +126,8 @@ function convertV2ToV1(v2: any): any {
 		if (q.min_facts) entry.min_facts = q.min_facts;
 		if (q.is_reasoning) entry.is_reasoning = q.is_reasoning;
 
-		// Convert 0-3 scoring to v1 expected_contains
 		if (q.scoring) {
+			entry.scoring = q.scoring;
 			if (q.scoring.score_3 && q.scoring.score_3.length > 0) {
 				entry.expected_contains = q.scoring.score_3;
 			}
@@ -136,12 +136,13 @@ function convertV2ToV1(v2: any): any {
 			}
 		}
 
-		// Abstention: no fact ref, has expected_pattern
+		if (q.distractor_ref) entry.distractor_ref = q.distractor_ref;
+		if (q.distractor_note) entry.distractor_note = q.distractor_note;
+
 		if (cat === "abstention" && !entry.fact) {
 			delete entry.fact;
 		}
 
-		// Irrelevant isolation: no fact ref
 		if (cat === "irrelevant_isolation" && !entry.fact) {
 			delete entry.fact;
 		}
@@ -149,7 +150,6 @@ function convertV2ToV1(v2: any): any {
 		capabilities[cat].queries.push(entry);
 	}
 
-	// Mark abstention as mandatory
 	if (capabilities.abstention) {
 		capabilities.abstention.mandatory_pass = true;
 		capabilities.abstention.weight = 2;
@@ -162,6 +162,7 @@ function convertV2ToV1(v2: any): any {
 			mandatory_pass: ["abstention"],
 			grades: { A: "core >= 90%", B: "core >= 75%", C: "core >= 60%", F: "core < 60%" },
 		},
+		version: v2.version,
 	};
 }
 
@@ -578,6 +579,7 @@ ${memories.map((m) => `- ${m}`).join("\n")}
 interface JudgeResult {
 	pass: boolean;
 	reason: string;
+	score?: number;
 }
 
 function buildJudgePrompt(
@@ -690,68 +692,74 @@ function parseVerdict(raw: string): JudgeResult {
 	return { pass, reason: raw.slice(0, 120) || "EMPTY" };
 }
 
-function keywordJudge(response: string, q: any, capName: string): JudgeResult {
+function keywordJudge(response: string, q: any, capName: string, isV2 = false): JudgeResult {
 	const lower = response.toLowerCase();
+
 	if (capName === "abstention") {
 		const refusals = [
-			// Korean
-			"말씀하신 적",
-			"기억에 없",
-			"모르",
-			"없는 것 같",
-			"언급하신 적",
-			"기억이 없",
-			"알 수 없",
-			"말한 적",
-			"정보가 없",
-			"없습니다",
-			"아닙니다",
-			"죄송",
-			// English
-			"don't have",
-			"don't recall",
-			"no memory",
-			"not in my memory",
-			"no record",
-			"don't remember",
-			"i'm not aware",
-			"haven't mentioned",
-			"no information",
-			"didn't mention",
-			"not something",
+			"말씀하신 적", "기억에 없", "모르", "없는 것 같", "언급하신 적",
+			"기억이 없", "알 수 없", "말한 적", "정보가 없", "없습니다",
+			"아닙니다", "죄송", "don't have", "don't recall", "no memory",
+			"not in my memory", "no record", "don't remember", "i'm not aware",
+			"haven't mentioned", "no information", "didn't mention", "not something",
 		];
-		return refusals.some((p) => lower.includes(p))
-			? { pass: true, reason: "PASS(kw): refusal" }
-			: { pass: false, reason: "FAIL(kw): no refusal" };
+		const refused = refusals.some((p) => lower.includes(p));
+		return isV2
+			? { pass: refused, reason: refused ? "PASS(kw-v2): refusal" : "FAIL(kw-v2): no refusal", score: refused ? 3 : 0 }
+			: refused
+				? { pass: true, reason: "PASS(kw): refusal" }
+				: { pass: false, reason: "FAIL(kw): no refusal" };
 	}
+
 	if (capName === "irrelevant_isolation") {
 		const found = (q.expected_not_contains ?? []).filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
-		return found.length > 0
-			? { pass: false, reason: `FAIL(kw): forbidden [${found}]` }
-			: { pass: true, reason: "PASS(kw)" };
+		const ok = found.length === 0;
+		return isV2
+			? { pass: ok, reason: ok ? "PASS(kw-v2)" : `FAIL(kw-v2): forbidden [${found}]`, score: ok ? 3 : 0 }
+			: ok
+				? { pass: true, reason: "PASS(kw)" }
+				: { pass: false, reason: `FAIL(kw): forbidden [${found}]` };
 	}
+
 	if (q.expected_any) {
 		const min = q.min_expected ?? 1;
 		const found = q.expected_any.filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
+		if (isV2) {
+			const s3 = q.scoring?.score_3 ?? [];
+			const s2 = q.scoring?.score_2 ?? [];
+			if (found.length >= min && s3.length > 0 && s3.some((k: string) => lower.includes(k.toLowerCase()))) {
+				return { pass: true, reason: `PASS(kw-v2): [${found}]`, score: 3 };
+			}
+			if (found.length >= min) return { pass: true, reason: `PASS(kw-v2): [${found}]`, score: 2 };
+			if (found.length > 0) return { pass: false, reason: `PARTIAL(kw-v2): ${found.length}/${min}`, score: 1 };
+			return { pass: false, reason: "FAIL(kw-v2): none found", score: 0 };
+		}
 		return found.length >= min
 			? { pass: true, reason: `PASS(kw): [${found}]` }
-			: {
-					pass: false,
-					reason: `FAIL(kw): ${found.length}/${q.expected_any.length}`,
-				};
+			: { pass: false, reason: `FAIL(kw): ${found.length}/${q.expected_any.length}` };
 	}
+
 	if (q.expected_contains) {
 		const found = q.expected_contains.filter((k: string) =>
 			lower.includes(k.toLowerCase()),
 		);
+		if (isV2) {
+			const s3 = q.scoring?.score_3 ?? [];
+			if (found.length > 0 && s3.length > 0 && s3.some((k: string) => lower.includes(k.toLowerCase()))) {
+				return { pass: true, reason: `PASS(kw-v2): perfect [${found}]`, score: 3 };
+			}
+			if (found.length > 0) return { pass: true, reason: `PASS(kw-v2): partial [${found}]`, score: 2 };
+			return { pass: false, reason: "FAIL(kw-v2): none found", score: 0 };
+		}
 		return found.length > 0
 			? { pass: true, reason: `PASS(kw): [${found}]` }
 			: { pass: false, reason: "FAIL(kw): none found" };
 	}
+
 	return { pass: false, reason: "NO_JUDGE" };
 }
 
@@ -761,17 +769,17 @@ function judgeResponse(
 	q: any,
 	capName: string,
 	response: string,
+	isV2 = false,
 ): JudgeResult {
-	if (mode === "keyword") return keywordJudge(response, q, capName);
+	if (mode === "keyword") return keywordJudge(response, q, capName, isV2);
 	if (mode === "gemini-pro") {
 		const results = geminiProBatchJudgeSync([{ idx: 0, q, capName, response }]);
-		return results[0] ?? keywordJudge(response, q, capName);
+		return results[0] ?? keywordJudge(response, q, capName, isV2);
 	}
 
-	// claude-cli judge
 	const prompt = buildJudgePrompt(q, capName, response);
 	const raw = callClaudeCli(prompt);
-	if (!raw) return keywordJudge(response, q, capName); // fallback
+	if (!raw) return keywordJudge(response, q, capName, isV2);
 	return parseVerdict(raw);
 }
 
@@ -1019,6 +1027,38 @@ async function main() {
 						}
 					}
 				}
+
+				if (config.v2 && factBank.facts) {
+					const distractors = factBank.facts
+						.filter((f: any) => f.distractor?.statement)
+						.map((f: any) => ({ id: f.distractor.id, statement: f.distractor.statement }));
+					console.log(`\n    Encoding ${distractors.length} distractor facts...`);
+					for (const d of distractors) {
+						if (processedIds.includes(d.id)) {
+							stored++;
+							continue;
+						}
+						try {
+							const ok = await adapter.addFact(d.statement);
+							if (ok) {
+								stored++;
+								processedIds.push(d.id);
+							} else {
+								gated++;
+								processedIds.push(d.id);
+							}
+						} catch (err: any) {
+							console.warn(`    ⚠ distractor ${d.id}: ${err.message?.slice(0, 50)}`);
+							gated++;
+							processedIds.push(d.id);
+						}
+						await new Promise((r) => setTimeout(r, THROTTLE_MS));
+					}
+					try {
+						writeFileSync(encodeCheckpointPath, JSON.stringify(processedIds));
+					} catch (e) {}
+				}
+
 				const summary = `  - [Phase 1] ${adapterName}: Stored: ${stored}/${factBank.facts.length} (New: ${stored - processedIds.length}, Skipped: ${processedIds.length})\n`;
 				try {
 					appendFileSync(historyLogPath, summary);
@@ -1171,7 +1211,7 @@ async function main() {
 						config.runs === 1
 					) {
 						// Defer judge to batch — push placeholder detail
-						details.push({
+						const pendingDetail: TestDetail = {
 							id,
 							capability: capName,
 							query,
@@ -1187,7 +1227,12 @@ async function main() {
 								completion: askResult.completionTokens,
 								total: askResult.promptTokens + askResult.completionTokens,
 							},
-						});
+						};
+						if (config.v2) {
+							pendingDetail.scoringV2 = true;
+							pendingDetail.maxScore = 3;
+						}
+						details.push(pendingDetail);
 						pendingJudge.push({
 							q,
 							capName,
@@ -1201,6 +1246,7 @@ async function main() {
 						let totalPromptTokens = askResult.promptTokens;
 						let totalCompletionTokens = askResult.completionTokens;
 						let totalLatency = searchLatency + askResult.latencyMs;
+						let lastVerdict: JudgeResult | null = null;
 
 						for (let run = 0; run < config.runs; run++) {
 							if (run > 0) {
@@ -1221,8 +1267,10 @@ async function main() {
 								q,
 								capName,
 								lastResponse,
+								config.v2,
 							);
 							lastReason = verdict.reason;
+							lastVerdict = verdict;
 							if (verdict.pass) passCount++;
 						}
 
@@ -1232,7 +1280,7 @@ async function main() {
 								? `${passCount}/${config.runs} → ${pass ? "PASS" : "FAIL"} | ${lastReason.slice(0, 60)}`
 								: lastReason;
 
-						details.push({
+						const detailObj: TestDetail = {
 							id,
 							capability: capName,
 							query,
@@ -1249,7 +1297,13 @@ async function main() {
 								total:
 									(totalPromptTokens + totalCompletionTokens) / config.runs,
 							},
-						});
+						};
+						if (config.v2) {
+							detailObj.scoringV2 = true;
+							detailObj.maxScore = 3;
+							if (lastVerdict?.score !== undefined) detailObj.score = lastVerdict.score;
+						}
+						details.push(detailObj);
 						console.log(
 							`      ${pass ? "✅" : "❌"} ${id} "${query.slice(0, 30)}..." [${memories.length} mem] ${reason.slice(0, 50)}`,
 						);
@@ -1283,6 +1337,7 @@ async function main() {
 					if (d && v) {
 						d.pass = v.pass;
 						d.reason = v.reason;
+						if (v.score !== undefined) d.score = v.score;
 					}
 				}
 
@@ -1310,28 +1365,57 @@ async function main() {
 			// Phase 3: Score (weighted)
 			const core = details.filter((d) => !d.isBonus);
 			const bonus = details.filter((d) => d.isBonus);
-			// Weighted score: each test contributes its category weight
-			const coreWeightedPass = core.reduce(
-				(sum, d) => sum + (d.pass ? d.weight : 0),
-				0,
-			);
+			const useV2Scoring = config.v2 && core.some((d) => d.scoringV2);
+			let coreWeightedPass: number;
+			let coreRate: number;
+			let v2AvgScore: number | undefined;
+
+			if (useV2Scoring) {
+				const scored = core.filter((d) => d.score !== undefined);
+				v2AvgScore = scored.length > 0
+					? scored.reduce((sum, d) => sum + (d.score ?? 0), 0) / scored.length
+					: 0;
+				coreWeightedPass = core.reduce(
+					(sum, d) => sum + (d.pass ? d.weight : 0),
+					0,
+				);
+				const coreWeightedTotal = core.reduce((sum, d) => sum + d.weight, 0);
+				coreRate = coreWeightedTotal > 0 ? coreWeightedPass / coreWeightedTotal : 0;
+			} else {
+				coreWeightedPass = core.reduce(
+					(sum, d) => sum + (d.pass ? d.weight : 0),
+					0,
+				);
+				const coreWeightedTotal = core.reduce((sum, d) => sum + d.weight, 0);
+				coreRate = coreWeightedTotal > 0 ? coreWeightedPass / coreWeightedTotal : 0;
+			}
 			const coreWeightedTotal = core.reduce((sum, d) => sum + d.weight, 0);
 			const corePassed = core.filter((d) => d.pass).length;
 			const bonusPassed = bonus.filter((d) => d.pass).length;
-			const coreRate =
-				coreWeightedTotal > 0 ? coreWeightedPass / coreWeightedTotal : 0;
 			const bonusRate = bonus.length > 0 ? bonusPassed / bonus.length : 0;
-			const abstentionFail = details.some(
+
+			const abstentionFail = !useV2Scoring && details.some(
 				(d) => d.capability === "abstention" && !d.pass,
 			);
+			const abstentionScore = useV2Scoring
+				? details.filter((d) => d.capability === "abstention").reduce((s, d) => s + (d.score ?? 0), 0) /
+					Math.max(details.filter((d) => d.capability === "abstention").length, 1)
+				: undefined;
 
 			let grade: string;
-			if (abstentionFail) grade = "F (abstention fail)";
-			else if (coreRate >= 0.9 && (bonus.length === 0 || bonusRate >= 0.5))
-				grade = "A";
-			else if (coreRate >= 0.75) grade = "B";
-			else if (coreRate >= 0.6) grade = "C";
-			else grade = "F";
+			if (useV2Scoring) {
+				if (v2AvgScore !== undefined && v2AvgScore >= 2.5) grade = "A";
+				else if (v2AvgScore !== undefined && v2AvgScore >= 2.0) grade = "B";
+				else if (v2AvgScore !== undefined && v2AvgScore >= 1.5) grade = "C";
+				else grade = "F";
+			} else {
+				if (abstentionFail) grade = "F (abstention fail)";
+				else if (coreRate >= 0.9 && (bonus.length === 0 || bonusRate >= 0.5))
+					grade = "A";
+				else if (coreRate >= 0.75) grade = "B";
+				else if (coreRate >= 0.6) grade = "C";
+				else grade = "F";
+			}
 
 			const byCapability: ComparisonResult["byCapability"] = {};
 			for (const d of details) {
@@ -1385,6 +1469,10 @@ async function main() {
 			console.log(
 				`    Core: ${corePassed}/${core.length} items, weighted ${Math.round(coreRate * 100)}% (${coreWeightedPass}/${coreWeightedTotal} pts)`,
 			);
+			if (useV2Scoring && v2AvgScore !== undefined) {
+				console.log(`    V2 Avg Score: ${v2AvgScore.toFixed(2)}/3.00`);
+				if (abstentionScore !== undefined) console.log(`    Abstention Score: ${abstentionScore.toFixed(2)}/3.00`);
+			}
 			console.log(`    Bonus: ${bonusPassed}/${bonus.length}`);
 			console.log(`    Grade: ${grade}`);
 			console.log(`    Avg Latency: ${avgLatencyMs.toFixed(0)}ms`);
@@ -1476,7 +1564,7 @@ async function main() {
 	// Also save a global summary in the main reports dir for convenience
 	const summaryPath = join(
 		import.meta.dirname,
-		"../../../..",
+		"../../..",
 		"reports",
 		`summary-${runId}.json`,
 	);
