@@ -698,6 +698,7 @@ export class MemorySystem {
 		const recap = buildDeterministicRecap(msgs, input.keepTail);
 
 		let finalContent = recap;
+		let realtime = false;
 		if (this.summarizer) {
 			try {
 				const polished = await this.summarizer({
@@ -707,8 +708,13 @@ export class MemorySystem {
 					...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
 					seedSummary: recap,
 				});
-				if (polished && polished.trim().length > 0) {
-					finalContent = polished.trim();
+				if (typeof polished === "string") {
+					if (polished.trim().length > 0) finalContent = polished.trim();
+				} else if (polished && typeof polished.content === "string") {
+					if (polished.content.trim().length > 0) {
+						finalContent = polished.content.trim();
+					}
+					if (polished.realtime === true) realtime = true;
 				}
 			} catch (err) {
 				console.warn("[MemorySystem] compaction summarizer failed, using deterministic recap:", err);
@@ -722,7 +728,7 @@ export class MemorySystem {
 				timestamp: Date.now(),
 			},
 			droppedCount: msgs.length,
-			realtime: false,
+			realtime,
 		};
 	}
 
@@ -782,11 +788,21 @@ function buildDeterministicRecap(
 }
 
 /** Host-supplied summarizer. Receives the original messages plus the
- *  deterministic recap seed and returns a polished summary text. */
+ *  deterministic recap seed and returns either a plain polished summary
+ *  string (simple shape) or a structured result that can additionally
+ *  declare `realtime: true` when the summary was already precomputed
+ *  (e.g. from a rolling summary maintained during encode()). */
 export type CompactionSummarizer = (input: {
 	messages: readonly { role: string; content: string; timestamp?: number }[];
 	keepTail: number;
 	targetTokens: number;
 	sessionId?: string;
 	seedSummary: string;
-}) => Promise<string>;
+	signal?: AbortSignal;
+}) => Promise<string | CompactionSummarizerResult>;
+
+export interface CompactionSummarizerResult {
+	content: string;
+	/** Mark true when the summary was precomputed/cached (no fresh LLM call). */
+	realtime?: boolean;
+}
