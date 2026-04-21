@@ -93,6 +93,15 @@ export interface MemorySystemOptions {
 	 *  uses a deterministic recap. When provided, the summarizer polishes
 	 *  the recap (fallback to deterministic on failure). */
 	summarizer?: CompactionSummarizer;
+	/** Rolling-summary tuning. All optional, sensible defaults. */
+	rollingSummaryOptions?: {
+		/** Max recent messages kept per session (default 24). */
+		headroom?: number;
+		/** Max chars allowed in the compressed stem (default 4000). */
+		compressedMax?: number;
+		/** Max topics tracked per session with LRU eviction (default 24). */
+		topicCap?: number;
+	};
 	/** Qdrant-specific options. When set, QdrantAdapter is used; embeddingProvider is required. */
 	qdrantOptions?: {
 		url: string;
@@ -170,13 +179,21 @@ export class MemorySystem {
 	private readonly rollingSummaries = new Map<string, RollingSummary>();
 	/** Max messages tracked per rolling summary; older entries are folded
 	 *  into `compressed`. Prevents unbounded growth on long sessions. */
-	private readonly rollingHeadroom = 24;
+	private readonly rollingHeadroom: number;
+	/** Max characters allowed in `compressed` stem. Older compressed
+	 *  fragments are truncated from the front when exceeded. */
+	private readonly rollingCompressedMax: number;
+	/** Max topic entries tracked per session. Uses LRU-recency eviction. */
+	private readonly rollingTopicCap: number;
 
 	constructor(options: MemorySystemOptions) {
 		this.consolidationIntervalMs =
 			options.consolidationIntervalMs ?? 30 * 60 * 1000;
 		this.factExtractor = options.factExtractor ?? heuristicFactExtractor;
 		if (options.summarizer) this.summarizer = options.summarizer;
+		this.rollingHeadroom = options.rollingSummaryOptions?.headroom ?? 24;
+		this.rollingCompressedMax = options.rollingSummaryOptions?.compressedMax ?? 4000;
+		this.rollingTopicCap = options.rollingSummaryOptions?.topicCap ?? 24;
 
 		if (options.qdrantOptions) {
 			if (!options.embeddingProvider) {
@@ -697,7 +714,7 @@ export class MemorySystem {
 				userCount: 0,
 				assistantCount: 0,
 				toolCount: 0,
-				topics: new Set<string>(),
+				topics: new Map<string, number>(),
 				firstUser: undefined,
 			};
 			this.rollingSummaries.set(sessionId, rs);
@@ -711,9 +728,19 @@ export class MemorySystem {
 		} else if (input.role === "tool") {
 			rs.toolCount++;
 		}
-		for (const match of input.content.matchAll(/\b[A-Z][\w-]{2,}\b/g)) {
-			rs.topics.add(match[0]);
-			if (rs.topics.size >= 12) break;
+
+		// LRU topic tracking: delete-then-set marks recency. Unicode-aware
+		// regex catches Korean/CJK/accented alphabets too.
+		for (const match of input.content.matchAll(/\b[\p{Lu}\p{Lo}][\p{L}\p{N}_-]{2,}\b/gu)) {
+			const topic = match[0];
+			if (rs.topics.has(topic)) rs.topics.delete(topic);
+			rs.topics.set(topic, Date.now());
+			while (rs.topics.size > this.rollingTopicCap) {
+				// Map iteration is insertion order → first entry is LRU.
+				const iter = rs.topics.keys().next();
+				if (iter.done) break;
+				rs.topics.delete(iter.value);
+			}
 		}
 
 		rs.recent.push({
@@ -724,9 +751,13 @@ export class MemorySystem {
 		if (rs.recent.length > this.rollingHeadroom) {
 			const evicted = rs.recent.splice(0, rs.recent.length - this.rollingHeadroom);
 			if (evicted.length > 0) {
-				// Compress evicted messages into the stem.
 				const compressed = compressEvictedMessages(evicted);
 				rs.compressed = rs.compressed ? `${rs.compressed}\n${compressed}` : compressed;
+				// Truncate from the front when the stem exceeds its cap.
+				if (rs.compressed.length > this.rollingCompressedMax) {
+					const overflow = rs.compressed.length - this.rollingCompressedMax;
+					rs.compressed = `[…earlier stem truncated…]\n${rs.compressed.slice(overflow)}`;
+				}
 			}
 		}
 		rs.updated = Date.now();
@@ -746,7 +777,7 @@ export class MemorySystem {
 			userCount: rs.userCount,
 			assistantCount: rs.assistantCount,
 			toolCount: rs.toolCount,
-			topics: Array.from(rs.topics),
+			topics: Array.from(rs.topics.keys()),
 			...(rs.firstUser !== undefined ? { firstUser: rs.firstUser } : {}),
 		}));
 	}
@@ -906,7 +937,9 @@ interface RollingSummary {
 	userCount: number;
 	assistantCount: number;
 	toolCount: number;
-	topics: Set<string>;
+	/** LRU topic → last-seen timestamp. Map preserves insertion order so
+	 *  the oldest entry is evicted when the cap is reached. */
+	topics: Map<string, number>;
 	firstUser?: string;
 }
 
@@ -946,11 +979,11 @@ function buildRecapFromRollingSummary(
 	keepTail: number,
 ): string {
 	const lines: string[] = [
-		`[Conversation recap (rolling) — ${windowSize} earlier messages compacted]`,
-		`Session turns (so far): ${rs.userCount} user · ${rs.assistantCount} assistant · ${rs.toolCount} tool`,
+		`[Conversation recap (rolling) — ${windowSize} messages in the caller's compaction window]`,
+		`Session turns tracked so far: ${rs.userCount} user · ${rs.assistantCount} assistant · ${rs.toolCount} tool`,
 	];
 	if (rs.topics.size > 0) {
-		lines.push(`Topics: ${Array.from(rs.topics).join(", ")}`);
+		lines.push(`Topics: ${Array.from(rs.topics.keys()).join(", ")}`);
 	}
 	if (rs.firstUser) lines.push(`Session started with: "${rs.firstUser}"`);
 	if (rs.compressed) lines.push(`Earlier: ${rs.compressed}`);
