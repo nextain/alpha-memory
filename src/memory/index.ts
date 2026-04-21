@@ -787,6 +787,32 @@ export class MemorySystem {
 		this.rollingSummaries.delete(sessionId);
 	}
 
+	/**
+	 * Restore rolling summaries from a prior `snapshotRollingSummaries()`
+	 * result. Use for process-level durability (write snapshot to disk,
+	 * restore on restart). Overwrites any existing in-memory entries for
+	 * the same sessionId.
+	 */
+	loadRollingSummaries(snapshots: readonly RollingSummarySnapshot[]): void {
+		for (const s of snapshots) {
+			const topics = new Map<string, number>();
+			for (const t of s.topics) topics.set(t, s.updated);
+			const rs: RollingSummary = {
+				sessionId: s.sessionId,
+				started: s.started,
+				updated: s.updated,
+				recent: [...s.recent],
+				compressed: s.compressed,
+				userCount: s.userCount,
+				assistantCount: s.assistantCount,
+				toolCount: s.toolCount,
+				topics,
+			};
+			if (s.firstUser !== undefined) rs.firstUser = s.firstUser;
+			this.rollingSummaries.set(s.sessionId, rs);
+		}
+	}
+
 	// ─── Compaction (naia-agent CompactableCapable) ──────────────────────
 	//
 	// Implements the shape of @nextain/agent-types `CompactableCapable`
