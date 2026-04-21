@@ -89,6 +89,10 @@ export interface MemorySystemOptions {
 	consolidationIntervalMs?: number;
 	/** Custom fact extractor (default: heuristic). Inject LLM-based extractor in production. */
 	factExtractor?: FactExtractor;
+	/** Optional LLM summarizer for `compact()`. When omitted, compact()
+	 *  uses a deterministic recap. When provided, the summarizer polishes
+	 *  the recap (fallback to deterministic on failure). */
+	summarizer?: CompactionSummarizer;
 	/** Qdrant-specific options. When set, QdrantAdapter is used; embeddingProvider is required. */
 	qdrantOptions?: {
 		url: string;
@@ -160,6 +164,7 @@ export class MemorySystem {
 		this.consolidationIntervalMs =
 			options.consolidationIntervalMs ?? 30 * 60 * 1000;
 		this.factExtractor = options.factExtractor ?? heuristicFactExtractor;
+		if (options.summarizer) this.summarizer = options.summarizer;
 
 		if (options.qdrantOptions) {
 			if (!options.embeddingProvider) {
@@ -662,10 +667,16 @@ export class MemorySystem {
 	//
 	// v0: deterministic summarizer that compresses a message window into a
 	// synthetic recap paragraph. No LLM call.
-	// v1 (planned): optional summarizer callback that lets a host inject
-	// an LLM for higher-fidelity summaries.
+	// **v1 (current)**: optional `summarizer` callback. When provided,
+	// MemorySystem asks it to produce a higher-fidelity summary, fallback
+	// to v0 recap on failure.
 	// v2 (roadmap #6 CompactionMap): rolling summary maintained during
 	// encode() so compact() returns an already-built summary instantly.
+
+	/** Optional LLM-backed summarizer. Host injects via
+	 *  `MemorySystemOptions.summarizer`. Receives the compaction input and
+	 *  a deterministic recap seed; returns the polished summary text. */
+	private readonly summarizer?: CompactionSummarizer;
 
 	/**
 	 * Produce a summary of the given message window suitable for replacing
@@ -684,43 +695,30 @@ export class MemorySystem {
 		realtime?: boolean;
 	}> {
 		const msgs = input.messages;
+		const recap = buildDeterministicRecap(msgs, input.keepTail);
 
-		// Roll stats
-		let userCount = 0;
-		let assistantCount = 0;
-		let toolCount = 0;
-		const topics = new Set<string>();
-		for (const m of msgs) {
-			if (m.role === "user") userCount++;
-			else if (m.role === "assistant") assistantCount++;
-			else if (m.role === "tool") toolCount++;
-			// Crude topic extraction: first capitalized token sequence.
-			for (const match of m.content.matchAll(/\b[A-Z][\w-]{2,}\b/g)) {
-				topics.add(match[0]);
-				if (topics.size >= 8) break;
+		let finalContent = recap;
+		if (this.summarizer) {
+			try {
+				const polished = await this.summarizer({
+					messages: msgs,
+					keepTail: input.keepTail,
+					targetTokens: input.targetTokens,
+					...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+					seedSummary: recap,
+				});
+				if (polished && polished.trim().length > 0) {
+					finalContent = polished.trim();
+				}
+			} catch (err) {
+				console.warn("[MemorySystem] compaction summarizer failed, using deterministic recap:", err);
 			}
 		}
-
-		const first = msgs[0];
-		const last = msgs[msgs.length - 1];
-
-		const lines: string[] = [
-			`[Conversation recap — ${msgs.length} earlier messages compacted]`,
-			`Turns: ${userCount} user · ${assistantCount} assistant · ${toolCount} tool`,
-		];
-		if (topics.size > 0) {
-			lines.push(`Topics mentioned: ${Array.from(topics).join(", ")}`);
-		}
-		if (first) lines.push(`Started with: "${truncateForRecap(first.content, 120)}"`);
-		if (last && last !== first) {
-			lines.push(`Most recent before recap: "${truncateForRecap(last.content, 120)}"`);
-		}
-		lines.push(`(Follow-up context continues in the ${input.keepTail} messages after this recap.)`);
 
 		return {
 			summary: {
 				role: "assistant",
-				content: lines.join("\n"),
+				content: finalContent,
 				timestamp: Date.now(),
 			},
 			droppedCount: msgs.length,
@@ -741,3 +739,54 @@ function truncateForRecap(s: string, max: number): string {
 	if (trimmed.length <= max) return trimmed;
 	return `${trimmed.slice(0, max - 1)}…`;
 }
+
+/**
+ * Build the deterministic recap used when no summarizer is injected, and
+ * as the fallback seed passed to an injected summarizer.
+ */
+function buildDeterministicRecap(
+	msgs: readonly { role: string; content: string; timestamp?: number }[],
+	keepTail: number,
+): string {
+	let userCount = 0;
+	let assistantCount = 0;
+	let toolCount = 0;
+	const topics = new Set<string>();
+	for (const m of msgs) {
+		if (m.role === "user") userCount++;
+		else if (m.role === "assistant") assistantCount++;
+		else if (m.role === "tool") toolCount++;
+		for (const match of m.content.matchAll(/\b[A-Z][\w-]{2,}\b/g)) {
+			topics.add(match[0]);
+			if (topics.size >= 8) break;
+		}
+	}
+
+	const first = msgs[0];
+	const last = msgs[msgs.length - 1];
+
+	const lines: string[] = [
+		`[Conversation recap — ${msgs.length} earlier messages compacted]`,
+		`Turns: ${userCount} user · ${assistantCount} assistant · ${toolCount} tool`,
+	];
+	if (topics.size > 0) {
+		lines.push(`Topics mentioned: ${Array.from(topics).join(", ")}`);
+	}
+	if (first) lines.push(`Started with: "${truncateForRecap(first.content, 120)}"`);
+	if (last && last !== first) {
+		lines.push(`Most recent before recap: "${truncateForRecap(last.content, 120)}"`);
+	}
+	lines.push(`(Follow-up context continues in the ${keepTail} messages after this recap.)`);
+
+	return lines.join("\n");
+}
+
+/** Host-supplied summarizer. Receives the original messages plus the
+ *  deterministic recap seed and returns a polished summary text. */
+export type CompactionSummarizer = (input: {
+	messages: readonly { role: string; content: string; timestamp?: number }[];
+	keepTail: number;
+	targetTokens: number;
+	sessionId?: string;
+	seedSummary: string;
+}) => Promise<string>;
