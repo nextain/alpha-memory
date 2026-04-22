@@ -573,45 +573,82 @@ async function main() {
 
 		console.log(`  Judging ${items.length} items...\n`);
 
-		// Run judge
-		const verdicts = await batchJudge(judgeMode, items, batchSize);
+		if (judgeMode === "keyword") {
+			for (const item of items) {
+				const v = keywordJudge(item.response, item.q, item.capName);
+				const d = result.details[item.detailIdx];
+				if (d) { d.pass = v.pass; d.reason = v.reason; }
+			}
+		} else if (judgeMode === "claude-cli") {
+			for (const item of items) {
+				const singlePrompt = buildJudgePrompt(item.q, item.capName, item.response);
+				const singleRaw = callClaudeCli(singlePrompt);
+				const v = singleRaw ? parseVerdict(singleRaw) : keywordJudge(item.response, item.q, item.capName);
+				const d = result.details[item.detailIdx];
+				if (d) { d.pass = v.pass; d.reason = v.reason; }
+				totalPromptChars += singlePrompt.length;
+				totalCompletionChars += singleRaw.length;
+				judgeCallCount++;
+			}
+			saved.judge = judgeMode;
+			saved.timestamp = new Date().toISOString();
+			const scored = rescore(result.details);
+			result.core = scored.core; result.bonus = scored.bonus; result.grade = scored.grade; result.byCapability = scored.byCapability;
+			writeFileSync(inputPath, JSON.stringify(saved, null, 2));
+		} else {
+			for (let bi = 0; bi < items.length; bi += batchSize) {
+				const batch = items.slice(bi, bi + batchSize);
+				const prompt = buildBatchPrompt(batch);
+				const batchNum = Math.floor(bi / batchSize) + 1;
+				const totalBatches = Math.ceil(items.length / batchSize);
+				console.log(`    🤖 ${judgeMode} batch ${batchNum}/${totalBatches}: ${batch.length} items...`);
 
-		// Apply verdicts
-		for (let i = 0; i < items.length; i++) {
-			const v = verdicts[i];
-			const d = result.details[items[i].detailIdx];
-			if (d && v) {
-				d.pass = v.pass;
-				d.reason = v.reason;
+				let raw: string;
+				if (judgeMode === "gemini-pro-cli") {
+					raw = callGeminiCli(prompt);
+				} else {
+					raw = await callGlmApi(prompt);
+				}
+
+				if (!raw) {
+					console.warn(`    ⚠ ${judgeMode} returned empty, falling back to keyword`);
+					for (const item of batch) {
+						const v = keywordJudge(item.response, item.q, item.capName);
+						const d = result.details[item.detailIdx];
+						if (d) { d.pass = v.pass; d.reason = v.reason; }
+					}
+				} else {
+					const batchResults = parseBatchVerdict(raw, batch.length);
+					for (let j = 0; j < batch.length; j++) {
+						const v = batchResults[j];
+						const d = result.details[batch[j].detailIdx];
+						if (d && v) { d.pass = v.pass; d.reason = v.reason; }
+					}
+					totalPromptChars += prompt.length;
+					totalCompletionChars += raw.length;
+					judgeCallCount++;
+				}
+
+				const scored = rescore(result.details);
+				result.core = scored.core; result.bonus = scored.bonus; result.grade = scored.grade; result.byCapability = scored.byCapability;
+				saved.judge = judgeMode;
+				saved.timestamp = new Date().toISOString();
+				writeFileSync(inputPath, JSON.stringify(saved, null, 2));
+				console.log(`    💾 Saved batch ${batchNum}/${totalBatches} → ${scored.core.passed}/${scored.core.total} (${Math.round(scored.core.rate * 100)}%)`);
 			}
 		}
 
-		// Rescore
 		const scored = rescore(result.details);
-		result.core = scored.core;
-		result.bonus = scored.bonus;
-		result.grade = scored.grade;
-		result.byCapability = scored.byCapability;
-
 		console.log(`\n    ─── ${result.adapter} Result ───`);
-		console.log(
-			`    Core: ${scored.core.passed}/${scored.core.total}, weighted ${Math.round(scored.core.rate * 100)}%`,
-		);
+		console.log(`    Core: ${scored.core.passed}/${scored.core.total}, weighted ${Math.round(scored.core.rate * 100)}%`);
 		console.log(`    Grade: ${scored.grade}`);
-
-		// Per-category breakdown
 		for (const [cap, data] of Object.entries(scored.byCapability)) {
 			console.log(`    ${cap.padEnd(28)} ${data.passed}/${data.total}`);
 		}
 	}
 
 	printTokenUsage(judgeMode);
-
-	// Update saved file
-	saved.judge = judgeMode;
-	saved.timestamp = new Date().toISOString();
-	writeFileSync(inputPath, JSON.stringify(saved, null, 2));
-	console.log(`\n  Updated: ${inputPath}`);
+	console.log(`\n  Final: ${inputPath}`);
 }
 
 main();

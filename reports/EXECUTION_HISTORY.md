@@ -1283,3 +1283,19 @@
 - LLM: gemini-flash-lite
 - Judge: keyword
   - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오후 4:50:08
+- Run ID: `run-2026-04-22T07-50-08-541Z`
+- Adapters: airi
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] airi: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오후 4:55:01
+- Run ID: `run-2026-04-22T07-55-01-878Z`
+- Adapters: naia-local
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
