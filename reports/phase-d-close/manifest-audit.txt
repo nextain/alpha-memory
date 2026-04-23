@@ -1,0 +1,19 @@
+=== Phase D manifest audit ===
+
+--- .fails counts (target: 0 for Phase-D-scoped rows after D.7) ---
+  reconsolidation: 0 it.fails lines
+  importance: 0 it.fails lines
+  importance.corpus: 1 it.fails lines
+  decay: 0 it.fails lines
+
+--- current-state pin counts (target: 0 after coordinated deletion at D.7) ---
+  reconsolidation: 0 current-state pin lines
+  importance: 0 current-state pin lines
+  importance.corpus: 0 current-state pin lines
+  decay: 0 current-state pin lines
+
+--- Phase A close baseline (manifest-committed expectations) ---
+  .fails baseline: reconsolidation 6, importance 2, importance.corpus 3, decay 1 = 12 total
+  pins baseline:   reconsolidation 2, importance 1, decay 3 = 6 total
+
+Audit complete. Use at each sub-phase close + D.7 gate.

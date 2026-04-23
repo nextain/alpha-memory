@@ -16,6 +16,7 @@
  * - mem0 ADD/UPDATE/DELETE/NOOP pipeline
  */
 
+import { stripKoreanParticle } from "./index.js";
 import type { Fact } from "./types.js";
 
 /** Result of a reconsolidation check */
@@ -44,21 +45,37 @@ const NEGATION_PATTERNS = [
 	// Korean
 	/아니[라고]/,
 	/않/,
+	// Standalone 안 negator (whitespace-bounded to avoid matching 안녕, 안나, 안철수 …)
+	/(^|\s)안(\s|$)/,
 	/바꿨/,
 	/변경/,
 	/대신/,
 	/그만/,
 ];
 
-/** Preference/state verbs that indicate updatable facts */
+/** Value-replacement overlap threshold — tighter than negation branch (0.3).
+ *  Without negation cues, we need stronger positive evidence. */
+const VALUE_REPLACEMENT_OVERLAP = 0.5;
+
+/** Preference/state verbs that indicate updatable facts.
+ *  D.2: added 3rd-person singular forms (prefers/uses/lives in) so
+ *  substring matching catches natural-language facts like "Luke lives in Seoul"
+ *  (previous list had only "live in" which failed to match "lives in"). */
 const STATE_VERBS = [
 	"prefer",
+	"prefers",
 	"use",
+	"uses",
 	"like",
+	"likes",
 	"want",
+	"wants",
 	"work with",
+	"works with",
 	"live in",
+	"lives in",
 	"work at",
+	"works at",
 	"좋아",
 	"사용",
 	"쓰",
@@ -160,6 +177,25 @@ export function checkContradiction(
 		};
 	}
 
+	// Value replacement — state-verb fact with shared entity and content
+	// differs. No negation cue required; the overlap threshold is tighter
+	// (VALUE_REPLACEMENT_OVERLAP = 0.5) to compensate.
+	// Substantive-new-info guard: require ≥ 3 new tokens so entity-only inputs
+	// (RC-18 "Luke") don't collapse the overlap ratio to 1.0 on one token.
+	if (
+		sharedEntities.length > 0 &&
+		isStateFact &&
+		overlapRatio >= VALUE_REPLACEMENT_OVERLAP &&
+		existingLower !== newLower &&
+		newTokens.length >= 3
+	) {
+		return {
+			action: "update",
+			updatedContent: newInfo,
+			reason: `Value replacement detected: state-fact with shared entity [${sharedEntities.join(", ")}], new value supersedes`,
+		};
+	}
+
 	// Note: "flag_contradiction" for high overlap without state verb is subsumed by
 	// the overlapRatio > 0.3 check above. If future logic changes the threshold,
 	// re-evaluate whether a separate flag_contradiction branch is needed.
@@ -186,10 +222,13 @@ export function findContradictions(
 		.filter(({ result }) => result.action !== "keep");
 }
 
-/** Simple tokenizer for contradiction checking */
+/** Simple tokenizer for contradiction checking.
+ *  D.2 RC-16c: apply stripKoreanParticle so particle-different tokens
+ *  ("에디터를" vs "에디터로") lemmatize to the same stem and match. */
 function tokenizeSimple(text: string): string[] {
 	return text
 		.replace(/[^\p{L}\p{N}\s]/gu, " ")
 		.split(/\s+/)
-		.filter((t) => t.length > 1);
+		.filter((t) => t.length > 1)
+		.map((t) => stripKoreanParticle(t));
 }

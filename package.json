@@ -1,69 +1,74 @@
 {
-	"name": "@nextain/alpha-memory",
-	"version": "0.1.4",
-	"description": "Alpha Memory System — Naia OS cognitive memory architecture",
-	"type": "module",
-	"license": "Apache-2.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/nextain/alpha-memory.git"
-	},
-	"keywords": [
-		"memory",
-		"ai",
-		"naia",
-		"vector-search",
-		"knowledge-graph",
-		"llm-memory"
-	],
-	"exports": {
-		".": {
-			"import": "./dist/memory/index.js",
-			"types": "./dist/memory/index.d.ts"
-		}
-	},
-	"types": "./dist/memory/index.d.ts",
-	"files": [
-		"dist/memory/",
-		"dist/utils/",
-		"src/memory/",
-		"src/utils/",
-		"README.md",
-		"README.ko.md",
-		"LICENSE"
-	],
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "tsc",
-		"typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
-		"test": "vitest run",
-		"benchmark": "tsx src/benchmark/comparison/run-comparison.ts",
-		"check": "biome check --write ."
-	},
-	"peerDependencies": {
-		"@huggingface/transformers": "^3.0.0"
-	},
-	"peerDependenciesMeta": {
-		"@huggingface/transformers": {
-			"optional": true
-		}
-	},
-	"dependencies": {
-		"@qdrant/js-client-rest": "^1.8.0"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^1.9.0",
-		"@types/node": "^22.0.0",
-		"@vitest/coverage-v8": "^4.1.5",
-		"mem0ai": "^2.4.2",
-		"tsx": "^4.19.0",
-		"typescript": "^5.6.0",
-		"vectra": "^0.2.2",
-		"vitest": "^4.0.18"
-	},
-	"engines": {
-		"node": ">=20"
-	}
+  "name": "@nextain/alpha-memory",
+  "version": "0.1.4",
+  "description": "Alpha Memory System — Naia OS cognitive memory architecture",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nextain/alpha-memory.git"
+  },
+  "keywords": [
+    "memory",
+    "ai",
+    "naia",
+    "vector-search",
+    "knowledge-graph",
+    "llm-memory"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/memory/index.js",
+      "types": "./dist/memory/index.d.ts"
+    }
+  },
+  "types": "./dist/memory/index.d.ts",
+  "files": [
+    "dist/memory/",
+    "dist/utils/",
+    "src/memory/",
+    "src/utils/",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "benchmark": "tsx src/benchmark/comparison/run-comparison.ts",
+    "check": "biome check --write ."
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.8.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "mem0ai": "^2.4.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vectra": "^0.2.2",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  }
 }

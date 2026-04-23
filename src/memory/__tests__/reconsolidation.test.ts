@@ -86,76 +86,35 @@ describe("checkContradiction — direct negation", () => {
 // describe records current behaviour (keep) so it goes red when Phase D
 // flips the semantic behaviour, forcing both blocks to be cleaned up.
 
-describe("RC-04 Phase D contract (6 invariants) — all .fails until Phase D", () => {
+describe("RC-04 value-replacement (Phase D.2 flipped green)", () => {
 	const factSeoul = makeFact({
 		content: "Luke lives in Seoul",
 		entities: ["Luke"],
 	});
 
-	it.fails("invariant 1 — value replacement returns update", () => {
+	it("invariant 1 — value replacement returns update", () => {
 		const r = checkContradiction(factSeoul, "Luke lives in Tokyo");
 		expect(r.action).toBe("update");
 	});
 
-	it.fails(
-		"invariant 2 — updatedContent is the new info verbatim (new value wins, no merge)",
-		() => {
-			const r = checkContradiction(factSeoul, "Luke lives in Tokyo");
-			expect(r.updatedContent).toBe("Luke lives in Tokyo");
-		},
-	);
-
-	// Invariant 3 removed: "reason vocabulary" contract is too loose to pin
-	// with a regex (R4 reviewer suggested keeping but our current "No
-	// contradiction detected" accidentally matches any `contradict`-family
-	// regex, making .fails non-deterministic). Phase D can define its own
-	// reason string; the behavioural invariants 1, 2, 4, 6 are sufficient.
-
-	it.fails(
-		"invariant 4 — findContradictions reports exactly 1 match (symmetric)",
-		() => {
-			const matches = findContradictions([factSeoul], "Luke lives in Tokyo");
-			expect(matches).toHaveLength(1);
-		},
-	);
-
-	// Invariants 5/6 already hold in current source — not .fails. But group
-	// them here so Phase D fix can see the full contract in one place.
-	it("invariant 5 — different entity does NOT contradict (no over-correction)", () => {
-		const r = checkContradiction(factSeoul, "Anna lives in Tokyo");
-		// Currently returns "keep" (negative case already correct).
-		expect(r.action).toBe("keep");
-	});
-
-	it.fails(
-		"invariant 6 — entity preserved in downstream linking (fails today: findContradictions returns empty)",
-		() => {
-			const matches = findContradictions([factSeoul], "Luke lives in Tokyo");
-			expect(matches[0]?.fact.entities).toContain("Luke");
-		},
-	);
-});
-
-describe("RC-04 pin — current (buggy) behaviour", () => {
-	const factSeoul = makeFact({
-		content: "Luke lives in Seoul",
-		entities: ["Luke"],
-	});
-
-	it("[B-BUG RC-04 pin] currently returns keep — remove when Phase D fix lands", () => {
+	it("invariant 2 — updatedContent is the new info verbatim", () => {
 		const r = checkContradiction(factSeoul, "Luke lives in Tokyo");
+		expect(r.updatedContent).toBe("Luke lives in Tokyo");
+	});
+
+	it("invariant 4 — findContradictions reports exactly 1 match", () => {
+		const matches = findContradictions([factSeoul], "Luke lives in Tokyo");
+		expect(matches).toHaveLength(1);
+	});
+
+	it("invariant 5 — different entity does NOT contradict (anti-over-correction)", () => {
+		const r = checkContradiction(factSeoul, "Anna lives in Tokyo");
 		expect(r.action).toBe("keep");
 	});
 
-	it("[B-BUG RC-05 pin] temporal variant — currently keep (same root cause as RC-04)", () => {
-		const factPast = makeFact({
-			content: "Luke lived in Seoul in 2020",
-			entities: ["Luke"],
-		});
-		const r = checkContradiction(factPast, "Luke lives in Tokyo now");
-		// R5 reviewer: this must pin the concrete current value, not a
-		// "either-or" tautology. Verified at runtime: current returns "keep".
-		expect(r.action).toBe("keep");
+	it("invariant 6 — entity preserved in downstream linking", () => {
+		const matches = findContradictions([factSeoul], "Luke lives in Tokyo");
+		expect(matches[0]?.fact.entities).toContain("Luke");
 	});
 });
 
@@ -220,29 +179,15 @@ describe("checkContradiction — Korean negation (effect-based)", () => {
 		expect(r.action).toBe("update");
 	});
 
-	it.fails(
-		"[B-BUG RC-08c] Korean standalone 안 negator is NOT in NEGATION_PATTERNS — currently undetected",
-		() => {
-			// "안" (standalone, not "않") is a common Korean negator but not
-			// listed at reconsolidation.ts:44-51. Phase D should extend the
-			// pattern list to include 안 (as /\s안\s/ or similar to avoid
-			// collision with entity names containing "안").
-			const fact = makeFact({
-				content: "Neovim 에디터 사용",
-				entities: [],
-			});
-			const r = checkContradiction(fact, "이제 Vim 안 써요");
-			expect(r.action).toBe("update");
-		},
-	);
-
-	it("[B-BUG RC-08c pin] current behaviour: 안 negator yields keep", () => {
+	it("RC-08c Korean standalone 안 negator detected (D.2 flipped green)", () => {
+		// Phase D.2: added /(^|\s)안(\s|$)/ to NEGATION_PATTERNS, whitespace-
+		// bounded to avoid matching 안녕/안나/안철수.
 		const fact = makeFact({
-			content: "Neovim 에디터 사용",
-			entities: [],
+			content: "Vim 에디터 사용",
+			entities: ["Vim"],
 		});
 		const r = checkContradiction(fact, "이제 Vim 안 써요");
-		expect(r.action).toBe("keep");
+		expect(r.action).toBe("update");
 	});
 });
 
@@ -453,40 +398,16 @@ describe("checkContradiction — Korean particle attachment (RC-16)", () => {
 		expect(r.action).toBe("update");
 	});
 
-	it(
-		"[B-BUG RC-16b pin] particle-different tokens ('를' vs '로') currently NOT overlap-matched — substring rule fails at same-length boundary",
-		() => {
-			// R5 drove us here: RC-16a actually tested 바꿨 negation, not particle
-			// handling. This test isolates particle behaviour. Both tokens are
-			// length 4 — source at :106 computes shorter = nt (when et.length
-			// is not < nt.length). Then longer.includes(shorter) compares full
-			// 4-char strings, which differ only in the particle. → no match.
-			// This is the 2nd algorithmic concern raised by R4 Q2#3: "tokenizeSimple
-			// leaves Korean particles attached". Phase D should lemmatize particles.
-			const fact = makeFact({
-				content: "Neovim 에디터를 사용해서 편집",
-				entities: [],
-			});
-			const r = checkContradiction(fact, "에디터로 많은 작업");
-			// Current (buggy) behaviour: defaults to "unrelated" because overlap=0.
-			expect(r.action).toBe("keep");
-			expect(r.reason.toLowerCase()).toContain("unrelated");
-		},
-	);
-
-	it.fails(
-		"[B-BUG RC-16c Phase D contract] particle-different tokens SHOULD be recognized as overlapping via lemmatization",
-		() => {
-			// When Phase D implements proper particle stripping (or lemmatization),
-			// this .fails flips to green. The pin above goes red, signalling cleanup.
-			const fact = makeFact({
-				content: "Neovim 에디터를 사용해서 편집",
-				entities: [],
-			});
-			const r = checkContradiction(fact, "에디터로 많은 작업");
-			expect(r.reason.toLowerCase()).not.toContain("unrelated");
-		},
-	);
+	it("RC-16c particle-different tokens lemmatize to same stem, overlap found (D.2 flipped green)", () => {
+		// Phase D.2: tokenizeSimple now applies stripKoreanParticle, so
+		// "에디터를" and "에디터로" both reduce to "에디터" and match exactly.
+		const fact = makeFact({
+			content: "Neovim 에디터를 사용해서 편집",
+			entities: [],
+		});
+		const r = checkContradiction(fact, "에디터로 많은 작업");
+		expect(r.reason.toLowerCase()).not.toContain("unrelated");
+	});
 });
 
 // ─── RC-17 branch-order precedence ─────────────────────────────────────
@@ -510,6 +431,38 @@ describe("checkContradiction — branch-order precedence (RC-17)", () => {
 });
 
 // ─── RC-18 entity-only match insufficient ──────────────────────────────
+
+// ─── RC-21 anti-over-correction matrix (D.2 outline §6 gate) ───────────
+
+describe("checkContradiction — anti-over-correction matrix (RC-21)", () => {
+	const fact = makeFact({
+		content: "Luke uses Vim",
+		entities: ["Luke"],
+	});
+
+	it("RC-21a same entity + same state verb + replacement value → update", () => {
+		const r = checkContradiction(fact, "Luke uses Cursor");
+		expect(r.action).toBe("update");
+	});
+
+	it("RC-21b same entity + different topic (no state-verb overlap) → keep (anti-over-correction)", () => {
+		// Key guard: value-replacement branch must not fire when the new info
+		// doesn't share enough content with the fact. "likes coffee" vs "uses Vim"
+		// shares only "Luke"; overlapRatio should stay below 0.5.
+		const r = checkContradiction(fact, "Luke likes coffee");
+		expect(r.action).toBe("keep");
+	});
+
+	it("RC-21c different entity + same state verb + replacement value → keep", () => {
+		const r = checkContradiction(fact, "Anna uses Cursor");
+		expect(r.action).toBe("keep");
+	});
+
+	it("RC-21d identical content → keep (RC-01 preserved)", () => {
+		const r = checkContradiction(fact, "Luke uses Vim");
+		expect(r.action).toBe("keep");
+	});
+});
 
 describe("checkContradiction — entity-only match (RC-18)", () => {
 	it("RC-18 new info is only the entity name, no negation, no substantive overlap → keep", () => {

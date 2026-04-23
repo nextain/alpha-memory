@@ -45,6 +45,18 @@ export function calculateStrength(
 	lastAccessed: number,
 	now: number,
 ): number {
+	// D.4 DC-15: non-finite input guard. NaN / ±Infinity silently propagate
+	// through Math.max and land as NaN in downstream callers (benchmark
+	// pipeline, memory.recall()). Fail safe: clamp to MIN_STRENGTH.
+	if (
+		!Number.isFinite(importance) ||
+		!Number.isFinite(recallCount) ||
+		!Number.isFinite(lastAccessed) ||
+		!Number.isFinite(now)
+	) {
+		return MIN_STRENGTH;
+	}
+
 	// Use time since last access (not creation) — each recall resets the decay clock
 	const daysSinceAccess = Math.max(
 		0,

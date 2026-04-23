@@ -67,65 +67,61 @@ const corpus: CorpusCase[] = [
 		current: true,
 	},
 
-	// ── Accidentally stored via IM-12 (high-signal but no matching marker)
-	// ── These ARE high-signal (expected true). Current stores them, but for
-	//    the wrong reason (boundary coincidence). Not a GAP on outcome.
+	// ── D.3 collateral: high-signal cases no longer stored (IM-12 coincidence
+	//    gone). These become NEW GAPs — expected stays true; fix deferred to
+	//    D.5 (LLM/entity extractor). See phase-d-3-outline.md §2.
 	// ──────────────────────────────────────────────────────────────────────
 	{
-		label: "technical decision (no marker, stored by IM-12)",
+		label: "[NEW GAP D.5] technical decision — no marker detection",
 		content: "we are using Postgres now",
 		expected: true,
-		current: true,
+		current: false,
 		notes:
-			"No IMPORTANCE marker matches 'using'/'now'. Stores via IM-12 boundary. " +
-			"Phase D should store this with high signal, not boundary luck.",
+			"D.3 removed IM-12 coincidence → no longer stores. D.5 must detect " +
+			"entity+state ('using Postgres') without keyword markers.",
 	},
 	{
-		label: "explicit store request (no marker, stored by IM-12)",
+		label: "[NEW GAP D.5] explicit store request — no marker",
 		content: "remember this",
 		expected: true,
-		current: true,
-		notes:
-			"Canonical request. 'remember' is NOT in IMPORTANCE_MARKERS. Stores " +
-			"via IM-12 for wrong reason. Phase D contract: detect 'remember'/'save'/" +
-			"'write down' explicitly.",
+		current: false,
+		notes: "'remember' not in markers. D.5 intent classifier needed.",
 	},
 	{
-		label: "Korean explicit request — 기억해",
+		label: "[NEW GAP D.5] Korean explicit request — 기억해",
 		content: "이거 기억해줘",
 		expected: true,
-		current: true,
-		notes: "Korean '기억해' not in markers. Same IM-12 coincidence.",
+		current: false,
+		notes: "Korean '기억해' not in markers. D.5 scope.",
 	},
 	{
-		label: "emotion contextual — negation inside positive",
+		label: "[NEW GAP D.5] emotion contextual — negation inside positive",
 		content: "don't hate to say I love this",
 		expected: true,
-		current: true,
+		current: false,
 		notes:
 			"'hate' hits NEGATIVE_EMOTION, 'love' hits POSITIVE_EMOTION → emotion=0.5, " +
-			"arousal=0. Current stores via IM-12. Phase D should detect overall " +
-			"positive sentiment (1 pos in negated 'don't hate').",
+			"arousal=0, utility=0.15 → no longer stores post-D.3. D.5 sentiment ctx.",
 	},
 
-	// ── GAPS: noise stored that should be dropped ───────────────────────
+	// ── Old GAPs resolved by D.3 (kept as regular passes — current now matches expected) ──
 	{
-		label: "GAP — conversational noise stored by IM-12",
+		label: "conversational noise — correctly dropped post-D.3",
 		content: "the weather is nice today",
 		expected: false,
-		current: true,
+		current: false,
 	},
 	{
-		label: "GAP — one-word ack stored by IM-12",
+		label: "one-word ack — correctly dropped post-D.3",
 		content: "ok",
 		expected: false,
-		current: true,
+		current: false,
 	},
 	{
-		label: "GAP — minimal greeting stored by IM-12",
+		label: "minimal greeting — correctly dropped post-D.3",
 		content: "hi",
 		expected: false,
-		current: true,
+		current: false,
 	},
 
 	// ── Correctly dropped (low role weight + no markers) ─────────────────
@@ -178,11 +174,11 @@ describe("scoreImportance — behavioural corpus (R7, real-world scenarios)", ()
 });
 
 describe("corpus summary (informational)", () => {
-	it("GAP count tracks Phase D behavioural scope", () => {
+	it("GAP count tracks Phase D.5+ behavioural scope", () => {
 		const gaps = corpus.filter((c) => c.expected !== c.current);
-		// Current state: 3 GAPs (weather-noise, "ok", "hi"). All are
-		// IM-12-induced false positives — user-role marker-free content
-		// storing at the 0.15 coincidence.
-		expect(gaps.length).toBe(3);
+		// Post-D.3: old 3 GAPs resolved (weather/ok/hi correctly drop); 4 new
+		// GAPs surfaced (technical decision / remember / 기억해 / don't hate)
+		// that require D.5 intent+entity extractor to satisfy.
+		expect(gaps.length).toBe(4);
 	});
 });

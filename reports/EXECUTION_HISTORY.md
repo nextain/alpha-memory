@@ -1299,3 +1299,58 @@
 - LLM: gemini-flash-lite
 - Judge: keyword
   - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오후 10:11:33
+- Run ID: `run-2026-04-22T13-11-33-267Z`
+- Adapters: mem0, sillytavern
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] sillytavern: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오후 10:18:24
+- Run ID: `run-2026-04-22T13-18-24-895Z`
+- Adapters: sillytavern
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] sillytavern: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 22. 오후 10:25:54
+- Run ID: `run-2026-04-22T13-25-54-614Z`
+- Adapters: mem0
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] mem0: Stored: 309/200 (New: -1, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 23. 오전 12:00:30
+- Run ID: `run-2026-04-22T15-00-30-895Z`
+- Adapters: mem0
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 23. 오전 1:20:28
+- Run ID: `run-2026-04-22T16-20-28-356Z`
+- Adapters: mem0
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 23. 오전 1:20:28
+- Run ID: `run-2026-04-22T16-20-28-357Z`
+- Adapters: letta
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 23. 오전 1:20:28
+- Run ID: `run-2026-04-22T16-20-28-358Z`
+- Adapters: letta
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] letta: Stored: 0/200 (New: -310, Skipped: 310)
+  - [Phase 1] letta: Stored: 0/200 (New: -310, Skipped: 310)
+  - [Phase 1] mem0: Stored: 310/200 (New: 0, Skipped: 310)

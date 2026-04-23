@@ -228,30 +228,29 @@ describe("calculateStrength — non-finite inputs (DC-15, R8 add)", () => {
 	// propagates through Math.max. Pin current behaviour so a future wrapper
 	// that catches NaN is a deliberate change with a test update.
 
-	it("DC-15a NaN importance currently propagates through Math.max → returns NaN", () => {
+	it("DC-15a NaN importance → returns MIN_STRENGTH (D.4 safe fallback)", () => {
 		const s = calculateStrength(NaN, 0, 0, 0, atDays(10));
-		expect(Number.isNaN(s)).toBe(true);
+		expect(s).toBe(MIN_STRENGTH_OBSERVED);
 	});
 
-	it("DC-15a NaN recallCount currently propagates → NaN", () => {
+	it("DC-15a NaN recallCount → returns MIN_STRENGTH", () => {
 		const s = calculateStrength(0.5, 0, NaN, 0, atDays(10));
-		expect(Number.isNaN(s)).toBe(true);
+		expect(s).toBe(MIN_STRENGTH_OBSERVED);
 	});
 
-	it.fails(
-		"[B-BUG DC-15 Phase D contract] NaN input should produce a finite safe fallback (>= MIN_STRENGTH)",
-		() => {
-			// Phase D contract: silent NaN poisoning is dangerous. Either
-			// wrap with isFinite check returning MIN_STRENGTH, or throw.
-			// Pin the expected behaviour as "returns >= MIN_STRENGTH".
-			const s = calculateStrength(NaN, 0, 0, 0, atDays(10));
-			expect(s).toBeGreaterThanOrEqual(MIN_STRENGTH_OBSERVED);
-		},
-	);
+	it("DC-15a NaN now → returns MIN_STRENGTH", () => {
+		const s = calculateStrength(0.5, 0, 0, 0, NaN);
+		expect(s).toBe(MIN_STRENGTH_OBSERVED);
+	});
 
-	it("DC-15b +Infinity days → exp(-finite*Inf) = 0 → strength clamped to MIN_STRENGTH", () => {
+	it("DC-15 Phase-D contract satisfied: NaN input produces finite safe fallback ≥ MIN_STRENGTH", () => {
+		const s = calculateStrength(NaN, 0, 0, 0, atDays(10));
+		expect(s).toBeGreaterThanOrEqual(MIN_STRENGTH_OBSERVED);
+	});
+
+	it("DC-15b +Infinity days → now=Infinity hits finite-guard, returns MIN_STRENGTH", () => {
 		const s = calculateStrength(0.5, 0, 0, 0, Number.POSITIVE_INFINITY);
-		// Math.exp(-λ * Infinity) = 0 → strength = 0.5 * 0 * 1 = 0 → clamp to 0.01
+		// D.4 guard short-circuits before exp(-λ*Inf) path; returns MIN_STRENGTH.
 		expect(s).toBe(MIN_STRENGTH_OBSERVED);
 	});
 

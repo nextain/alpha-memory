@@ -178,14 +178,14 @@ describe("shouldStore — utility-only threshold (IM-07 / IM-10)", () => {
 		expect(shouldStore(low)).toBe(false);
 	});
 
-	it("IM-10 boundary: utility === 0.15 exactly → shouldStore true (inclusive >=)", () => {
+	it("IM-10 boundary: utility === 0.15 exactly → shouldStore FALSE (exclusive `>`, D.3 IM-12 fix)", () => {
 		const at: { utility: number; importance: number; surprise: number; emotion: number } = {
 			utility: 0.15,
 			importance: 0,
 			surprise: 0,
 			emotion: 0.5,
 		};
-		expect(shouldStore(at)).toBe(true);
+		expect(shouldStore(at)).toBe(false);
 	});
 
 	it("IM-10 just below: utility === 0.149 → shouldStore false", () => {
@@ -279,43 +279,54 @@ describe("scoreImportance — monotonicity in marker hits (IM-11)", () => {
 
 // ─── IM-12 — B-BUG: marker-free user always stores ────────────────────
 
-describe("[B-BUG IM-12] marker-free user utility coincides with threshold", () => {
-	it("[IM-12 pin] currently: marker-free user → utility === 0.15 (== STORAGE_GATE_THRESHOLD)", () => {
+describe("IM-12 decoupling (D.3 fixed)", () => {
+	it("marker-free user: utility stays at 0.15 (coincidence preserved) but shouldStore=false", () => {
+		// D.3 Option (b): strict `>` threshold. The numeric collision
+		// roleWeight×0.5 === STORAGE_GATE_THRESHOLD is acceptable because
+		// the gate behaviour is now decoupled from the boundary value.
 		const s = scoreImportance(input({ content: "ok", role: "user" }));
-		expect(s.utility).toBe(0.15);
-		expect(shouldStore(s)).toBe(true);
+		expect(s.utility).toBe(STORAGE_GATE_THRESHOLD);
+		expect(shouldStore(s)).toBe(false);
 	});
 
-	it.fails(
-		"[B-BUG IM-12 Phase D contract, R7 sharpened] roleWeight × 0.5 should NOT equal STORAGE_GATE_THRESHOLD by coincidence",
-		() => {
-			// R7 Q2: the deeper bug is not "permissive" but "coincidental numeric
-			// collision". Two unrelated knobs — user roleWeight (0.3) and the
-			// 0.5 importance weight in utility — produce exactly 0.15, same as
-			// the 0.15 threshold. Any refactor of either knob silently changes
-			// the gate behaviour for every marker-free user message.
-			//
-			// Phase D contract: decouple. Either:
-			//   (a) make roleWeight × importance-weight ≠ threshold by design, OR
-			//   (b) gate on a signal distinct from scoreImportance output
-			const s = scoreImportance(input({ content: "ok", role: "user" }));
-			// Pin the decoupling: marker-free user utility should land strictly
-			// below OR strictly above threshold, never equal.
-			expect(s.utility).not.toBe(STORAGE_GATE_THRESHOLD);
-		},
-	);
+	it("marker-free user is now classified as noise (JSDoc intent restored)", () => {
+		const s = scoreImportance(input({ content: "hello", role: "user" }));
+		expect(shouldStore(s)).toBe(false);
+	});
+});
 
-	it.fails(
-		"[B-BUG IM-12 secondary contract] marker-free user should NOT store (JSDoc 'noise gate' interpretation)",
-		() => {
-			// R7 Q2 notes real agents track minimal acks; this contract is one
-			// interpretation of the fix, not the only one. Phase D may choose
-			// a different cure (e.g. a context-aware gate). Pin one contract
-			// here and revisit.
-			const s = scoreImportance(input({ content: "ok", role: "user" }));
-			expect(shouldStore(s)).toBe(false);
-		},
-	);
+// ─── IM-24 anti-over-correction (R7 + D.3 outline §5) ──────────────────
+
+describe("shouldStore — strict monotonicity across boundary (IM-24)", () => {
+	const make = (utility: number) => ({
+		utility,
+		importance: 0,
+		surprise: 0,
+		emotion: 0.5,
+	});
+
+	it("just-above boundary → true", () => {
+		expect(shouldStore(make(0.15 + Number.EPSILON * 16))).toBe(true);
+	});
+
+	it("exactly at boundary (0.15) → false (exclusive)", () => {
+		expect(shouldStore(make(0.15))).toBe(false);
+	});
+
+	it("just below boundary → false", () => {
+		expect(shouldStore(make(0.149))).toBe(false);
+	});
+
+	it("well above boundary → true", () => {
+		expect(shouldStore(make(0.5))).toBe(true);
+	});
+
+	it("marker-driven user utility > 0.15 → still stores", () => {
+		// 1 IMPORTANCE marker: utility = (0.3 + 0.15) * 0.5 = 0.225
+		const s = scoreImportance(input({ content: "always remember", role: "user" }));
+		expect(s.utility).toBeGreaterThan(0.15);
+		expect(shouldStore(s)).toBe(true);
+	});
 });
 
 // ─── IM-14 — Korean markers ────────────────────────────────────────────
