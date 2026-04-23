@@ -1,0 +1,10 @@
+{
+  "runId": "run-2026-04-23T01-35-21-799Z",
+  "summary": [
+    {
+      "adapter": "naia-local",
+      "score": 0.38213399503722084,
+      "grade": "F (abstention fail)"
+    }
+  ]
+}
