@@ -157,10 +157,10 @@ export const STORAGE_GATE_THRESHOLD = 0.15;
 /**
  * Determine if an input is worth storing as a memory.
  * Below the gate threshold, the input is considered noise.
+ *
+ * Note: user messages with no keyword hits score utility = 0.3 * 0.5 = 0.15
+ * exactly. Using >= ensures plain factual statements from users are stored.
  */
 export function shouldStore(score: ImportanceScore): boolean {
-	// D.3 IM-12 decoupling: strict `>`. The coincidence
-	// `user roleWeight × 0.5 === STORAGE_GATE_THRESHOLD === 0.15` remains,
-	// but utility landing on the boundary no longer triggers storage.
-	return score.utility > STORAGE_GATE_THRESHOLD;
+	return score.utility >= STORAGE_GATE_THRESHOLD;
 }
