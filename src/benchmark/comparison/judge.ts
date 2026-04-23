@@ -257,6 +257,28 @@ function callClaudeCli(prompt: string): string {
 	}
 }
 
+function callCodexCli(prompt: string): string {
+	try {
+		const raw = execSync('echo "$(cat)" | codex exec - 2>/dev/null', {
+			input: prompt,
+			timeout: 120000,
+			encoding: "utf-8",
+			maxBuffer: 1024 * 1024,
+			shell: "/bin/bash",
+		}).trim();
+		const lines = raw.split("\n");
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (trimmed === "PASS" || trimmed === "FAIL" || trimmed.startsWith("PASS") || trimmed.startsWith("FAIL")) {
+				return line;
+			}
+		}
+		return raw;
+	} catch {
+		return "";
+	}
+}
+
 function callGeminiCli(
 	prompt: string,
 	model = "gemini-3.1-pro-preview",
@@ -473,7 +495,7 @@ function rescore(details: Detail[]): {
 async function main() {
 	const args = process.argv.slice(2);
 	let inputPath = "";
-	let judgeMode: "keyword" | "claude-cli" | "gemini-pro-cli" | "glm-api" =
+	let judgeMode: "keyword" | "claude-cli" | "codex-cli" | "gemini-pro-cli" | "glm-api" =
 		"gemini-pro-cli";
 	let batchSize = 10;
 	let categories: string[] | null = null;
@@ -606,6 +628,8 @@ async function main() {
 				let raw: string;
 				if (judgeMode === "gemini-pro-cli") {
 					raw = callGeminiCli(prompt);
+				} else if (judgeMode === "codex-cli") {
+					raw = callCodexCli(prompt);
 				} else {
 					raw = await callGlmApi(prompt);
 				}
