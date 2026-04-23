@@ -540,14 +540,16 @@ async function main() {
 	// Load saved results
 	const saved: SavedResult = JSON.parse(readFileSync(inputPath, "utf-8"));
 
-	// Load query templates to get expected_contains etc.
+	// Detect language and v2 templates from filename or result data fingerprint
 	const langSuffix =
 		inputPath.includes("-en-") || inputPath.includes(".en.") ? ".en" : "";
+	const firstDetails = saved.results?.[0]?.details ?? [];
+	const drCount = firstDetails.filter((d: Detail) => d.capability === "direct_recall").length;
+	const totalDetails = firstDetails.length;
 	const isV2 =
-		inputPath.includes("v2") ||
 		args.includes("--v2") ||
-		saved.version?.includes("v2") ||
-		saved.results?.[0]?.details?.[0]?.scoringV2;
+		inputPath.includes("-v2") ||
+		(drCount >= 40 && totalDetails >= 240);
 	const v2Suffix = isV2 ? "-v2" : "";
 	const templatesPath = new URL(
 		`../query-templates${v2Suffix}${langSuffix}.json`,
