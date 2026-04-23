@@ -540,9 +540,18 @@ async function main() {
 	// Load saved results
 	const saved: SavedResult = JSON.parse(readFileSync(inputPath, "utf-8"));
 
-	// Detect language and v2 templates from filename or result data fingerprint
-	const langSuffix =
-		inputPath.includes("-en-") || inputPath.includes(".en.") ? ".en" : "";
+	// Detect language and v2 templates from filename, --lang flag, or query content
+	const langFlagIdx = args.indexOf("--lang");
+	const langFlag = langFlagIdx >= 0 ? args[langFlagIdx + 1] : "";
+	let langSuffix =
+		langFlag === "en" || inputPath.includes("-en-") || inputPath.includes(".en.")
+			? ".en"
+			: "";
+	if (!langSuffix) {
+		const firstQuery = saved.results?.[0]?.details?.[0]?.query ?? "";
+		const hasHangul = /[가-힣]/.test(firstQuery);
+		if (firstQuery && !hasHangul) langSuffix = ".en";
+	}
 	const firstDetails = saved.results?.[0]?.details ?? [];
 	const drCount = firstDetails.filter((d: Detail) => d.capability === "direct_recall").length;
 	const totalDetails = firstDetails.length;
