@@ -336,3 +336,171 @@ R7 벤치마크에서 "LLM 사전지식 경로"가 식별되었습니다 — 기
 
 *작성: 2026-04-23. GLM-5.1 + Gemini 2.5 Pro 분석 포함.*
 *데이터: /tmp/consensus-results.json*
+
+---
+
+## 부록 B: Precision-Recall 트레이드오프 분석 (심화)
+
+### 아키텍처 관계
+
+```
+naia-local = mem0 (vector search base) + Naia Layer
+  ├── Importance Gating (3축 점수: importance × surprise × emotion)
+  ├── Consolidation (팩트 통합/중복 제거)
+  └── Contradiction Detection (모순 탐지/업데이트)
+```
+
+naia-local과 mem0은 **동일한 벡터 검색 기반(mem0 OSS)**을 사용합니다. 차이는 Naia Layer의 추가 처리뿐입니다.
+
+### 벤치마크가 말하는 것
+
+| 지표 | mem0 (base) | naia-local (+Naia Layer) | 변화 | 해석 |
+|------|------------|--------------------------|------|------|
+| Keyword (정밀도) | 28.5% | **31.5%** | +3pp | Naia Layer가 정밀도 개선 |
+| Gemini (엄격 semantic) | 32.0% | 28.5% | -3.5pp | 의미적 recall 저하 |
+| GLM (관대 semantic) | 79.5% | 66.0% | -13.5pp | 의미적 recall 대폭 저하 |
+| Consensus (다수결) | **39.8%** | 38.6% | -1.2pp | 종합적으로 mem0 우위 |
+
+**결론**: Naia Layer가 precision을 올렸지만, **과도한 필터링으로 semantic recall을 깎아버림**.
+
+### 카테고리별 격차 분석
+
+| 카테고리 | naia-local | mem0 | 격차 | 원인 추정 |
+|----------|-----------|------|------|----------|
+| semantic_search | 2/18 | **16/18** | 8배 | Importance gating이 의미적 관련 팩트 필터링 |
+| direct_recall | 25/49 | **34/49** | 1.4배 | Gating이 직접 회상 팩트도 일부 차단 |
+| unchanged_persistence | 0/11 | 0/11 | 동일 | Contradiction detection cascade delete |
+| multi_fact_synthesis | 0/15 | 0/15 | 동일 | 두 시스템 모두 multi-hop 미구현 |
+| temporal | **3/20** | 0/20 | naia 우위 | Consolidation이 일부 시간 정보 보존 |
+| contradiction_indirect | **8/15** | 7/15 | 근소 | Naia contradiction detection 소폭 우위 |
+
+### 이중 순위 (공정성 vs 사용자 경험)
+
+**공정성/정확도 순위 (Keyword — exact match)**
+
+| 순위 | 어댑터 | 평균 |
+|------|--------|------|
+| 1 | **naia-local** | 31.5% |
+| 2 | mem0 | 28.5% |
+| 3 | sillytavern | 26.5% |
+| 4 | letta | 15.5% |
+| 5 | airi | 15.0% |
+
+**사용자 경험 순위 (Semantic — 3-Judge Consensus)**
+
+| 순위 | 어댑터 | 평균 |
+|------|--------|------|
+| 1 | **mem0** | 39.8% |
+| 2 | naia-local | 38.6% |
+| 3 | sillytavern | 27.0% |
+| 4 | airi | 14.5% |
+| 5 | letta | 14.5% |
+
+> naia-local은 팩트 정확도에서 1위지만, 사용자가 체감하는 의미적 회상 품질에서는 mem0에 뒤처짐.
+
+---
+
+## 부록 C: 3-AI 개선 방안 분석 (Precision-Recall 프레이밍)
+
+### [GLM-5.1의 분석 v2]
+
+**1. Recall 저하의 주요 원인**
+
+가장 유력한 원인은 **Importance Gating(중요도 게이팅)**입니다. `semantic_search` (16/18 → 2/18)에서의 급격한 성능 하락은, 의미적으로는 관련이 있지만 Naia의 중요도 점수 기준을 통과하지 못한 메모리들이 대거 필터링되었음을 의미합니다. Importance Gating이 80%의 원인, 나머지 20%는 모순 탐지 버그와 통합 로직의 정보 손실.
+
+**2. Importance Threshold 개선안**
+
+- **하드 필터링 → 소프트 필터링(재랭킹)** 전환: 임계값 이하 메모리를 삭제하지 않고 순위만 낮춤
+- 최종 점수 = `0.6 × vector_score + 0.4 × naia_importance` 가중 합산
+- **동적 임계값**: 쿼리 의도에 따라 threshold 조정 (탐색적 0.5, 사실적 0.85)
+
+**3. unchanged_persistence 수정**
+
+- '삭제' 대신 `status` 필드 도입 (`active`, `archived`, `contradicted`)
+- 모순 시 물리적 삭제 금지, 상태만 `contradicted`로 변경 + `contradicted_by` 링크
+- 검색 시 `status: active`만 기본 조회
+
+**4. multi_fact_synthesis 구현**
+
+- Multi-hop 검색: 1차 검색 → 엔티티 추출 → 2차 검색 → 결과 병합
+- LLM 기반 합성: 수집된 팩트를 컨텍스트로 묶어 LLM에 종합 답변 요청
+
+**5. 우선순위**: P0 unchanged_persistence → P1 Importance Gating → P2 multi_fact_synthesis → P3 Consolidation 고도화
+
+### [Gemini 2.5 Pro의 분석 v2]
+
+**1. Cause of Recall Degradation**
+
+The importance gate is the primary suspect. The slight precision gain (+3pp) at the cost of catastrophic recall drop (-13.5pp, 8x gap on semantic_search) indicates the gate is too aggressive. Consolidation may contribute by over-summarizing.
+
+**2. Tuning the Threshold**
+
+- Disable consolidation and contradiction detection temporarily
+- Run parameter sweep across thresholds (0.1 to 0.9)
+- Optimize for F1-Score (harmonic mean of precision and recall)
+
+**3. Fixing unchanged_persistence**
+
+Implement Hybrid Search: augment vector store with keyword index (BM25). Merge results with re-ranking, giving high weight to exact matches for proper nouns or quoted text.
+
+**4. Implementing multi_fact_synthesis**
+
+Query Decomposition Agent: LLM breaks complex query → sequential sub-queries → retrieve & refine → synthesize final answer.
+
+**5. Priority**: P0 Tune Importance Threshold → P1 Fix unchanged_persistence → P2 multi_fact_synthesis
+
+### 3-AI 합의 (GLM + Gemini)
+
+| 항목 | 합의 내용 |
+|------|----------|
+| **Recall 저하 원인** | Importance Gating이 주범 (80%), Consolidation 정보 손실이 부벽 (20%) |
+| **해결 방법** | Hard filtering → Soft re-ranking 전환. vector_score + importance 가중 합산 |
+| **unchanged_persistence** | 물리적 삭제 금지 → status 필드 도입. GLM은 상태 기반, Gemini는 Hybrid Search 제안 |
+| **multi_fact_synthesis** | Multi-hop 검색 + LLM 합성 파이프라인. 두 AI 모두 동일 방식 제안 |
+| **의견 차이** | GLM은 P0=unchanged_persistence, Gemini는 P0=Importance Threshold 조정 |
+| **종합 합의** | P0: Importance Gating 개선 (recall 회복이 시급) + unchanged_persistence 수정 (병렬) → P1: multi_fact_synthesis |
+
+---
+
+## 부록 D: 개선 로드맵 v2 (3-AI 합의 기반)
+
+### P0: Importance Gating → Soft Re-ranking (1-2 스프린트)
+
+**목표**: semantic_search 2/18 → 10/18+, 전체 recall -13.5pp 회복
+
+```
+현재: memories.filter(m => m.importance > threshold)  // hard filter
+변경: memories.sort((a,b) => (0.6*a.vector + 0.4*b.importance) - (0.6*b.vector + 0.4*b.importance))
+```
+
+- Hard filter → weighted re-ranking 전환
+- 동적 threshold: 쿼리 intent 분류 → threshold 조정
+- 검증: semantic_search 카테고리로 parameter sweep (0.1~0.9)
+
+### P0 (병렬): unchanged_persistence 수정 (1-2 스프린트)
+
+**목표**: 0/11 → 8/11+
+
+- 메모리 스키마에 `status` 필드 추가 (active/contradicted/archived)
+- Contradiction update 시 물리적 삭제 → 상태 변경만
+- Cascade delete 로직 제거, 대상 메모리 ID 1개만 업데이트
+
+### P1: multi_fact_synthesis 구현 (1-2 스프린트)
+
+**목표**: 0/15 → 5/15+
+
+- Query Decomposition: LLM이 복합 쿼리를 서브쿼리로 분해
+- Multi-hop 검색: 1차 결과에서 엔티티 추출 → 2차 검색
+- LLM 합성: 수집 팩트 컨텍스트로 종합 답변 생성
+
+### P2: Consolidation 로직 고도화 (1 분기)
+
+- 통합 시 뉘앙스 손실 최소화
+- Temporal 버전 관리: 과거 상태 보존 (temporal 3/20 → 10/20+)
+- Bi-temporal 모델 검토
+
+### P3: Judge 시스템 2.0
+
+- Binary PASS/FAIL → 다차원 평가 (Accuracy, Completeness, Relevance)
+- F1-Score 최적화 기준 확립
+- HITL 캘리브레이션 세트 (50-100개 인간 평가 항목)
