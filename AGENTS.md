@@ -123,7 +123,8 @@ Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with 
 - **Mem0Adapter LLM dedup kills Korean**: mem0 KO 24.5% = naia KO 24.0% — same pipeline, confirmed root cause. mem0's EN-optimized LLM dedup strips Korean text during normalization. Fix: switch benchmark + production to LocalAdapter. → alpha-memory#12
 - **abstention is retrieval failure, not confidence gating**: naia abstention 100% (KO) / 75% (EN) is a false positive — nothing is retrieved so LLM says "I don't know". Real fix requires vector search first, then cosine similarity threshold. → alpha-memory#9
 - **temporal 0-15%**: Naia overwrites facts on contradiction update, losing past state history. R8 v2: naia 3/20, mem0 0/20. → alpha-memory#8
-- **EN fact bank 260/488 untranslated**: Mixed KO/EN queries in EN benchmark. Degrades EN result reliability.
+- **EN fact bank 260/488 untranslated**: Mixed KO/EN queries in EN benchmark. Degrades EN result reliability. → **FIXED** in R9 (full EN translation)
+- **naia-local EN pipeline Korean anchor**: Fact extractor, sessionRecall headers, benchmark prompt all had Korean anchors causing EN collapse. → **FIXED** (Bug #6)
 
 ## Benchmark Infrastructure Bugs (2026-04-23, GLM-5.1 + Gemini 2.5 Pro Cross-Reviewed)
 
@@ -265,6 +266,47 @@ reports/
 - 모든 시스템 F 등급 (1위도 40% 미만)
 
 **Report:** See `reports/r8-v2-5adapter/report-ko.md`
+
+### R9 v2 KO+EN Results (2026-04-24, 2 adapters × 3-Judge, v2 templates fix)
+
+**변경사항**: Bug #1-#5 수정 + v2 templates 정상 사용 + EN pipeline 한국어 anchor 제거 (llm-fact-extractor, sessionRecall, benchmark prompt).
+
+#### KO (241 queries)
+
+| Judge | naia-local | mem0 | Gap |
+|-------|:---:|:---:|:---:|
+| Keyword | 87 (37%) | 84 (34%) | naia +3 |
+| GLM | 105 (44%) | 127 (53%) | mem0 +9 |
+| Gemini | 105 (44%) | 117 (49%) | mem0 +5 |
+| **평균** | **42%** | **45%** | **mem0 +3** |
+
+#### EN (241 queries, 한국어 anchor 수정 후)
+
+| Judge | naia-local | mem0 | Gap |
+|-------|:---:|:---:|:---:|
+| Keyword | 51 (21%) | 52 (22%) | mem0 +1 |
+| GLM | 65 (27%) | 117 (49%) | mem0 +22 |
+| Gemini | 61 (25%) | 125 (52%) | mem0 +27 |
+| **평균** | **24%** | **41%** | **mem0 +17** |
+
+#### 통합 순위
+
+| Adapter | KO | EN | **통합** | KO→EN 격차 |
+|---------|:---:|:---:|:---:|:---:|
+| mem0 | 45% | 41% | **43%** | -4pp |
+| naia-local | 42% | 24% | **33%** | **-18pp** |
+
+**Key Findings**:
+- mem0가 KO/EN 모두 안정 (43%), naia-local은 EN에서 붕괴 (-18pp)
+- naia-local EN 붕괴 원인: importance gating + keyword search가 EN에 부적합, vector search만으로 recall 부족
+- EN contradiction_direct: naia 10-13/20 vs mem0 15-19/20 — negation detection은 언어 독립적이나 retrieval에서 격차
+- abstention: naia EN 17/20 (85%)은 false positive — 실제로는 검색 실패
+- 양 시스템 모두 unchanged_persistence 0-1/11, multi_fact_synthesis 0/15 — 구조적 문제
+
+**Bug #6: EN pipeline Korean anchor [FIXED 2026-04-24]**
+- `llm-fact-extractor.ts:89` 한국어 예시 → EN 팩트가 한국어로 저장 → 검색 불가
+- `index.ts:546-581` sessionRecall() 한국어 헤더 → LLM이 EN 쿼리에 한국어 응답
+- 수정 후 naia-local EN: 16% → 21% (keyword), 22% → 27% (GLM)
 
 ## Implementation Roadmap
 
