@@ -116,13 +116,14 @@ Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with 
 
 ## Known Issues (from benchmark results)
 
+- **Naia Layer over-filtering (R8 v2 critical)**: Importance gating improves keyword precision +3pp but degrades semantic recall -13.5pp. semantic_search 2/18 vs mem0 base 16/18. Fix: hard filter → soft re-ranking. → P0
+- **unchanged_persistence cascade delete**: Contradiction update deletes unrelated facts. All adapters 0/11 in R8 v2. Fix: status field + non-destructive update. → P0
+- **multi_fact_synthesis 0%**: No multi-hop retrieval. Both naia-local and mem0 score 0/15. Fix: query decomposition + LLM synthesis. → P1
 - **deprecated embedding + missing vector search**: `text-embedding-004` (768d, EN-optimized, deprecated 2026-01-14) is not wired into LocalAdapter. Benchmark uses Mem0Adapter backend — LocalAdapter has never been measured. → alpha-memory#5 (Critical)
 - **Mem0Adapter LLM dedup kills Korean**: mem0 KO 24.5% = naia KO 24.0% — same pipeline, confirmed root cause. mem0's EN-optimized LLM dedup strips Korean text during normalization. Fix: switch benchmark + production to LocalAdapter. → alpha-memory#12
-- **abstention KO 100% is retrieval failure, not confidence gating**: naia KO abstention 100% is a false positive — nothing is retrieved so LLM says "I don't know". Real fix requires #5 (vector search) first, then cosine similarity threshold. → alpha-memory#9
-- **unchanged_persistence cascade delete**: Contradiction update deletes unrelated facts. naia EN 47%, KO 33%. → alpha-memory#10
-- **temporal 0% EN / 20% KO**: Naia overwrites facts on contradiction update, losing past state history. → alpha-memory#8
-- **System prompt language mixing**: EN benchmark system prompt contained Korean phrases. Fixed (commit 0b40bec).
-- **parseBatchVerdict bug**: Didn't handle `---` separator from gemini responses. Fixed (commit 0b40bec).
+- **abstention is retrieval failure, not confidence gating**: naia abstention 100% (KO) / 75% (EN) is a false positive — nothing is retrieved so LLM says "I don't know". Real fix requires vector search first, then cosine similarity threshold. → alpha-memory#9
+- **temporal 0-15%**: Naia overwrites facts on contradiction update, losing past state history. R8 v2: naia 3/20, mem0 0/20. → alpha-memory#8
+- **EN fact bank 260/488 untranslated**: Mixed KO/EN queries in EN benchmark. Degrades EN result reliability.
 
 ## Reports
 
@@ -139,6 +140,8 @@ reports/
 │   └── report-en.md         ← R5 EN 벤치마크 영문 보고서
 ├── r6-ko-benchmark/
 │   └── report-ko.md         ← R6 KO 벤치마크 한국어 보고서
+├── r8-v2-5adapter/
+│   └── report-ko.md         ← R8 v2 최종 보고서 (precision-recall 분석 + 로드맵)
 └── runs/                    ← 원시 JSON 결과 파일
 ```
 
@@ -195,18 +198,71 @@ reports/
 
 **Report:** See `reports/r6-ko-benchmark/report-ko.md`
 
+### R8 v2 Benchmark Results (2026-04-23, synthetic factbank, 5 adapters × 3-Judge)
+
+**설계**: v2 합성 팩트뱅크(200 허구 팩트, 241 쿼리)로 LLM 사전지식 경로 차단. airi baseline 33.9%→15%로 차단 확인.
+
+**아키텍처 관계**: `naia-local = mem0 (vector search base) + Naia Layer (importance gating, consolidation, contradiction detection)`
+
+**이중 순위 (공정성 vs 사용자 경험)**:
+
+| 지표 | 1위 | 2위 | 3위 |
+|------|-----|-----|-----|
+| Keyword (정확도) | **naia-local** 31.5% | mem0 28.5% | sillytavern 26.5% |
+| Consensus (사용자 경험) | **mem0** 39.8% | naia-local 38.6% | sillytavern 27.0% |
+| GLM (관대 semantic) | **mem0** 79.5% | naia-local 66.0% | sillytavern 50.0% |
+| Gemini (엄격 semantic) | **mem0** 32.0% | naia-local 28.5% | sillytavern 23.0% |
+
+**Precision-Recall 트레이드오프**:
+- Naia Layer가 keyword 정밀도 +3pp 개선, semantic recall -13.5pp 저하
+- 원인: Importance Gating이 너무 공격적 (80%), Consolidation 정보 손실 (20%)
+- semantic_search: naia 2/18 vs mem0 16/18 (8배 격차)
+- unchanged_persistence: 전멸 0/11 (cascade delete)
+- multi_fact_synthesis: 전멸 0/15
+- temporal: naia 3/20 vs mem0 0/20 (유일한 naia 우위 카테고리)
+- letta R7→R8 추락: KO 67.5%→14.5% (사전지식 경로 차단으로 무너짐)
+- 모든 시스템 F 등급 (1위도 40% 미만)
+
+**Report:** See `reports/r8-v2-5adapter/report-ko.md`
+
 ## Implementation Roadmap
 
-### Critical (#5, #12)
+### P0: Importance Gating → Soft Re-ranking (1-2 스프린트)
 
-- [ ] Wire offline embedding (all-MiniLM-L6-v2) into LocalAdapter — vector search never measured
+- [ ] Hard filter → weighted re-ranking 전환: `score = 0.6*vector + 0.4*importance`
+- [ ] 동적 threshold: 쿼리 intent 분류 → threshold 조정 (탐색적 0.5, 사실적 0.85)
+- [ ] semantic_search 2/18 → 10/18+ 목표, 전체 recall -13.5pp 회복
+
+### P0 (병렬): unchanged_persistence 수정 (1-2 스프린트)
+
+- [ ] 메모리 스키마에 `status` 필드 추가 (active/contradicted/archived)
+- [ ] Contradiction update 시 물리적 삭제 → 상태 변경만
+- [ ] Cascade delete 로직 제거, 대상 메모리 ID 1개만 업데이트
+- [ ] 0/11 → 8/11+ 목표
+
+### P1: multi_fact_synthesis 구현 (1-2 스프린트)
+
+- [ ] Query Decomposition: LLM이 복합 쿼리를 서브쿼리로 분해
+- [ ] Multi-hop 검색: 1차 결과에서 엔티티 추출 → 2차 검색
+- [ ] LLM 합성: 수집 팩트 컨텍스트로 종합 답변 생성
+- [ ] 0/15 → 5/15+ 목표
+
+### P2: Consolidation + Temporal 고도화 (1 분기)
+
+- [ ] 통합 시 뉘앙스 손실 최소화
+- [ ] Temporal 버전 관리: 과거 상태 보존 (temporal 3/20 → 10/20+)
+- [ ] Bi-temporal 모델 검토
+
+### P3: LocalAdapter 벡터 검색 (#5, #12)
+
+- [ ] Wire offline embedding (all-MiniLM-L6-v2) into LocalAdapter
 - [ ] Switch benchmark + production to LocalAdapter — mem0 LLM dedup kills Korean
 
-### High Priority (#8, #9, #10)
+### P4: Judge 시스템 2.0
 
-- [ ] Temporal recall — preserve past state on contradiction update (temporal 0% EN / 20% KO)
-- [ ] Abstention gating — cosine similarity threshold for "I don't know" (not retrieval failure)
-- [ ] Unchanged persistence — fix cascade delete on contradiction update
+- [ ] Binary PASS/FAIL → 다차원 평가 (Accuracy, Completeness, Relevance)
+- [ ] F1-Score 최적화 기준 확립
+- [ ] HITL 캘리브레이션 세트 (50-100개 인간 평가 항목)
 
 ### Token Embedding Gating (Experimental — Post-Patent)
 
