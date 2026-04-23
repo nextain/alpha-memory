@@ -125,6 +125,47 @@ Default: `gemini-2.5-flash-lite` (via OpenAI-compatible API). Configurable with 
 - **temporal 0-15%**: Naia overwrites facts on contradiction update, losing past state history. R8 v2: naia 3/20, mem0 0/20. → alpha-memory#8
 - **EN fact bank 260/488 untranslated**: Mixed KO/EN queries in EN benchmark. Degrades EN result reliability.
 
+## Benchmark Infrastructure Bugs (2026-04-23, GLM-5.1 + Gemini 2.5 Pro Cross-Reviewed)
+
+5개 버그/개선항목을 GLM-5.1과 Gemini 2.5 Pro가 교차 검증. **전원 CONFIRMED**.
+
+### Bug #1: judge.ts v2 템플릿 변환 누락 [HIGH]
+
+`run-comparison.ts`는 `convertV2ToV1()`로 v2 `queries[]` → v1 `capabilities.{cap}.queries[]` 변환 후 `scoring.score_3` → `expected_contains` 매핑. `judge.ts`에는 이 변환 로직이 없어 `templates.capabilities`가 `undefined` → `queryLookup` 비어감.
+
+**영향**: R9 GLM/Gemini re-judge가 제약 없이 "적절히 답했으면 PASS"로 평가. keyword judge는 5개 항목 `NO_JUDGE` → FAIL 처리.
+
+**수정안**: `convertV2ToV1()`을 공유 모듈로 추출, judge.ts에 적용.
+
+### Bug #2: judge.ts v2 템플릿 경로 탐지 오류 [HIGH]
+
+judge.ts가 항상 v1 템플릿(`query-templates.json`)만 로드. `--v2` 플래그/자동 감지 없음.
+
+**수정안**: `--v2` 플래그 + 파일명 기반 자동 감지로 `query-templates-v2.json` 로드.
+
+### Bug #3: judge.ts 체크포인트 resume 부재 [MEDIUM]
+
+배치별 저장은 있으나 재시작 시 전부 재judge. GLM 240문항 ~15분, 중간 타임아웃 시 전체 손실.
+
+**수정안**: judge 모드별 결과를 분리 저장 (`judge_results.glm-api`, `judge_results.gemini-pro-cli` 등). 재시작 시 이미 judge된 항목 스킵.
+
+### Bug #4: v2 scoring 구조 미활용 [LOW]
+
+`score_2`(부분 정답), `score_1`(관련 but 오답)이 `entry.scoring`에 보존되나 `buildJudgePrompt()`와 `keywordJudge()`에서 무시됨.
+
+**수정안**: LLM judge 프롬프트에 `score_2` 힌트 추가. keywordJudge 부분 점수는 false positive 리스크로 보류.
+
+### Bug #5: R9 혼합 실행 — v2 fact bank + v1 templates [HIGH]
+
+R9가 `--v2` 플래그로 실행됐으나 실제로는 v2 fact bank(200 facts) + **v1 templates(240 queries)** 혼합 사용. v2 templates(241 queries)는 한 번도 사용 안 됨.
+
+**증거**:
+- R9 DIRE=25 (v1 direct_recall=25, v2는 49)
+- R9 CONT=35 (v1 cd=20+ci=15, v2도 20+15이지만 내용 다름)
+- `scoringV2: true`는 `--v2` 플래그로 설정되었으나 템플릿은 v1
+
+**결론**: R9 전체 결과(KO)를 v2 templates 기반으로 재실행 필요.
+
 ## Reports
 
 Benchmark results are saved in `reports/` as JSON files.
