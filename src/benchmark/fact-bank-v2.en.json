@@ -1,3169 +1,3167 @@
 {
-	"$schema": "Fact Bank v2 — 200 facts (164 NL / 36 ID). Peer-reviewed design.",
-	"persona_note": "v2 test persona (fictional). 80% natural language / 20% unique ID. All info is fictional.",
-	"version": 2,
-	"design_principles": [
-		"80% natural language / 20% unique ID",
-		"5 distractor types: exact_substitute, partial_match, negative, conditional, hierarchical",
-		"0-3 scoring scale",
-		"Reasoning questions included",
-		"Ecological validity: real memory log distribution"
-	],
-	"total_facts": 200,
-	"natural_language_facts": 164,
-	"unique_id_facts": 36,
-	"nl_ratio": "82%",
-	"distractor_distribution": {
-		"exact_substitute": 31,
-		"negative": 27,
-		"partial_match": 15,
-		"conditional": 17,
-		"hierarchical": 20
-	},
-	"domains": 10,
-	"facts": [
-		{
-			"id": "F001",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "I'm Subin",
-			"entities": [
-				"Subin"
-			],
-			"extractable_facts": [
-				"이름: Subin"
-			],
-			"distractor": {
-				"id": "F001d",
-				"type": "exact_substitute",
-				"statement": "I'm Hajin",
-				"shared_concept": "이름"
-			}
-		},
-		{
-			"id": "F002",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "My older sister is Jun",
-			"entities": [
-				"Jun",
-				"언니"
-			],
-			"extractable_facts": [
-				"언니: Jun"
-			],
-			"distractor": {
-				"id": "F002d",
-				"type": "exact_substitute",
-				"statement": "My older sister is Seungwoo",
-				"shared_concept": "언니 이름"
-			}
-		},
-		{
-			"id": "F003",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "언니는 커피 안 마셔",
-			"entities": [
-				"안 마심"
-			],
-			"extractable_facts": [
-				"언니 커피: doesn't drink"
-			],
-			"distractor": {
-				"id": "F003d",
-				"type": "negative",
-				"statement": "언니도 커피 좋아해",
-				"shared_concept": "언니 커피 취향"
-			}
-		},
-		{
-			"id": "F004",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "혈액형은 AB형이야",
-			"entities": [
-				"AB형"
-			],
-			"extractable_facts": [
-				"혈액형: ABolder brother"
-			],
-			"distractor": {
-				"id": "F004d",
-				"type": "exact_substitute",
-				"statement": "혈액형은 O형이야",
-				"shared_concept": "혈액형"
-			}
-		},
-		{
-			"id": "F005",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "MBTI는 ENTP야",
-			"entities": [
-				"ENTP"
-			],
-			"extractable_facts": [
-				"MBTI: ENTP"
-			],
-			"distractor": {
-				"id": "F005d",
-				"type": "exact_substitute",
-				"statement": "MBTI는 INTJ야",
-				"shared_concept": "MBTI"
-			}
-		},
-		{
-			"id": "F006",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "birthday은 12월 7일이야",
-			"entities": [
-				"12월",
-				"7일"
-			],
-			"extractable_facts": [
-				"birthday: 12월 7일"
-			],
-			"distractor": {
-				"id": "F006d",
-				"type": "exact_substitute",
-				"statement": "birthday은 12월 7일(아님)이야",
-				"shared_concept": "birthday"
-			}
-		},
-		{
-			"id": "F007",
-			"domain": "identity",
-			"fact_type": "unique_id",
-			"statement": "사번은 NX-6601-LC야",
-			"entities": [
-				"NX-6601-LC"
-			],
-			"extractable_facts": [
-				"사번: NX-6601-LC"
-			],
-			"distractor": {
-				"id": "F007d",
-				"type": "exact_substitute",
-				"statement": "사번은 NX-1618-QI야",
-				"shared_concept": "사번"
-			}
-		},
-		{
-			"id": "F008",
-			"domain": "identity",
-			"fact_type": "unique_id",
-			"statement": "전화번호는 010-1650-8545야",
-			"entities": [
-				"010-1650-8545"
-			],
-			"extractable_facts": [
-				"전화번호: 010-1650-8545"
-			],
-			"distractor": {
-				"id": "F008d",
-				"type": "exact_substitute",
-				"statement": "전화번호는 010-4727-5982야",
-				"shared_concept": "전화번호"
-			}
-		},
-		{
-			"id": "F009",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "My hometown is Peanut Town",
-			"entities": [
-				"Peanut Town"
-			],
-			"extractable_facts": [
-				"고향: Peanut Town"
-			]
-		},
-		{
-			"id": "F010",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "나는 아침형 인간이야. 보통 새벽 6시에 일어나",
-			"entities": [
-				"아침형",
-				"6시"
-			],
-			"extractable_facts": [
-				"기상: 새벽 6시",
-				"유형: morning type"
-			],
-			"distractor": {
-				"id": "F010d",
-				"type": "partial_match",
-				"statement": "나는 올빼미형이야. 보통 새벽 2시에 자",
-				"shared_concept": "생활 리듬"
-			}
-		},
-		{
-			"id": "F011",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "차는 안 마셔. 커피만 마셔",
-			"entities": [
-				"안 마심",
-				"마심"
-			],
-			"extractable_facts": [
-				"차: doesn't drink",
-				"커피: drinks"
-			],
-			"distractor": {
-				"id": "F011d",
-				"type": "negative",
-				"statement": "차도 좋아하고 커피도 좋아해",
-				"shared_concept": "차/커피 취향"
-			}
-		},
-		{
-			"id": "F012",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "운전면허는 있지만 차는 안 Eggplant고 다녀",
-			"entities": [
-				"있음",
-				"없음"
-			],
-			"extractable_facts": [
-				"운전면허: yes",
-				"자차: none"
-			],
-			"distractor": {
-				"id": "F012d",
-				"type": "conditional",
-				"statement": "운전면허 있고 차도 Eggplant고 다녀",
-				"shared_concept": "면허와 차 소유"
-			}
-		},
-		{
-			"id": "F013",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "영어 이름은 Luna야",
-			"entities": [
-				"름은 Luna"
-			],
-			"extractable_facts": [
-				"영어: 름은 Luna"
-			],
-			"distractor": {
-				"id": "F013d",
-				"type": "negative",
-				"statement": "영어 이Doyun야",
-				"shared_concept": "영어"
-			}
-		},
-		{
-			"id": "F014",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "I served in the Air Force",
-			"entities": [
-				"Air Force 나왔어"
-			],
-			"extractable_facts": [
-				"군대: Air Force"
-			],
-			"distractor": {
-				"id": "F014d",
-				"type": "negative",
-				"statement": "군대는 Air Force 나왔어(아님)",
-				"shared_concept": "군대"
-			}
-		},
-		{
-			"id": "F015",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "I graduated from POSTECH",
-			"entities": [
-				"POSTECH 나왔어"
-			],
-			"extractable_facts": [
-				"대학: POSTECH 나왔어"
-			],
-			"distractor": {
-				"id": "F015d",
-				"type": "negative",
-				"statement": "대학은 POSTECH 나왔어(아님)",
-				"shared_concept": "대학"
-			}
-		},
-		{
-			"id": "F016",
-			"domain": "identity",
-			"fact_type": "unique_id",
-			"statement": "키는 157cm야",
-			"entities": [
-				"157cm"
-			],
-			"extractable_facts": [
-				"키: 157cm"
-			],
-			"distractor": {
-				"id": "F016d",
-				"type": "partial_match",
-				"statement": "키는 157cm(아님)야",
-				"shared_concept": "키"
-			}
-		},
-		{
-			"id": "F017",
-			"domain": "identity",
-			"fact_type": "unique_id",
-			"statement": "신발 사이즈는 239mm야",
-			"entities": [
-				"즈는 239mm"
-			],
-			"extractable_facts": [
-				"신발 사: 즈는 239mm"
-			],
-			"distractor": {
-				"id": "F017d",
-				"type": "hierarchical",
-				"statement": "신발 사이즈는 239mm(아님)야",
-				"shared_concept": "신발 사"
-			}
-		},
-		{
-			"id": "F018",
-			"domain": "identity",
-			"fact_type": "unique_id",
-			"statement": "시력은 -2.0이야",
-			"entities": [
-				"-2.0"
-			],
-			"extractable_facts": [
-				"시력: -2.0"
-			],
-			"distractor": {
-				"id": "F018d",
-				"type": "exact_substitute",
-				"statement": "시력은 -2.0(아님)이야",
-				"shared_concept": "시력"
-			}
-		},
-		{
-			"id": "F019",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "왼손잡이야",
-			"entities": [
-				"왼손잡이"
-			],
-			"extractable_facts": [
-				"손: 왼hand"
-			]
-		},
-		{
-			"id": "F020",
-			"domain": "identity",
-			"fact_type": "natural_language",
-			"statement": "문신 있어. 왼쪽 팔에 작은 거 하나",
-			"entities": [
-				"있음 (왼팔)"
-			],
-			"extractable_facts": [
-				"문신: yes (왼팔)"
-			],
-			"distractor": {
-				"id": "F020d",
-				"type": "hierarchical",
-				"statement": "문신 있어. 왼쪽 팔에 작은 거 하나",
-				"shared_concept": "문신"
-			}
-		},
-		{
-			"id": "F021",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use Pinscript as my editor",
-			"entities": [
-				"Pinscript"
-			],
-			"extractable_facts": [
-				"에디터: Pinscript"
-			],
-			"distractor": {
-				"id": "F021d",
-				"type": "exact_substitute",
-				"statement": "I use Vapor as my editor",
-				"shared_concept": "에디터"
-			}
-		},
-		{
-			"id": "F022",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My main language is Silvershell",
-			"entities": [
-				"Silvershell"
-			],
-			"extractable_facts": [
-				"주 언어: Silvershell"
-			],
-			"distractor": {
-				"id": "F022d",
-				"type": "exact_substitute",
-				"statement": "My main language is Novacode",
-				"shared_concept": "주 언어"
-			}
-		},
-		{
-			"id": "F023",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My framework is Zepton7",
-			"entities": [
-				"Zepton7"
-			],
-			"extractable_facts": [
-				"프레임워크: Zepton7"
-			],
-			"distractor": {
-				"id": "F023d",
-				"type": "hierarchical",
-				"statement": "My framework is Novacode",
-				"shared_concept": "프레임워크 (언어는 같음)"
-			},
-			"temporal_updates": [
-				{
-					"id": "F023u1",
-					"statement": "프레임워크 Quantum IDE(으)로 바꿨어. 예전에는 Zepton7였어",
-					"replaces_extractable": "프레임워크: Zepton7"
-				}
-			]
-		},
-		{
-			"id": "F024",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "다크모드 좋아해",
-			"entities": [
-				"다크모드"
-			],
-			"extractable_facts": [
-				"테마: 다크모드"
-			]
-		},
-		{
-			"id": "F025",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "탭 인덴트 선호해",
-			"entities": [
-				"탭"
-			],
-			"extractable_facts": [
-				"인덴트: 탭"
-			],
-			"distractor": {
-				"id": "F025d",
-				"type": "exact_substitute",
-				"statement": "스페이스 인덴트 선호해",
-				"shared_concept": "인덴트 스타일"
-			}
-		},
-		{
-			"id": "F026",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use Bash shell",
-			"entities": [
-				"Bash"
-			],
-			"extractable_facts": [
-				"셸: Bash"
-			],
-			"distractor": {
-				"id": "F026d",
-				"type": "exact_substitute",
-				"statement": "I use Fish shell",
-				"shared_concept": "셸"
-			},
-			"temporal_updates": [
-				{
-					"id": "F026u1",
-					"statement": "셸 Fish(으)로 바꿨어. 예전에는 Bash였어",
-					"replaces_extractable": "셸: Bash"
-				}
-			]
-		},
-		{
-			"id": "F027",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My terminal is Ghostty",
-			"entities": [
-				"Ghostty"
-			],
-			"extractable_facts": [
-				"터미널: Ghostty"
-			],
-			"distractor": {
-				"id": "F027d",
-				"type": "negative",
-				"statement": "My terminal is Alacritty",
-				"shared_concept": "터미널"
-			}
-		},
-		{
-			"id": "F028",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "패키지 매니저는 bun야",
-			"entities": [
-				"bun"
-			],
-			"extractable_facts": [
-				"패키지 매니저: bun"
-			],
-			"distractor": {
-				"id": "F028d",
-				"type": "exact_substitute",
-				"statement": "패키지 매니저는 yarn야",
-				"shared_concept": "패키지 매니저"
-			}
-		},
-		{
-			"id": "F029",
-			"domain": "tech",
-			"fact_type": "unique_id",
-			"statement": "Pinscript version is 1.7.96",
-			"entities": [
-				"1.7.96"
-			],
-			"extractable_facts": [
-				"에디터 버전: 1.7.96"
-			],
-			"distractor": {
-				"id": "F029d",
-				"type": "exact_substitute",
-				"statement": "Pinscript version is Zepton7",
-				"shared_concept": "에디터 버전"
-			},
-			"temporal_updates": [
-				{
-					"id": "F029u1",
-					"statement": "에디터 버전 Zepton7(으)로 바꿨어. 예전에는 1.7.96였어",
-					"replaces_extractable": "에디터 버전: 1.7.96"
-				}
-			]
-		},
-		{
-			"id": "F030",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "Git은 CLI로 써",
-			"entities": [
-				"CLI"
-			],
-			"extractable_facts": [
-				"Git: CLI"
-			],
-			"distractor": {
-				"id": "F030d",
-				"type": "negative",
-				"statement": "Git은 CLI(아님)로 써",
-				"shared_concept": "Git"
-			}
-		},
-		{
-			"id": "F031",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use Postgres for DB",
-			"entities": [
-				"Postgres 써"
-			],
-			"extractable_facts": [
-				"DB: Postgres 써"
-			],
-			"distractor": {
-				"id": "F031d",
-				"type": "conditional",
-				"statement": "DB는 Postgres 써(아님)",
-				"shared_concept": "DB"
-			}
-		},
-		{
-			"id": "F032",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My OS is Ubuntu",
-			"entities": [
-				"Ubuntu"
-			],
-			"extractable_facts": [
-				"OS: Ubuntu"
-			],
-			"distractor": {
-				"id": "F032d",
-				"type": "conditional",
-				"statement": "My OS is Ubuntu(아님)",
-				"shared_concept": "OS"
-			}
-		},
-		{
-			"id": "F033",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use Docker for containers",
-			"entities": [
-				"너는 Docker 써"
-			],
-			"extractable_facts": [
-				"컨테: 너는 Docker 써"
-			],
-			"distractor": {
-				"id": "F033d",
-				"type": "partial_match",
-				"statement": "컨테이너는 Docker 써(아님)",
-				"shared_concept": "컨테"
-			}
-		},
-		{
-			"id": "F034",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My CI is Cicle",
-			"entities": [
-				"Cicle"
-			],
-			"extractable_facts": [
-				"CI: Cicle"
-			],
-			"distractor": {
-				"id": "F034d",
-				"type": "partial_match",
-				"statement": "My CI is Cicle(아님)",
-				"shared_concept": "CI"
-			}
-		},
-		{
-			"id": "F035",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use AWS for cloud",
-			"entities": [
-				"AWS 써"
-			],
-			"extractable_facts": [
-				"클라우드: AWS 써"
-			]
-		},
-		{
-			"id": "F036",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I deploy with ALB",
-			"entities": [
-				"ALB로"
-			],
-			"extractable_facts": [
-				"배포: ALB로"
-			],
-			"distractor": {
-				"id": "F036d",
-				"type": "hierarchical",
-				"statement": "배포는 ALB로(아님) 해",
-				"shared_concept": "배포"
-			}
-		},
-		{
-			"id": "F037",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "My logger is Winston",
-			"entities": [
-				"Winston"
-			],
-			"extractable_facts": [
-				"로깅: Winston"
-			],
-			"distractor": {
-				"id": "F037d",
-				"type": "hierarchical",
-				"statement": "My logger is Winston(아님)",
-				"shared_concept": "로깅"
-			}
-		},
-		{
-			"id": "F038",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I use Sentry for monitoring",
-			"entities": [
-				"Sentry 써"
-			],
-			"extractable_facts": [
-				"모니터링: Sentry 써"
-			],
-			"distractor": {
-				"id": "F038d",
-				"type": "partial_match",
-				"statement": "모니터링은 Sentry 써(아님)",
-				"shared_concept": "모니터링"
-			}
-		},
-		{
-			"id": "F039",
-			"domain": "tech",
-			"fact_type": "natural_language",
-			"statement": "I manage monorepo with Nx",
-			"entities": [
-				"Nx로 관리"
-			],
-			"extractable_facts": [
-				"모노레포: Nx로 관리"
-			],
-			"distractor": {
-				"id": "F039d",
-				"type": "exact_substitute",
-				"statement": "모노레포는 Nx로 관리(아님)해",
-				"shared_concept": "모노레포"
-			}
-		},
-		{
-			"id": "F040",
-			"domain": "tech",
-			"fact_type": "unique_id",
-			"statement": "코드 커버리지 목표는 70%야",
-			"entities": [
-				"70%"
-			],
-			"extractable_facts": [
-				"코드 커버리지 목표: 70%"
-			],
-			"distractor": {
-				"id": "F040d",
-				"type": "partial_match",
-				"statement": "코드 커버리지 목표는 70%(아님)야",
-				"shared_concept": "코드 커버리지 목표"
-			}
-		},
-		{
-			"id": "F041",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite fruit is Rambutan",
-			"entities": [
-				"Rambutan"
-			],
-			"extractable_facts": [
-				"좋아하는 과일: Rambutan"
-			],
-			"distractor": {
-				"id": "F041d",
-				"type": "exact_substitute",
-				"statement": "My favorite fruit is Dragon Fruit",
-				"shared_concept": "좋아하는 과일"
-			}
-		},
-		{
-			"id": "F042",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite drink is Lassi",
-			"entities": [
-				"Lassi"
-			],
-			"extractable_facts": [
-				"좋아하는 음료: Lassi"
-			],
-			"distractor": {
-				"id": "F042d",
-				"type": "exact_substitute",
-				"statement": "My favorite drink is Misutgaru",
-				"shared_concept": "좋아하는 음료"
-			}
-		},
-		{
-			"id": "F043",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite color is Coral Pink",
-			"entities": [
-				"Coral Pink"
-			],
-			"extractable_facts": [
-				"좋아하는 색: Coral Pink"
-			]
-		},
-		{
-			"id": "F044",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "가장 좋아하는 movies는 \"Invisible River\"야",
-			"entities": [
-				"Invisible River"
-			],
-			"extractable_facts": [
-				"좋아하는 movies: Invisible River"
-			],
-			"distractor": {
-				"id": "F044d",
-				"type": "exact_substitute",
-				"statement": "가장 좋아하는 movies는 \"Glass Island\"야",
-				"shared_concept": "좋아하는 movies"
-			},
-			"temporal_updates": [
-				{
-					"id": "F044u1",
-					"statement": "좋아하는 movies Glass Island(으)로 바꿨어. 예전에는 Invisible River였어",
-					"replaces_extractable": "좋아하는 movies: Invisible River"
-				}
-			]
-		},
-		{
-			"id": "F045",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "음악은 R&B 좋아해",
-			"entities": [
-				"R&B"
-			],
-			"extractable_facts": [
-				"좋아하는 음악: R&B"
-			],
-			"distractor": {
-				"id": "F045d",
-				"type": "partial_match",
-				"statement": "I like Indie music",
-				"shared_concept": "좋아하는 음악"
-			},
-			"temporal_updates": [
-				{
-					"id": "F045u1",
-					"statement": "좋아하는 음악 Classical(으)로 바꿨어. 예전에는 R&B였어",
-					"replaces_extractable": "좋아하는 음악: R&B"
-				}
-			]
-		},
-		{
-			"id": "F046",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "매운 음식 싫어해",
-			"entities": [
-				"싫어함"
-			],
-			"extractable_facts": [
-				"매운맛: dislikes"
-			],
-			"distractor": {
-				"id": "F046d",
-				"type": "negative",
-				"statement": "매운 음식 좋아해",
-				"shared_concept": "매운 음식 선호도"
-			}
-		},
-		{
-			"id": "F047",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "비 올 때는 집에서 책 읽기 좋아해",
-			"entities": [
-				"집에서 책 읽기"
-			],
-			"extractable_facts": [
-				"비 올 때: 집에서 책 읽기"
-			],
-			"distractor": {
-				"id": "F047d",
-				"type": "exact_substitute",
-				"statement": "비 올 때는 집에서 책 읽기(아님) 좋아해",
-				"shared_concept": "비 올 때"
-			}
-		},
-		{
-			"id": "F048",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "술은 안 마셔",
-			"entities": [
-				"안 마심"
-			],
-			"extractable_facts": [
-				"술: doesn't drink"
-			],
-			"distractor": {
-				"id": "F048d",
-				"type": "negative",
-				"statement": "술 자주 마셔",
-				"shared_concept": "음주 여부"
-			}
-		},
-		{
-			"id": "F049",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "회식은 안 가. 점심은 가능해",
-			"entities": [
-				"안 감",
-				"가능"
-			],
-			"extractable_facts": [
-				"회식(저녁): not 감",
-				"점심: available"
-			],
-			"distractor": {
-				"id": "F049d",
-				"type": "conditional",
-				"statement": "회식도 가고 점심도 가능해",
-				"shared_concept": "회식 참석"
-			}
-		},
-		{
-			"id": "F050",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "아침은 꼭 챙겨 먹어",
-			"entities": [
-				"챙겨 먹음"
-			],
-			"extractable_facts": [
-				"아침: 챙겨 먹음"
-			],
-			"distractor": {
-				"id": "F050d",
-				"type": "partial_match",
-				"statement": "아침은 꼭 챙겨 먹어",
-				"shared_concept": "아침"
-			}
-		},
-		{
-			"id": "F051",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "야식은 안 먹어",
-			"entities": [
-				"안 먹음"
-			],
-			"extractable_facts": [
-				"야식: doesn't eat"
-			],
-			"distractor": {
-				"id": "F051d",
-				"type": "negative",
-				"statement": "야식 자주 먹어",
-				"shared_concept": "야식 여부"
-			}
-		},
-		{
-			"id": "F052",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite season is Summer",
-			"entities": [
-				"계절은 Summer"
-			],
-			"extractable_facts": [
-				"좋아하: 계절은 Summer"
-			]
-		},
-		{
-			"id": "F053",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite animal is dog",
-			"entities": [
-				"동물은 dog"
-			],
-			"extractable_facts": [
-				"좋아하: 동물은 dog"
-			]
-		},
-		{
-			"id": "F054",
-			"domain": "preference",
-			"fact_type": "unique_id",
-			"statement": "좋아하는 숫자는 72야",
-			"entities": [
-				"숫자는 72"
-			],
-			"extractable_facts": [
-				"좋아하: 숫자는 72"
-			],
-			"distractor": {
-				"id": "F054d",
-				"type": "negative",
-				"statement": "좋아하는 숫자는 72(아님)야",
-				"shared_concept": "좋아하"
-			}
-		},
-		{
-			"id": "F055",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "I dislike Carrot",
-			"entities": [
-				"음식은 Carrot"
-			],
-			"extractable_facts": [
-				"싫어하: 음식은 Carrot"
-			]
-		},
-		{
-			"id": "F056",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "방 안에 식물 좋아해",
-			"entities": [
-				"방 안에 식물 좋아해"
-			],
-			"extractable_facts": [
-				"방 안에 식물 좋아해"
-			]
-		},
-		{
-			"id": "F057",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "좋아하는 책 장르는 에세이야",
-			"entities": [
-				"책 장르는 에세"
-			],
-			"extractable_facts": [
-				"좋아하: 책 장르는 에세"
-			]
-		},
-		{
-			"id": "F058",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "팟캐스트 좋아해. 출퇴근길에 들어",
-			"entities": [
-				"팟캐스트 좋아해"
-			],
-			"extractable_facts": [
-				"팟캐스트 좋아해"
-			]
-		},
-		{
-			"id": "F059",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "디지털 미니멀리즘 지향해",
-			"entities": [
-				"디지털 미니멀리즘 지향해"
-			],
-			"extractable_facts": [
-				"디지털 미니멀리즘 지향해"
-			]
-		},
-		{
-			"id": "F060",
-			"domain": "preference",
-			"fact_type": "natural_language",
-			"statement": "My favorite brand is Formant",
-			"entities": [
-				"브랜드는 Formant"
-			],
-			"extractable_facts": [
-				"좋아하: 브랜드는 Formant"
-			],
-			"distractor": {
-				"id": "F060d",
-				"type": "conditional",
-				"statement": "My favorite brand is Formant(아님)",
-				"shared_concept": "좋아하"
-			}
-		},
-		{
-			"id": "F061",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "I live in Storm City Nam-gu",
-			"entities": [
-				"Storm City",
-				"Nam-gu"
-			],
-			"extractable_facts": [
-				"거주지: Storm City Nam-gu"
-			],
-			"distractor": {
-				"id": "F061d",
-				"type": "partial_match",
-				"statement": "I live in Storm City Bada-gu",
-				"shared_concept": "같은 도시 다른 구"
-			},
-			"temporal_updates": [
-				{
-					"id": "F061u1",
-					"statement": "거주지 Nam-gu(으)로 바꿨어. 예전에는 Storm City Nam-gu였어",
-					"replaces_extractable": "거주지: Storm City Nam-gu"
-				}
-			]
-		},
-		{
-			"id": "F062",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "My pet is a hamster named \"Bori\"",
-			"entities": [
-				"hamster",
-				"Bori"
-			],
-			"extractable_facts": [
-				"반려동물: hamster \"Bori\""
-			],
-			"distractor": {
-				"id": "F062d",
-				"type": "negative",
-				"statement": "반려동물은 hamster \"Bori\"(아님)이야",
-				"shared_concept": "반려동물"
-			}
-		},
-		{
-			"id": "F063",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "Bori는 10살이야",
-			"entities": [
-				"10살"
-			],
-			"extractable_facts": [
-				"반려동물 나이: 10살"
-			]
-		},
-		{
-			"id": "F064",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "자전거 타고 출퇴근해",
-			"entities": [
-				"자전거"
-			],
-			"extractable_facts": [
-				"출퇴근: 자전거"
-			],
-			"distractor": {
-				"id": "F064d",
-				"type": "hierarchical",
-				"statement": "자전거(아님) 타고 출퇴근해",
-				"shared_concept": "출퇴근"
-			}
-		},
-		{
-			"id": "F065",
-			"domain": "personal",
-			"fact_type": "unique_id",
-			"statement": "집은 50번길 161 1487호야",
-			"entities": [
-				"50번길 161 1487호"
-			],
-			"extractable_facts": [
-				"집: 50번길 161 1487호"
-			]
-		},
-		{
-			"id": "F066",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "3년째 여기 살아",
-			"entities": [
-				"3년"
-			],
-			"extractable_facts": [
-				"거주기간: 3년"
-			],
-			"distractor": {
-				"id": "F066d",
-				"type": "hierarchical",
-				"statement": "3년(아님)째 여기 살아",
-				"shared_concept": "거주기간"
-			}
-		},
-		{
-			"id": "F067",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "Before moving, I lived in Quantum City",
-			"entities": [
-				"Quantum City에 살았어"
-			],
-			"extractable_facts": [
-				"이사하기 전에: Quantum City에 살았어"
-			],
-			"distractor": {
-				"id": "F067d",
-				"type": "conditional",
-				"statement": "이사하기 전에는 Quantum City에 살았어(아님)",
-				"shared_concept": "이사하기 전에"
-			}
-		},
-		{
-			"id": "F068",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "There's a park near my place",
-			"entities": [
-				"집 근처에 park 있어"
-			],
-			"extractable_facts": [
-				"집 근처에 park 있어"
-			]
-		},
-		{
-			"id": "F069",
-			"domain": "personal",
-			"fact_type": "unique_id",
-			"statement": "관리비는 29만원이야",
-			"entities": [
-				"29만원"
-			],
-			"extractable_facts": [
-				"관리비: 29만원"
-			],
-			"distractor": {
-				"id": "F069d",
-				"type": "conditional",
-				"statement": "관리비는 29만원(아님)이야",
-				"shared_concept": "관리비"
-			}
-		},
-		{
-			"id": "F070",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "주차장 있어. 지하야",
-			"entities": [
-				"있음 (지하)"
-			],
-			"extractable_facts": [
-				"주차장: yes (지하)"
-			],
-			"distractor": {
-				"id": "F070d",
-				"type": "exact_substitute",
-				"statement": "주차장 있어. 지하야",
-				"shared_concept": "주차장"
-			}
-		},
-		{
-			"id": "F071",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "이웃이랑은 안 친해",
-			"entities": [
-				"안 친함"
-			],
-			"extractable_facts": [
-				"이웃 관계: not close"
-			],
-			"distractor": {
-				"id": "F071d",
-				"type": "negative",
-				"statement": "이웃이랑 친해",
-				"shared_concept": "이웃 관계"
-			}
-		},
-		{
-			"id": "F072",
-			"domain": "personal",
-			"fact_type": "unique_id",
-			"statement": "방 2개야",
-			"entities": [
-				"방 2개야"
-			],
-			"extractable_facts": [
-				"방 2개야"
-			]
-		},
-		{
-			"id": "F073",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "오피스텔이야",
-			"entities": [
-				"오피스텔"
-			],
-			"extractable_facts": [
-				"주거형태: housing"
-			]
-		},
-		{
-			"id": "F074",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "Monday마다 청소해",
-			"entities": [
-				"매주 Monday"
-			],
-			"extractable_facts": [
-				"청소: every Monday"
-			],
-			"distractor": {
-				"id": "F074d",
-				"type": "partial_match",
-				"statement": "Monday마다 청소해",
-				"shared_concept": "청소"
-			}
-		},
-		{
-			"id": "F075",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "빨래는 격일 해",
-			"entities": [
-				"격일"
-			],
-			"extractable_facts": [
-				"빨래: 격일"
-			]
-		},
-		{
-			"id": "F076",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "일찍 자려고 노력해. 12시 전에는",
-			"entities": [
-				"일찍 자려고 노력해"
-			],
-			"extractable_facts": [
-				"일찍 자려고 노력해"
-			]
-		},
-		{
-			"id": "F077",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "새벽에 물 한 잔 마셔",
-			"entities": [
-				"새벽에 물 한 잔 마셔"
-			],
-			"extractable_facts": [
-				"새벽에 물 한 잔 마셔"
-			]
-		},
-		{
-			"id": "F078",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "아침에 샤워해",
-			"entities": [
-				"아침"
-			],
-			"extractable_facts": [
-				"샤워: morning"
-			],
-			"distractor": {
-				"id": "F078d",
-				"type": "negative",
-				"statement": "아침(아님)에 샤워해",
-				"shared_concept": "샤워"
-			}
-		},
-		{
-			"id": "F079",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "커피는 집에서 타서 마셔",
-			"entities": [
-				"집에서 타서 마셔"
-			],
-			"extractable_facts": [
-				"커피: 집에서 타서 마셔"
-			],
-			"distractor": {
-				"id": "F079d",
-				"type": "hierarchical",
-				"statement": "커피는 집에서 타서 마셔(아님)",
-				"shared_concept": "커피"
-			}
-		},
-		{
-			"id": "F080",
-			"domain": "personal",
-			"fact_type": "natural_language",
-			"statement": "배달 음식은 주 2번 시켜먹어",
-			"entities": [
-				"주 2번 시켜먹어"
-			],
-			"extractable_facts": [
-				"배달 음식: 주 2번 시켜먹어"
-			],
-			"distractor": {
-				"id": "F080d",
-				"type": "conditional",
-				"statement": "배달 음식은 주 2번 시켜먹어(아님)",
-				"shared_concept": "배달 음식"
-			}
-		},
-		{
-			"id": "F081",
-			"domain": "temporal",
-			"fact_type": "unique_id",
-			"statement": "2023년 3월 7일에 입사했어",
-			"entities": [
-				"2023년",
-				"3월",
-				"7일"
-			],
-			"extractable_facts": [
-				"입사일: 2023년 3월 7일"
-			],
-			"distractor": {
-				"id": "F081d",
-				"type": "exact_substitute",
-				"statement": "2024년 7월 16일에 입사했어",
-				"shared_concept": "입사일"
-			}
-		},
-		{
-			"id": "F082",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "Team meeting is every Thursday",
-			"entities": [
-				"Thursday"
-			],
-			"extractable_facts": [
-				"팀 미팅: 매주 Thursday"
-			],
-			"distractor": {
-				"id": "F082d",
-				"type": "hierarchical",
-				"statement": "Team meeting is every Thursday(아님)",
-				"shared_concept": "팀 미팅"
-			}
-		},
-		{
-			"id": "F083",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매월 13일에 급여 받아",
-			"entities": [
-				"13일"
-			],
-			"extractable_facts": [
-				"급여일: 매월 13일"
-			],
-			"distractor": {
-				"id": "F083d",
-				"type": "partial_match",
-				"statement": "매월 13일(아님)에 급여 받아",
-				"shared_concept": "급여일"
-			}
-		},
-		{
-			"id": "F084",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "I go on vacation every Summer",
-			"entities": [
-				"가"
-			],
-			"extractable_facts": [
-				"매년 Summer에 휴: 가"
-			],
-			"distractor": {
-				"id": "F084d",
-				"type": "partial_match",
-				"statement": "매년 Summer에 휴가(아님) 가",
-				"shared_concept": "매년 Summer에 휴"
-			}
-		},
-		{
-			"id": "F085",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매일 7시에 출근해",
-			"entities": [
-				"7시에 출근해"
-			],
-			"extractable_facts": [
-				"7시에 출근해"
-			]
-		},
-		{
-			"id": "F086",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매일 6시에 일어나",
-			"entities": [
-				"6시에 일어나"
-			],
-			"extractable_facts": [
-				"6시에 일어나"
-			]
-		},
-		{
-			"id": "F087",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매일 23시에 자",
-			"entities": [
-				"23시에 자"
-			],
-			"extractable_facts": [
-				"23시에 자"
-			]
-		},
-		{
-			"id": "F088",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "주 3회 운동해",
-			"entities": [
-				"주 3회 운동해"
-			],
-			"extractable_facts": [
-				"주 3회 운동해"
-			]
-		},
-		{
-			"id": "F089",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매월 첫째 주 Monday에 월간 회고해",
-			"entities": [
-				"첫째 주 Monday"
-			],
-			"extractable_facts": [
-				"월간 회고: first Monday"
-			]
-		},
-		{
-			"id": "F090",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "분기별로 OKR 체크해",
-			"entities": [
-				"분기별"
-			],
-			"extractable_facts": [
-				"OKR 체크: quarterly"
-			],
-			"distractor": {
-				"id": "F090d",
-				"type": "conditional",
-				"statement": "분기별(아님)로 OKR 체크해",
-				"shared_concept": "OKR 체크"
-			}
-		},
-		{
-			"id": "F091",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "작년에 이사했어",
-			"entities": [
-				"작년"
-			],
-			"extractable_facts": [
-				"이사: 작년"
-			],
-			"temporal_updates": [
-				{
-					"id": "F091u1",
-					"statement": "이사 작년 (이전값)(으)로 바꿨어. 예전에는 작년였어",
-					"replaces_extractable": "이사: 작년"
-				}
-			],
-			"distractor": {
-				"id": "F091d",
-				"type": "hierarchical",
-				"statement": "작년(아님)에 이사했어",
-				"shared_concept": "이사"
-			}
-		},
-		{
-			"id": "F092",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "My first job was at Quantumleap",
-			"entities": [
-				"Quantumleap였어"
-			],
-			"extractable_facts": [
-				"첫 직장: Quantumleap였어"
-			]
-		},
-		{
-			"id": "F093",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "5년 동안 이 회사 다녔어",
-			"entities": [
-				"회사 다녔어"
-			],
-			"extractable_facts": [
-				"5년 동안: company 다녔어"
-			]
-		},
-		{
-			"id": "F094",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매주 Friday에 코드 리뷰해",
-			"entities": [
-				"Friday에 코드 리뷰해"
-			],
-			"extractable_facts": [
-				"Friday에 코드 리뷰해"
-			]
-		},
-		{
-			"id": "F095",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "매월 마지막 주에 배포해",
-			"entities": [
-				"매월 마지막 주"
-			],
-			"extractable_facts": [
-				"배포: 매월 마지막 주"
-			]
-		},
-		{
-			"id": "F096",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "스프린트는 2주 단위야",
-			"entities": [
-				"2주"
-			],
-			"extractable_facts": [
-				"스프린트: 2주"
-			],
-			"distractor": {
-				"id": "F096d",
-				"type": "hierarchical",
-				"statement": "스프린트는 2주(아님) 단위야",
-				"shared_concept": "스프린트"
-			}
-		},
-		{
-			"id": "F097",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "리포트는 매월 28일까지 작성해",
-			"entities": [
-				"매월 28일까지 작성"
-			],
-			"extractable_facts": [
-				"리포트: 매월 28일까지 작성"
-			]
-		},
-		{
-			"id": "F098",
-			"domain": "temporal",
-			"fact_type": "unique_id",
-			"statement": "연차는 12일 남았어",
-			"entities": [
-				"12일 남았어"
-			],
-			"extractable_facts": [
-				"연차: 12일 남았어"
-			]
-		},
-		{
-			"id": "F099",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "My goal this year is project launch",
-			"entities": [
-				"project launch"
-			],
-			"extractable_facts": [
-				"올해 목표: project launch"
-			],
-			"distractor": {
-				"id": "F099d",
-				"type": "conditional",
-				"statement": "My goal this year is project launch(아님)",
-				"shared_concept": "올해 목표"
-			}
-		},
-		{
-			"id": "F100",
-			"domain": "temporal",
-			"fact_type": "natural_language",
-			"statement": "I'm going to health checkup next month",
-			"entities": [
-				"기로 했어"
-			],
-			"extractable_facts": [
-				"다음 달에 health checkup: 기로 했어"
-			]
-		},
-		{
-			"id": "F101",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "I work at Stormbase Platform",
-			"entities": [
-				"Stormbase",
-				"Platform"
-			],
-			"extractable_facts": [
-				"회사: Stormbase",
-				"부서: Platform"
-			],
-			"distractor": {
-				"id": "F101d",
-				"type": "hierarchical",
-				"statement": "I work at Stormbase Data Solutions",
-				"shared_concept": "같은 회사 다른 부서"
-			},
-			"temporal_updates": [
-				{
-					"id": "F101u1",
-					"statement": "회사 Ironseed(으)로 바꿨어. 예전에는 Stormbase였어",
-					"replaces_extractable": "회사: Stormbase"
-				}
-			]
-		},
-		{
-			"id": "F102",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "사무실은 8층이야",
-			"entities": [
-				"8층"
-			],
-			"extractable_facts": [
-				"층: 8floor"
-			]
-		},
-		{
-			"id": "F103",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "내선번호는 2247야",
-			"entities": [
-				"2247"
-			],
-			"extractable_facts": [
-				"내선번호: 2247"
-			],
-			"distractor": {
-				"id": "F103d",
-				"type": "negative",
-				"statement": "내선번호는 2247(아님)야",
-				"shared_concept": "내선번호"
-			}
-		},
-		{
-			"id": "F104",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "리모트 워크 선호해",
-			"entities": [
-				"리모트"
-			],
-			"extractable_facts": [
-				"선호: remote"
-			],
-			"distractor": {
-				"id": "F104d",
-				"type": "partial_match",
-				"statement": "리모트(아님) 워크 선호해",
-				"shared_concept": "선호"
-			}
-		},
-		{
-			"id": "F105",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "주 2회 출근해",
-			"entities": [
-				"주 2회 출근해"
-			],
-			"extractable_facts": [
-				"주 2회 출근해"
-			]
-		},
-		{
-			"id": "F106",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "점심은 12시에 먹어",
-			"entities": [
-				"12시에 먹어"
-			],
-			"extractable_facts": [
-				"점심: 12시에 먹어"
-			],
-			"distractor": {
-				"id": "F106d",
-				"type": "conditional",
-				"statement": "점심은 12시에 먹어(아님)",
-				"shared_concept": "점심"
-			}
-		},
-		{
-			"id": "F107",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "동료들이랑 점심 먹어",
-			"entities": [
-				"랑 점심 먹어"
-			],
-			"extractable_facts": [
-				"동료들: 랑 lunch 먹어"
-			]
-		},
-		{
-			"id": "F108",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "PR 리뷰어 3명 필수야",
-			"entities": [
-				"PR 리뷰어 3명 필수야"
-			],
-			"extractable_facts": [
-				"PR 리뷰어 3명 필수야"
-			]
-		},
-		{
-			"id": "F109",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "테스트 커버리지 65% 유지해",
-			"entities": [
-				"테스트 커버리지 65% 유지해"
-			],
-			"extractable_facts": [
-				"테스트 커버리지 65% 유지해"
-			]
-		},
-		{
-			"id": "F110",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "Our messenger is Discord",
-			"entities": [
-				"Discord"
-			],
-			"extractable_facts": [
-				"사내 메신저: Discord"
-			],
-			"distractor": {
-				"id": "F110d",
-				"type": "exact_substitute",
-				"statement": "Our messenger is Discord(아님)",
-				"shared_concept": "사내 메신저"
-			}
-		},
-		{
-			"id": "F111",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "I use Google Workspace for email",
-			"entities": [
-				"Google Workspace 써"
-			],
-			"extractable_facts": [
-				"이메일: Google Workspace 써"
-			]
-		},
-		{
-			"id": "F112",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "I use Linear for docs",
-			"entities": [
-				"Linear로"
-			],
-			"extractable_facts": [
-				"문서화: Linear로"
-			],
-			"distractor": {
-				"id": "F112d",
-				"type": "exact_substitute",
-				"statement": "문서화는 Linear로(아님) 해",
-				"shared_concept": "문서화"
-			}
-		},
-		{
-			"id": "F113",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "I use Amplitude for A/B testing",
-			"entities": [
-				"Amplitude로"
-			],
-			"extractable_facts": [
-				"A/B 테스트: Amplitude로"
-			]
-		},
-		{
-			"id": "F114",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "I write tech blogs on Medium",
-			"entities": [
-				"Medium에 써"
-			],
-			"extractable_facts": [
-				"기술 블로그: Medium에 써"
-			]
-		},
-		{
-			"id": "F115",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "팀원 3명이야",
-			"entities": [
-				""
-			],
-			"extractable_facts": [
-				"팀원 3명: "
-			]
-		},
-		{
-			"id": "F116",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "My co-founder is Geon",
-			"entities": [
-				"공동창업자 Geon야"
-			],
-			"extractable_facts": [
-				"공동창업자 Geon야"
-			]
-		},
-		{
-			"id": "F117",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "DAU 목표는 174명이야",
-			"entities": [
-				"174명"
-			],
-			"extractable_facts": [
-				"DAU 목표: 174명"
-			],
-			"distractor": {
-				"id": "F117d",
-				"type": "conditional",
-				"statement": "DAU 목표는 174명(아님)이야",
-				"shared_concept": "DAU 목표"
-			}
-		},
-		{
-			"id": "F118",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "구독 가격은 19000원이야",
-			"entities": [
-				"격은 19000원"
-			],
-			"extractable_facts": [
-				"구독: 격은 19000원"
-			],
-			"temporal_updates": [
-				{
-					"id": "F118u1",
-					"statement": "구독 Haneul-gu(으)로 바꿨어. 예전에는 격은 19000원였어",
-					"replaces_extractable": "구독: 격은 19000원"
-				}
-			]
-		},
-		{
-			"id": "F119",
-			"domain": "work",
-			"fact_type": "unique_id",
-			"statement": "투자 2억 받았어",
-			"entities": [
-				"투자 2억 받았어"
-			],
-			"extractable_facts": [
-				"투자 2억 받았어"
-			]
-		},
-		{
-			"id": "F120",
-			"domain": "work",
-			"fact_type": "natural_language",
-			"statement": "Team retrospective is on Friday",
-			"entities": [
-				"Friday에"
-			],
-			"extractable_facts": [
-				"팀 회고: Friday에"
-			],
-			"distractor": {
-				"id": "F120d",
-				"type": "hierarchical",
-				"statement": "팀 회고는 Friday에(아님) 해",
-				"shared_concept": "팀 회고"
-			}
-		},
-		{
-			"id": "F121",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "I'm allergic to Peanut",
-			"entities": [
-				"Peanut"
-			],
-			"extractable_facts": [
-				"알레르기: Peanut"
-			],
-			"distractor": {
-				"id": "F121d",
-				"type": "exact_substitute",
-				"statement": "I'm allergic to Peach",
-				"shared_concept": "알레르기"
-			}
-		},
-		{
-			"id": "F122",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "I take Melatonin-X 41mg daily",
-			"entities": [
-				"Melatonin-X",
-				"41mg"
-			],
-			"extractable_facts": [
-				"약: Melatonin-X 41mg"
-			]
-		},
-		{
-			"id": "F123",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "운동은 주 5회 해",
-			"entities": [
-				"주 5회"
-			],
-			"extractable_facts": [
-				"운동: 주 5회"
-			]
-		},
-		{
-			"id": "F124",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "I mainly do Swimming",
-			"entities": [
-				"Swimming 위주로"
-			],
-			"extractable_facts": [
-				"운동: Swimming 위주로"
-			]
-		},
-		{
-			"id": "F125",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "수면은 6시간 해",
-			"entities": [
-				"6시간"
-			],
-			"extractable_facts": [
-				"수면: 6시간"
-			],
-			"distractor": {
-				"id": "F125d",
-				"type": "hierarchical",
-				"statement": "수면은 6시간(아님) 해",
-				"shared_concept": "수면"
-			}
-		},
-		{
-			"id": "F126",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "코골이 있어",
-			"entities": [
-				"있음"
-			],
-			"extractable_facts": [
-				"코골이: yes"
-			]
-		},
-		{
-			"id": "F127",
-			"domain": "health",
-			"fact_type": "unique_id",
-			"statement": "체지방률 16%야",
-			"entities": [
-				"체지방률 16%야"
-			],
-			"extractable_facts": [
-				"체지방률 16%야"
-			]
-		},
-		{
-			"id": "F128",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "혈압은 정상이야",
-			"entities": [
-				"정상"
-			],
-			"extractable_facts": [
-				"혈압: 정상"
-			],
-			"distractor": {
-				"id": "F128d",
-				"type": "hierarchical",
-				"statement": "혈압은 정상(아님)이야",
-				"shared_concept": "혈압"
-			}
-		},
-		{
-			"id": "F129",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "스트레칭 매일 해",
-			"entities": [
-				"매일"
-			],
-			"extractable_facts": [
-				"스트레칭: daily"
-			]
-		},
-		{
-			"id": "F130",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "health checkup 매년 받아",
-			"entities": [
-				"매년"
-			],
-			"extractable_facts": [
-				"health checkup: yearly"
-			]
-		},
-		{
-			"id": "F131",
-			"domain": "health",
-			"fact_type": "unique_id",
-			"statement": "안경 써. 도수는 4.5이야",
-			"entities": [
-				"4.5"
-			],
-			"extractable_facts": [
-				"안경 써. 도수: 4.5"
-			],
-			"distractor": {
-				"id": "F131d",
-				"type": "hierarchical",
-				"statement": "안경 써. 도수는 4.5(아님)이야",
-				"shared_concept": "안경 써. 도수"
-			}
-		},
-		{
-			"id": "F132",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "dentist 8개월마다 가",
-			"entities": [
-				"dentist 8개월마다 가"
-			],
-			"extractable_facts": [
-				"dentist 8개월마다 가"
-			]
-		},
-		{
-			"id": "F133",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "비타민 C 먹어",
-			"entities": [
-				"비타민 C 먹어"
-			],
-			"extractable_facts": [
-				"비타민 C 먹어"
-			]
-		},
-		{
-			"id": "F134",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "물 하루 1리터 마셔",
-			"entities": [
-				"물 하루 1리터 마셔"
-			],
-			"extractable_facts": [
-				"물 하루 1리터 마셔"
-			]
-		},
-		{
-			"id": "F135",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "cafe인은 오후 2시 이후엔 안 마셔",
-			"entities": [
-				"오후 2시 이후엔 안 마셔"
-			],
-			"extractable_facts": [
-				"cafe인: 오후 2시 이후엔 not 마셔"
-			],
-			"distractor": {
-				"id": "F135d",
-				"type": "conditional",
-				"statement": "cafe인은 언제든 마셔",
-				"shared_concept": "cafe인 섭취 제한"
-			}
-		},
-		{
-			"id": "F136",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "명상은 안 해",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"명상: doesn't"
-			],
-			"distractor": {
-				"id": "F136d",
-				"type": "negative",
-				"statement": "매일 명상해",
-				"shared_concept": "명상 여부"
-			}
-		},
-		{
-			"id": "F137",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "담배 안 펴",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"흡연: doesn't"
-			],
-			"distractor": {
-				"id": "F137d",
-				"type": "negative",
-				"statement": "담배 펴",
-				"shared_concept": "흡연 여부"
-			}
-		},
-		{
-			"id": "F138",
-			"domain": "health",
-			"fact_type": "unique_id",
-			"statement": "병원등록번호는 MC-2862-OM야",
-			"entities": [
-				"MC-2862-OM"
-			],
-			"extractable_facts": [
-				"병원등록번호: MC-2862-OM"
-			]
-		},
-		{
-			"id": "F139",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "약은 아침에 먹어",
-			"entities": [
-				"아침"
-			],
-			"extractable_facts": [
-				"약 복용: morning"
-			]
-		},
-		{
-			"id": "F140",
-			"domain": "health",
-			"fact_type": "natural_language",
-			"statement": "식사는 규칙적으로 해",
-			"entities": [
-				"규칙적으로"
-			],
-			"extractable_facts": [
-				"식사: 규칙적으로"
-			]
-		},
-		{
-			"id": "F141",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "My best friend Ian is a Perfumer",
-			"entities": [
-				"Ian",
-				"Perfumer"
-			],
-			"extractable_facts": [
-				"절친: 이not",
-				"직업: Perfumer"
-			],
-			"distractor": {
-				"id": "F141d",
-				"type": "exact_substitute",
-				"statement": "My best friend Sungmin is a Librarian",
-				"shared_concept": "절친 이름/직업"
-			}
-		},
-		{
-			"id": "F142",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I've known Ian since 2022",
-			"entities": [
-				"2022년"
-			],
-			"extractable_facts": [
-				"알Crab 된 해: 2022년"
-			],
-			"distractor": {
-				"id": "F142d",
-				"type": "conditional",
-				"statement": "Ian랑 2022년(아님)부터 알고 지냈어",
-				"shared_concept": "알Crab 된 해"
-			}
-		},
-		{
-			"id": "F143",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I do cooking with Arin",
-			"entities": [
-				"Arin",
-				"cooking 모임"
-			],
-			"extractable_facts": [
-				"Arin랑 같: cooking meetings"
-			],
-			"distractor": {
-				"id": "F143d",
-				"type": "negative",
-				"statement": "Arin랑 같이 cooking 모임(아님) 해",
-				"shared_concept": "Arin랑 같"
-			}
-		},
-		{
-			"id": "F144",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "SNS는 안 해",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"SNS: doesn't"
-			],
-			"distractor": {
-				"id": "F144d",
-				"type": "negative",
-				"statement": "SNS 자주 해",
-				"shared_concept": "SNS 사용"
-			}
-		},
-		{
-			"id": "F145",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "모임은 주 1회야",
-			"entities": [
-				"주 1회"
-			],
-			"extractable_facts": [
-				"모임: 주 1회"
-			],
-			"distractor": {
-				"id": "F145d",
-				"type": "hierarchical",
-				"statement": "모임은 주 1회(아님)야",
-				"shared_concept": "모임"
-			}
-		},
-		{
-			"id": "F146",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I live in Geon는 Busan",
-			"entities": [
-				"Busan에 살아"
-			],
-			"extractable_facts": [
-				"Geon: Busan에 살아"
-			],
-			"distractor": {
-				"id": "F146d",
-				"type": "negative",
-				"statement": "Geon는 Busan에 살아(아님)",
-				"shared_concept": "Geon"
-			}
-		},
-		{
-			"id": "F147",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I have a neighborhood friend Jungho",
-			"entities": [
-				"동네 친구 Jungho 있어"
-			],
-			"extractable_facts": [
-				"동네 친구 Jungho 있어"
-			]
-		},
-		{
-			"id": "F148",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I have a college classmate Lua",
-			"entities": [
-				"대학 동기 Lua 있어"
-			],
-			"extractable_facts": [
-				"대학 동기 Lua 있어"
-			]
-		},
-		{
-			"id": "F149",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "전화번호는 자주 안 바꿔",
-			"entities": [
-				"자주 안 바꿈"
-			],
-			"extractable_facts": [
-				"전화번호: 자주 not 바꿈"
-			],
-			"distractor": {
-				"id": "F149d",
-				"type": "conditional",
-				"statement": "전화번호는 자주 안 바꿔",
-				"shared_concept": "전화번호"
-			}
-		},
-		{
-			"id": "F150",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "birthday 선물은 직접 만들어줘",
-			"entities": [
-				"직접 만들어줘"
-			],
-			"extractable_facts": [
-				"birthday 선물: 직접 만들어줘"
-			],
-			"distractor": {
-				"id": "F150d",
-				"type": "conditional",
-				"statement": "birthday 선물은 직접 만들어줘(아님)",
-				"shared_concept": "birthday 선물"
-			}
-		},
-		{
-			"id": "F151",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "친한 친구 5명 있어",
-			"entities": [
-				"친한 친구 5명 있어"
-			],
-			"extractable_facts": [
-				"친한 친구 5명 있어"
-			]
-		},
-		{
-			"id": "F152",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "인맥 관리는 안 해",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"인맥 관리: doesn't"
-			]
-		},
-		{
-			"id": "F153",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "모임에서는 잘 안 말해",
-			"entities": [
-				"말 없는 편"
-			],
-			"extractable_facts": [
-				"모임: 말 없는 편"
-			],
-			"distractor": {
-				"id": "F153d",
-				"type": "negative",
-				"statement": "모임에서 리드하는 편이야",
-				"shared_concept": "모임 성향"
-			}
-		},
-		{
-			"id": "F154",
-			"domain": "social",
-			"fact_type": "unique_id",
-			"statement": "Sungmin's last 4 digits are 6755",
-			"entities": [
-				"Sungmin 전화번호 뒷자리 6755야"
-			],
-			"extractable_facts": [
-				"Sungmin 전화번호 뒷자리 6755야"
-			]
-		},
-		{
-			"id": "F155",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "We meet every year-end",
-			"entities": [
-				"매년 year-end에 모여"
-			],
-			"extractable_facts": [
-				"매년 year-end에 모여"
-			]
-		},
-		{
-			"id": "F156",
-			"domain": "social",
-			"fact_type": "unique_id",
-			"statement": "단톡방 3개 있어",
-			"entities": [
-				"단톡방 3개 있어"
-			],
-			"extractable_facts": [
-				"단톡방 3개 있어"
-			]
-		},
-		{
-			"id": "F157",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I often go to restaurants with Siu",
-			"entities": [
-				"맛집 Siu랑 자주 가"
-			],
-			"extractable_facts": [
-				"맛집 Siu랑 자주 가"
-			]
-		},
-		{
-			"id": "F158",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "여행은 친구들이랑 가",
-			"entities": [
-				"친구들이랑 가"
-			],
-			"extractable_facts": [
-				"여행: 친구들이랑 가"
-			],
-			"distractor": {
-				"id": "F158d",
-				"type": "hierarchical",
-				"statement": "여행은 Jungang-gu",
-				"shared_concept": "여행"
-			}
-		},
-		{
-			"id": "F159",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "Yuna birthday은 4월 17일이야",
-			"entities": [
-				"4월 17일"
-			],
-			"extractable_facts": [
-				"Yuna birthday: 4월 17일"
-			]
-		},
-		{
-			"id": "F160",
-			"domain": "social",
-			"fact_type": "natural_language",
-			"statement": "I have a mentor Geon",
-			"entities": [
-				"멘토 Geon 있어"
-			],
-			"extractable_facts": [
-				"멘토 Geon 있어"
-			]
-		},
-		{
-			"id": "F161",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "월세는 2030000원이야",
-			"entities": [
-				"2030000원"
-			],
-			"extractable_facts": [
-				"월세: 2030000원"
-			],
-			"distractor": {
-				"id": "F161d",
-				"type": "exact_substitute",
-				"statement": "월세는 3710000원이야",
-				"shared_concept": "월세"
-			}
-		},
-		{
-			"id": "F162",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "적금은 매월 4900000원씩 넣어",
-			"entities": [
-				"4900000원"
-			],
-			"extractable_facts": [
-				"적금: 4900000원/월"
-			]
-		},
-		{
-			"id": "F163",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "투자는 안 해",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"투자: doesn't"
-			],
-			"distractor": {
-				"id": "F163d",
-				"type": "negative",
-				"statement": "주식 투자 해",
-				"shared_concept": "투자 여부"
-			}
-		},
-		{
-			"id": "F164",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "I use Samsung Card",
-			"entities": [
-				"Samsung Card 써"
-			],
-			"extractable_facts": [
-				"카드: Samsung Card 써"
-			]
-		},
-		{
-			"id": "F165",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "My bank is K Bank",
-			"entities": [
-				"K Bank"
-			],
-			"extractable_facts": [
-				"통장: K Bank"
-			],
-			"distractor": {
-				"id": "F165d",
-				"type": "exact_substitute",
-				"statement": "My bank is Kakao Bank",
-				"shared_concept": "통장"
-			}
-		},
-		{
-			"id": "F166",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "계좌 뒷자리 6009야",
-			"entities": [
-				"계좌 뒷자리 6009야"
-			],
-			"extractable_facts": [
-				"계좌 뒷자리 6009야"
-			]
-		},
-		{
-			"id": "F167",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "월급은 529만원이야",
-			"entities": [
-				"529만원"
-			],
-			"extractable_facts": [
-				"월급: 529만원"
-			]
-		},
-		{
-			"id": "F168",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "식비는 월 46만원이야",
-			"entities": [
-				"월 46만원"
-			],
-			"extractable_facts": [
-				"식비: 월 46만원"
-			],
-			"distractor": {
-				"id": "F168d",
-				"type": "exact_substitute",
-				"statement": "식비는 월 46만원(아님)이야",
-				"shared_concept": "식비"
-			}
-		},
-		{
-			"id": "F169",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "교통비는 11만원이야",
-			"entities": [
-				"11만원"
-			],
-			"extractable_facts": [
-				"교통비: 11만원"
-			]
-		},
-		{
-			"id": "F170",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "구독 서비스 3개 써",
-			"entities": [
-				"구독 서비스 3개 써"
-			],
-			"extractable_facts": [
-				"구독 서비스 3개 써"
-			]
-		},
-		{
-			"id": "F171",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "Naver Pay 자주 써",
-			"entities": [
-				"버 페이 자주 써"
-			],
-			"extractable_facts": [
-				"네: 버 페이 자주 써"
-			]
-		},
-		{
-			"id": "F172",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "현금은 잘 안 써",
-			"entities": [
-				"안 씀"
-			],
-			"extractable_facts": [
-				"현금: doesn't use"
-			],
-			"distractor": {
-				"id": "F172d",
-				"type": "negative",
-				"statement": "현금 자주 써",
-				"shared_concept": "현금 사용"
-			}
-		},
-		{
-			"id": "F173",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "가계부 써",
-			"entities": [
-				"씀"
-			],
-			"extractable_facts": [
-				"가계부: keeps"
-			]
-		},
-		{
-			"id": "F174",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "비상금 694만원 있어",
-			"entities": [
-				"비상금 694만원 있어"
-			],
-			"extractable_facts": [
-				"비상금 694만원 있어"
-			]
-		},
-		{
-			"id": "F175",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "대출은 없어",
-			"entities": [
-				"없음"
-			],
-			"extractable_facts": [
-				"대출: none"
-			],
-			"distractor": {
-				"id": "F175d",
-				"type": "negative",
-				"statement": "대출 2748만원 있어",
-				"shared_concept": "대출 여부"
-			}
-		},
-		{
-			"id": "F176",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "My insurance is health insurance only",
-			"entities": [
-				"health insurance only"
-			],
-			"extractable_facts": [
-				"보험: health insurance only"
-			],
-			"distractor": {
-				"id": "F176d",
-				"type": "exact_substitute",
-				"statement": "My insurance is health insurance only(아님)",
-				"shared_concept": "보험"
-			}
-		},
-		{
-			"id": "F177",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "저축률은 21%야",
-			"entities": [
-				"21%"
-			],
-			"extractable_facts": [
-				"저축률: 21%"
-			],
-			"distractor": {
-				"id": "F177d",
-				"type": "negative",
-				"statement": "저축률은 21%(아님)야",
-				"shared_concept": "저축률"
-			}
-		},
-		{
-			"id": "F178",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "For premium services, I use one",
-			"entities": [
-				"use one"
-			],
-			"extractable_facts": [
-				"프리미엄 서비스: use one"
-			]
-		},
-		{
-			"id": "F179",
-			"domain": "finance",
-			"fact_type": "unique_id",
-			"statement": "경조사비는 연 143만원 정도 써",
-			"entities": [
-				"연 143만원 정도 써"
-			],
-			"extractable_facts": [
-				"경조사비: 연 143만원 정도 써"
-			]
-		},
-		{
-			"id": "F180",
-			"domain": "finance",
-			"fact_type": "natural_language",
-			"statement": "부수입은 없어",
-			"entities": [
-				"없음"
-			],
-			"extractable_facts": [
-				"부수입: none"
-			]
-		},
-		{
-			"id": "F181",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "My hobby is Kirami",
-			"entities": [
-				"Kirami"
-			],
-			"extractable_facts": [
-				"취미: Kirami"
-			],
-			"distractor": {
-				"id": "F181d",
-				"type": "exact_substitute",
-				"statement": "My hobby is Indoor Climbing",
-				"shared_concept": "취미"
-			}
-		},
-		{
-			"id": "F182",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "I do my hobby at Iron Square",
-			"entities": [
-				"Iron Square"
-			],
-			"extractable_facts": [
-				"장소: Iron Square"
-			],
-			"distractor": {
-				"id": "F182d",
-				"type": "partial_match",
-				"statement": "I do my hobby at Blue Creek Center",
-				"shared_concept": "같은 취미 다른 장소"
-			}
-		},
-		{
-			"id": "F183",
-			"domain": "hobby",
-			"fact_type": "unique_id",
-			"statement": "Board Games 랭킹 3.81위야",
-			"entities": [
-				"3.81"
-			],
-			"extractable_facts": [
-				"랭킹: 3.81위"
-			],
-			"distractor": {
-				"id": "F183d",
-				"type": "conditional",
-				"statement": "Board Games 랭킹 3.81위(아님)야",
-				"shared_concept": "랭킹"
-			}
-		},
-		{
-			"id": "F184",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "On weekends I usually cooking",
-			"entities": [
-				"보통 cooking 해"
-			],
-			"extractable_facts": [
-				"보통 cooking 해"
-			]
-		},
-		{
-			"id": "F185",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "I like Jazz music",
-			"entities": [
-				"Jazz 좋아"
-			],
-			"extractable_facts": [
-				"음악: Jazz 좋아"
-			]
-		},
-		{
-			"id": "F186",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "사진 찍는 것도 좋아해",
-			"entities": [
-				"것도 좋아"
-			],
-			"extractable_facts": [
-				"사진 찍: 것도 좋아"
-			],
-			"distractor": {
-				"id": "F186d",
-				"type": "exact_substitute",
-				"statement": "사진 찍는 것도 좋아(아님)해",
-				"shared_concept": "사진 찍"
-			}
-		},
-		{
-			"id": "F187",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "My camera is Sony A7C",
-			"entities": [
-				"Sony A7C"
-			],
-			"extractable_facts": [
-				"카메라: Sony A7C"
-			],
-			"distractor": {
-				"id": "F187d",
-				"type": "partial_match",
-				"statement": "My camera is Sony A7C(아님)",
-				"shared_concept": "카메라"
-			}
-		},
-		{
-			"id": "F188",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "렌즈는 24-70mm야",
-			"entities": [
-				"24-70mm"
-			],
-			"extractable_facts": [
-				"렌즈: 24-70mm"
-			]
-		},
-		{
-			"id": "F189",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "reading는 SF 좋아해",
-			"entities": [
-				"SF 좋아"
-			],
-			"extractable_facts": [
-				"reading: SF 좋아"
-			],
-			"distractor": {
-				"id": "F189d",
-				"type": "hierarchical",
-				"statement": "reading는 SF 좋아(아님)해",
-				"shared_concept": "reading"
-			}
-		},
-		{
-			"id": "F190",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "한 달에 책 2권 읽어",
-			"entities": [
-				"한 달에 책 2권 읽어"
-			],
-			"extractable_facts": [
-				"한 달에 책 2권 읽어"
-			]
-		},
-		{
-			"id": "F191",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "Crab임은 안 해",
-			"entities": [
-				"안 함"
-			],
-			"extractable_facts": [
-				"Crab임: doesn't"
-			],
-			"distractor": {
-				"id": "F191d",
-				"type": "negative",
-				"statement": "Crab임 좋아해",
-				"shared_concept": "Crab임 여부"
-			}
-		},
-		{
-			"id": "F192",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "cooking 취미야",
-			"entities": [
-				"cooking 취미야"
-			],
-			"extractable_facts": [
-				"cooking 취미야"
-			]
-		},
-		{
-			"id": "F193",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "잘하는 cooking는 Pasta야",
-			"entities": [
-				"cooking는 Pasta"
-			],
-			"extractable_facts": [
-				"잘하: cooking는 Pasta"
-			]
-		},
-		{
-			"id": "F194",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "드론 날려",
-			"entities": [
-				"드론 날려"
-			],
-			"extractable_facts": [
-				"드론 날려"
-			]
-		},
-		{
-			"id": "F195",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "Astronomy 좋아해",
-			"entities": [
-				"Astronomy 좋아해"
-			],
-			"extractable_facts": [
-				"Astronomy 좋아해"
-			]
-		},
-		{
-			"id": "F196",
-			"domain": "hobby",
-			"fact_type": "unique_id",
-			"statement": "망원경은 반사 99mm야",
-			"entities": [
-				"반사 99mm"
-			],
-			"extractable_facts": [
-				"망원경: 반사 99mm"
-			],
-			"distractor": {
-				"id": "F196d",
-				"type": "hierarchical",
-				"statement": "망원경은 반사 99mm(아님)야",
-				"shared_concept": "망원경"
-			}
-		},
-		{
-			"id": "F197",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "Hiking도 가끔 가",
-			"entities": [
-				"끔 가"
-			],
-			"extractable_facts": [
-				"Hiking도: 끔 가"
-			],
-			"distractor": {
-				"id": "F197d",
-				"type": "negative",
-				"statement": "Hiking도 가끔 가(아님)",
-				"shared_concept": "Hiking도"
-			}
-		},
-		{
-			"id": "F198",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "최근 등반한 Geon Silver Ridge야",
-			"entities": [
-				"최근 등반한 Geon Silver Ridge야"
-			],
-			"extractable_facts": [
-				"최근 등반한 Geon Silver Ridge야"
-			]
-		},
-		{
-			"id": "F199",
-			"domain": "hobby",
-			"fact_type": "unique_id",
-			"statement": "Indoor Climbing V5 레벨이야",
-			"entities": [
-				""
-			],
-			"extractable_facts": [
-				"Indoor Climbing V5 레벨: "
-			]
-		},
-		{
-			"id": "F200",
-			"domain": "hobby",
-			"fact_type": "natural_language",
-			"statement": "Terrarium 만들어",
-			"entities": [
-				"Terrarium 만들어"
-			],
-			"extractable_facts": [
-				"Terrarium 만들어"
-			]
-		}
-	]
+  "$schema": "Fact Bank v2 — 200 facts (164 NL / 36 ID). Peer-reviewed design.",
+  "persona_note": "v2 test persona (fictional). 80% natural language / 20% unique ID. All info is fictional.",
+  "version": 2,
+  "design_principles": [
+    "80% natural language / 20% unique ID",
+    "5 distractor types: exact_substitute, partial_match, negative, conditional, hierarchical",
+    "0-3 scoring scale",
+    "Reasoning questions included",
+    "Ecological validity: real memory log distribution"
+  ],
+  "total_facts": 200,
+  "natural_language_facts": 164,
+  "unique_id_facts": 36,
+  "nl_ratio": "82%",
+  "distractor_distribution": {
+    "exact_substitute": 31,
+    "negative": 27,
+    "partial_match": 15,
+    "conditional": 17,
+    "hierarchical": 20
+  },
+  "domains": 10,
+  "facts": [
+    {
+      "id": "F001",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I'm Subin",
+      "entities": [
+        "Subin"
+      ],
+      "extractable_facts": [
+        "name: Subin"
+      ],
+      "distractor": {
+        "id": "F001d",
+        "type": "exact_substitute",
+        "statement": "I'm Hajin",
+        "shared_concept": "name"
+      }
+    },
+    {
+      "id": "F002",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My older sister is Jun",
+      "entities": [
+        "Jun",
+        "older sister"
+      ],
+      "extractable_facts": [
+        "older sister: Jun"
+      ],
+      "distractor": {
+        "id": "F002d",
+        "type": "exact_substitute",
+        "statement": "My older sister is Seungwoo",
+        "shared_concept": "older sister's name"
+      }
+    },
+    {
+      "id": "F003",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My older sister doesn't drink coffee",
+      "entities": [
+        "doesn't drink"
+      ],
+      "extractable_facts": [
+        "older sister coffee: doesn't drink"
+      ],
+      "distractor": {
+        "id": "F003d",
+        "type": "negative",
+        "statement": "My older sister also likes coffee",
+        "shared_concept": "older sister's coffee preference"
+      }
+    },
+    {
+      "id": "F004",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My blood type is AB",
+      "entities": [
+        "AB"
+      ],
+      "extractable_facts": [
+        "blood type: AB"
+      ],
+      "distractor": {
+        "id": "F004d",
+        "type": "exact_substitute",
+        "statement": "My blood type is O",
+        "shared_concept": "blood type"
+      }
+    },
+    {
+      "id": "F005",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My MBTI is ENTP",
+      "entities": [
+        "ENTP"
+      ],
+      "extractable_facts": [
+        "MBTI: ENTP"
+      ],
+      "distractor": {
+        "id": "F005d",
+        "type": "exact_substitute",
+        "statement": "My MBTI is INTJ",
+        "shared_concept": "MBTI"
+      }
+    },
+    {
+      "id": "F006",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My birthday is December 7th",
+      "entities": [
+        "December",
+        "7th"
+      ],
+      "extractable_facts": [
+        "birthday: December 7th"
+      ],
+      "distractor": {
+        "id": "F006d",
+        "type": "exact_substitute",
+        "statement": "My birthday is December 7th (not)",
+        "shared_concept": "birthday"
+      }
+    },
+    {
+      "id": "F007",
+      "domain": "identity",
+      "fact_type": "unique_id",
+      "statement": "My employee ID is NX-6601-LC",
+      "entities": [
+        "NX-6601-LC"
+      ],
+      "extractable_facts": [
+        "employee ID: NX-6601-LC"
+      ],
+      "distractor": {
+        "id": "F007d",
+        "type": "exact_substitute",
+        "statement": "My employee ID is NX-1618-QI",
+        "shared_concept": "employee ID"
+      }
+    },
+    {
+      "id": "F008",
+      "domain": "identity",
+      "fact_type": "unique_id",
+      "statement": "My phone number is 010-1650-8545",
+      "entities": [
+        "010-1650-8545"
+      ],
+      "extractable_facts": [
+        "phone number: 010-1650-8545"
+      ],
+      "distractor": {
+        "id": "F008d",
+        "type": "exact_substitute",
+        "statement": "My phone number is 010-4727-5982",
+        "shared_concept": "phone number"
+      }
+    },
+    {
+      "id": "F009",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My hometown is Peanut Town",
+      "entities": [
+        "Peanut Town"
+      ],
+      "extractable_facts": [
+        "hometown: Peanut Town"
+      ]
+    },
+    {
+      "id": "F010",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I'm a morning person. I usually wake up at 6 AM.",
+      "entities": [
+        "morning type",
+        "6 AM"
+      ],
+      "extractable_facts": [
+        "wake up time: 6 AM",
+        "type: morning type"
+      ],
+      "distractor": {
+        "id": "F010d",
+        "type": "partial_match",
+        "statement": "I'm a night owl. I usually go to sleep at 2 AM.",
+        "shared_concept": "sleep pattern"
+      }
+    },
+    {
+      "id": "F011",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I don't drink tea. I only drink coffee.",
+      "entities": [
+        "doesn't drink",
+        "drinks"
+      ],
+      "extractable_facts": [
+        "tea: doesn't drink",
+        "coffee: drinks"
+      ],
+      "distractor": {
+        "id": "F011d",
+        "type": "negative",
+        "statement": "I like both tea and coffee.",
+        "shared_concept": "tea/coffee preference"
+      }
+    },
+    {
+      "id": "F012",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I have a driver's license, but I don't drive a car.",
+      "entities": [
+        "have",
+        "don't have"
+      ],
+      "extractable_facts": [
+        "driver's license: yes",
+        "own car: none"
+      ],
+      "distractor": {
+        "id": "F012d",
+        "type": "conditional",
+        "statement": "I have a driver's license and I drive a car.",
+        "shared_concept": "license and car ownership"
+      }
+    },
+    {
+      "id": "F013",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "My English name is Luna",
+      "entities": [
+        "name is Luna"
+      ],
+      "extractable_facts": [
+        "English name: Luna"
+      ],
+      "distractor": {
+        "id": "F013d",
+        "type": "negative",
+        "statement": "My English name is Doyun",
+        "shared_concept": "English name"
+      }
+    },
+    {
+      "id": "F014",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I served in the Air Force",
+      "entities": [
+        "served in Air Force"
+      ],
+      "extractable_facts": [
+        "military service: Air Force"
+      ],
+      "distractor": {
+        "id": "F014d",
+        "type": "negative",
+        "statement": "I did not serve in the Air Force",
+        "shared_concept": "military service"
+      }
+    },
+    {
+      "id": "F015",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I graduated from POSTECH",
+      "entities": [
+        "graduated from POSTECH"
+      ],
+      "extractable_facts": [
+        "university: graduated from POSTECH"
+      ],
+      "distractor": {
+        "id": "F015d",
+        "type": "negative",
+        "statement": "I did not graduate from POSTECH",
+        "shared_concept": "university"
+      }
+    },
+    {
+      "id": "F016",
+      "domain": "identity",
+      "fact_type": "unique_id",
+      "statement": "My height is 157cm",
+      "entities": [
+        "157cm"
+      ],
+      "extractable_facts": [
+        "height: 157cm"
+      ],
+      "distractor": {
+        "id": "F016d",
+        "type": "partial_match",
+        "statement": "My height is 157cm (not)",
+        "shared_concept": "height"
+      }
+    },
+    {
+      "id": "F017",
+      "domain": "identity",
+      "fact_type": "unique_id",
+      "statement": "My shoe size is 239mm",
+      "entities": [
+        "size is 239mm"
+      ],
+      "extractable_facts": [
+        "shoe size: 239mm"
+      ],
+      "distractor": {
+        "id": "F017d",
+        "type": "hierarchical",
+        "statement": "My shoe size is 239mm (not)",
+        "shared_concept": "shoe size"
+      }
+    },
+    {
+      "id": "F018",
+      "domain": "identity",
+      "fact_type": "unique_id",
+      "statement": "My eyesight is -2.0",
+      "entities": [
+        "-2.0"
+      ],
+      "extractable_facts": [
+        "eyesight: -2.0"
+      ],
+      "distractor": {
+        "id": "F018d",
+        "type": "exact_substitute",
+        "statement": "My eyesight is -2.0 (not)",
+        "shared_concept": "eyesight"
+      }
+    },
+    {
+      "id": "F019",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I'm left-handed",
+      "entities": [
+        "left-handed"
+      ],
+      "extractable_facts": [
+        "hand: left"
+      ]
+    },
+    {
+      "id": "F020",
+      "domain": "identity",
+      "fact_type": "natural_language",
+      "statement": "I have a tattoo. A small one on my left arm.",
+      "entities": [
+        "have (left arm)"
+      ],
+      "extractable_facts": [
+        "tattoo: yes (left arm)"
+      ],
+      "distractor": {
+        "id": "F020d",
+        "type": "hierarchical",
+        "statement": "I have a tattoo. A small one on my left arm.",
+        "shared_concept": "tattoo"
+      }
+    },
+    {
+      "id": "F021",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Pinscript as my editor",
+      "entities": [
+        "Pinscript"
+      ],
+      "extractable_facts": [
+        "editor: Pinscript"
+      ],
+      "distractor": {
+        "id": "F021d",
+        "type": "exact_substitute",
+        "statement": "I use Vapor as my editor",
+        "shared_concept": "editor"
+      }
+    },
+    {
+      "id": "F022",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My main language is Silvershell",
+      "entities": [
+        "Silvershell"
+      ],
+      "extractable_facts": [
+        "main language: Silvershell"
+      ],
+      "distractor": {
+        "id": "F022d",
+        "type": "exact_substitute",
+        "statement": "My main language is Novacode",
+        "shared_concept": "main language"
+      }
+    },
+    {
+      "id": "F023",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My framework is Zepton7",
+      "entities": [
+        "Zepton7"
+      ],
+      "extractable_facts": [
+        "framework: Zepton7"
+      ],
+      "distractor": {
+        "id": "F023d",
+        "type": "hierarchical",
+        "statement": "My framework is Novacode",
+        "shared_concept": "framework (same language)"
+      },
+      "temporal_updates": [
+        {
+          "id": "F023u1",
+          "statement": "I changed my framework to Quantum IDE. It used to be Zepton7",
+          "replaces_extractable": "framework: Zepton7"
+        }
+      ]
+    },
+    {
+      "id": "F024",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I like dark mode",
+      "entities": [
+        "dark mode"
+      ],
+      "extractable_facts": [
+        "theme: dark mode"
+      ]
+    },
+    {
+      "id": "F025",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I prefer tab indentation",
+      "entities": [
+        "tab"
+      ],
+      "extractable_facts": [
+        "indentation: tab"
+      ],
+      "distractor": {
+        "id": "F025d",
+        "type": "exact_substitute",
+        "statement": "I prefer space indentation",
+        "shared_concept": "indentation style"
+      }
+    },
+    {
+      "id": "F026",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Bash shell",
+      "entities": [
+        "Bash"
+      ],
+      "extractable_facts": [
+        "shell: Bash"
+      ],
+      "distractor": {
+        "id": "F026d",
+        "type": "exact_substitute",
+        "statement": "I use Fish shell",
+        "shared_concept": "shell"
+      },
+      "temporal_updates": [
+        {
+          "id": "F026u1",
+          "statement": "I changed my shell to Fish. It used to be Bash",
+          "replaces_extractable": "shell: Bash"
+        }
+      ]
+    },
+    {
+      "id": "F027",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My terminal is Ghostty",
+      "entities": [
+        "Ghostty"
+      ],
+      "extractable_facts": [
+        "terminal: Ghostty"
+      ],
+      "distractor": {
+        "id": "F027d",
+        "type": "negative",
+        "statement": "My terminal is Alacritty",
+        "shared_concept": "terminal"
+      }
+    },
+    {
+      "id": "F028",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My package manager is bun",
+      "entities": [
+        "bun"
+      ],
+      "extractable_facts": [
+        "package manager: bun"
+      ],
+      "distractor": {
+        "id": "F028d",
+        "type": "exact_substitute",
+        "statement": "My package manager is yarn",
+        "shared_concept": "package manager"
+      }
+    },
+    {
+      "id": "F029",
+      "domain": "tech",
+      "fact_type": "unique_id",
+      "statement": "Pinscript version is 1.7.96",
+      "entities": [
+        "1.7.96"
+      ],
+      "extractable_facts": [
+        "editor version: 1.7.96"
+      ],
+      "distractor": {
+        "id": "F029d",
+        "type": "exact_substitute",
+        "statement": "Pinscript version is Zepton7",
+        "shared_concept": "editor version"
+      },
+      "temporal_updates": [
+        {
+          "id": "F029u1",
+          "statement": "I changed my editor version to Zepton7. It used to be 1.7.96",
+          "replaces_extractable": "editor version: 1.7.96"
+        }
+      ]
+    },
+    {
+      "id": "F030",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Git with CLI",
+      "entities": [
+        "CLI"
+      ],
+      "extractable_facts": [
+        "Git: CLI"
+      ],
+      "distractor": {
+        "id": "F030d",
+        "type": "negative",
+        "statement": "I don't use Git with CLI",
+        "shared_concept": "Git"
+      }
+    },
+    {
+      "id": "F031",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Postgres for DB",
+      "entities": [
+        "Postgres"
+      ],
+      "extractable_facts": [
+        "DB: Postgres"
+      ],
+      "distractor": {
+        "id": "F031d",
+        "type": "conditional",
+        "statement": "I don't use Postgres for DB",
+        "shared_concept": "DB"
+      }
+    },
+    {
+      "id": "F032",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My OS is Ubuntu",
+      "entities": [
+        "Ubuntu"
+      ],
+      "extractable_facts": [
+        "OS: Ubuntu"
+      ],
+      "distractor": {
+        "id": "F032d",
+        "type": "conditional",
+        "statement": "My OS is not Ubuntu",
+        "shared_concept": "OS"
+      }
+    },
+    {
+      "id": "F033",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Docker for containers",
+      "entities": [
+        "Docker"
+      ],
+      "extractable_facts": [
+        "containers: Docker"
+      ],
+      "distractor": {
+        "id": "F033d",
+        "type": "partial_match",
+        "statement": "I don't use Docker for containers",
+        "shared_concept": "containers"
+      }
+    },
+    {
+      "id": "F034",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My CI is Cicle",
+      "entities": [
+        "Cicle"
+      ],
+      "extractable_facts": [
+        "CI: Cicle"
+      ],
+      "distractor": {
+        "id": "F034d",
+        "type": "partial_match",
+        "statement": "My CI is not Cicle",
+        "shared_concept": "CI"
+      }
+    },
+    {
+      "id": "F035",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use AWS for cloud",
+      "entities": [
+        "AWS"
+      ],
+      "extractable_facts": [
+        "cloud: AWS"
+      ]
+    },
+    {
+      "id": "F036",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I deploy with ALB",
+      "entities": [
+        "ALB"
+      ],
+      "extractable_facts": [
+        "deployment: ALB"
+      ],
+      "distractor": {
+        "id": "F036d",
+        "type": "hierarchical",
+        "statement": "I don't deploy with ALB",
+        "shared_concept": "deployment"
+      }
+    },
+    {
+      "id": "F037",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "My logger is Winston",
+      "entities": [
+        "Winston"
+      ],
+      "extractable_facts": [
+        "logging: Winston"
+      ],
+      "distractor": {
+        "id": "F037d",
+        "type": "hierarchical",
+        "statement": "My logger is not Winston",
+        "shared_concept": "logging"
+      }
+    },
+    {
+      "id": "F038",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I use Sentry for monitoring",
+      "entities": [
+        "Sentry"
+      ],
+      "extractable_facts": [
+        "monitoring: Sentry"
+      ],
+      "distractor": {
+        "id": "F038d",
+        "type": "partial_match",
+        "statement": "I don't use Sentry for monitoring",
+        "shared_concept": "monitoring"
+      }
+    },
+    {
+      "id": "F039",
+      "domain": "tech",
+      "fact_type": "natural_language",
+      "statement": "I manage monorepo with Nx",
+      "entities": [
+        "Nx"
+      ],
+      "extractable_facts": [
+        "monorepo: Nx"
+      ],
+      "distractor": {
+        "id": "F039d",
+        "type": "exact_substitute",
+        "statement": "I don't manage monorepo with Nx",
+        "shared_concept": "monorepo"
+      }
+    },
+    {
+      "id": "F040",
+      "domain": "tech",
+      "fact_type": "unique_id",
+      "statement": "Code coverage target is 70%",
+      "entities": [
+        "70%"
+      ],
+      "extractable_facts": [
+        "code coverage target: 70%"
+      ],
+      "distractor": {
+        "id": "F040d",
+        "type": "partial_match",
+        "statement": "Code coverage target is not 70%",
+        "shared_concept": "code coverage target"
+      }
+    },
+    {
+      "id": "F041",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite fruit is Rambutan",
+      "entities": [
+        "Rambutan"
+      ],
+      "extractable_facts": [
+        "Favorite fruit: Rambutan"
+      ],
+      "distractor": {
+        "id": "F041d",
+        "type": "exact_substitute",
+        "statement": "My favorite fruit is Dragon Fruit",
+        "shared_concept": "Favorite fruit"
+      }
+    },
+    {
+      "id": "F042",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite drink is Lassi",
+      "entities": [
+        "Lassi"
+      ],
+      "extractable_facts": [
+        "Favorite drink: Lassi"
+      ],
+      "distractor": {
+        "id": "F042d",
+        "type": "exact_substitute",
+        "statement": "My favorite drink is Misutgaru",
+        "shared_concept": "Favorite drink"
+      }
+    },
+    {
+      "id": "F043",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite color is Coral Pink",
+      "entities": [
+        "Coral Pink"
+      ],
+      "extractable_facts": [
+        "Favorite color: Coral Pink"
+      ]
+    },
+    {
+      "id": "F044",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite movies are \"Invisible River\"",
+      "entities": [
+        "Invisible River"
+      ],
+      "extractable_facts": [
+        "Favorite movies: Invisible River"
+      ],
+      "distractor": {
+        "id": "F044d",
+        "type": "exact_substitute",
+        "statement": "My favorite movies are \"Glass Island\"",
+        "shared_concept": "Favorite movies"
+      },
+      "temporal_updates": [
+        {
+          "id": "F044u1",
+          "statement": "I changed my favorite movies to Glass Island. It used to be Invisible River.",
+          "replaces_extractable": "Favorite movies: Invisible River"
+        }
+      ]
+    },
+    {
+      "id": "F045",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I like R&B music.",
+      "entities": [
+        "R&B"
+      ],
+      "extractable_facts": [
+        "Favorite music: R&B"
+      ],
+      "distractor": {
+        "id": "F045d",
+        "type": "partial_match",
+        "statement": "I like Indie music",
+        "shared_concept": "Favorite music"
+      },
+      "temporal_updates": [
+        {
+          "id": "F045u1",
+          "statement": "I changed my favorite music to Classical. It used to be R&B.",
+          "replaces_extractable": "Favorite music: R&B"
+        }
+      ]
+    },
+    {
+      "id": "F046",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I dislike spicy food.",
+      "entities": [
+        "dislike"
+      ],
+      "extractable_facts": [
+        "Spiciness: dislikes"
+      ],
+      "distractor": {
+        "id": "F046d",
+        "type": "negative",
+        "statement": "I like spicy food.",
+        "shared_concept": "Spicy food preference"
+      }
+    },
+    {
+      "id": "F047",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "When it rains, I like to read books at home.",
+      "entities": [
+        "reading books at home"
+      ],
+      "extractable_facts": [
+        "When it rains: reading books at home"
+      ],
+      "distractor": {
+        "id": "F047d",
+        "type": "exact_substitute",
+        "statement": "When it rains, I don't like reading books at home.",
+        "shared_concept": "When it rains"
+      }
+    },
+    {
+      "id": "F048",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I don't drink alcohol.",
+      "entities": [
+        "doesn't drink"
+      ],
+      "extractable_facts": [
+        "Alcohol: doesn't drink"
+      ],
+      "distractor": {
+        "id": "F048d",
+        "type": "negative",
+        "statement": "I drink alcohol often.",
+        "shared_concept": "Drinking habits"
+      }
+    },
+    {
+      "id": "F049",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I don't go to company dinners. Lunch is possible.",
+      "entities": [
+        "don't go",
+        "possible"
+      ],
+      "extractable_facts": [
+        "Company dinner (evening): not going",
+        "Lunch: available"
+      ],
+      "distractor": {
+        "id": "F049d",
+        "type": "conditional",
+        "statement": "I go to company dinners and lunch is also possible.",
+        "shared_concept": "Company dinner attendance"
+      }
+    },
+    {
+      "id": "F050",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I always eat breakfast.",
+      "entities": [
+        "always eat"
+      ],
+      "extractable_facts": [
+        "Breakfast: always eat"
+      ],
+      "distractor": {
+        "id": "F050d",
+        "type": "partial_match",
+        "statement": "I always eat breakfast.",
+        "shared_concept": "Breakfast"
+      }
+    },
+    {
+      "id": "F051",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I don't eat late-night snacks.",
+      "entities": [
+        "don't eat"
+      ],
+      "extractable_facts": [
+        "Late-night snack: doesn't eat"
+      ],
+      "distractor": {
+        "id": "F051d",
+        "type": "negative",
+        "statement": "I eat late-night snacks often.",
+        "shared_concept": "Late-night snack habits"
+      }
+    },
+    {
+      "id": "F052",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite season is Summer",
+      "entities": [
+        "season is Summer"
+      ],
+      "extractable_facts": [
+        "Favorite: season is Summer"
+      ]
+    },
+    {
+      "id": "F053",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite animal is dog",
+      "entities": [
+        "animal is dog"
+      ],
+      "extractable_facts": [
+        "Favorite: animal is dog"
+      ]
+    },
+    {
+      "id": "F054",
+      "domain": "preference",
+      "fact_type": "unique_id",
+      "statement": "My favorite number is 72.",
+      "entities": [
+        "number is 72"
+      ],
+      "extractable_facts": [
+        "Favorite: number is 72"
+      ],
+      "distractor": {
+        "id": "F054d",
+        "type": "negative",
+        "statement": "My favorite number is not 72.",
+        "shared_concept": "Favorite"
+      }
+    },
+    {
+      "id": "F055",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I dislike Carrot",
+      "entities": [
+        "food is Carrot"
+      ],
+      "extractable_facts": [
+        "Dislike: food is Carrot"
+      ]
+    },
+    {
+      "id": "F056",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I like plants in my room.",
+      "entities": [
+        "like plants in my room"
+      ],
+      "extractable_facts": [
+        "like plants in my room"
+      ]
+    },
+    {
+      "id": "F057",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite book genre is essay.",
+      "entities": [
+        "book genre is essay"
+      ],
+      "extractable_facts": [
+        "Favorite: book genre is essay"
+      ]
+    },
+    {
+      "id": "F058",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I like podcasts. I listen to them during my commute.",
+      "entities": [
+        "like podcasts"
+      ],
+      "extractable_facts": [
+        "like podcasts"
+      ]
+    },
+    {
+      "id": "F059",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "I aim for digital minimalism.",
+      "entities": [
+        "aim for digital minimalism"
+      ],
+      "extractable_facts": [
+        "aim for digital minimalism"
+      ]
+    },
+    {
+      "id": "F060",
+      "domain": "preference",
+      "fact_type": "natural_language",
+      "statement": "My favorite brand is Formant",
+      "entities": [
+        "brand is Formant"
+      ],
+      "extractable_facts": [
+        "Favorite: brand is Formant"
+      ],
+      "distractor": {
+        "id": "F060d",
+        "type": "conditional",
+        "statement": "My favorite brand is not Formant",
+        "shared_concept": "Favorite"
+      }
+    },
+    {
+      "id": "F061",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I live in Storm City Nam-gu",
+      "entities": [
+        "Storm City",
+        "Nam-gu"
+      ],
+      "extractable_facts": [
+        "residence: Storm City Nam-gu"
+      ],
+      "distractor": {
+        "id": "F061d",
+        "type": "partial_match",
+        "statement": "I live in Storm City Bada-gu",
+        "shared_concept": "same city different district"
+      },
+      "temporal_updates": [
+        {
+          "id": "F061u1",
+          "statement": "Changed residence to Nam-gu. Previously lived in Storm City Nam-gu.",
+          "replaces_extractable": "residence: Storm City Nam-gu"
+        }
+      ]
+    },
+    {
+      "id": "F062",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "My pet is a hamster named \"Bori\"",
+      "entities": [
+        "hamster",
+        "Bori"
+      ],
+      "extractable_facts": [
+        "pet: hamster \"Bori\""
+      ],
+      "distractor": {
+        "id": "F062d",
+        "type": "negative",
+        "statement": "My pet is not a hamster named \"Bori\"",
+        "shared_concept": "pet"
+      }
+    },
+    {
+      "id": "F063",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "Bori is 10 years old",
+      "entities": [
+        "10 years old"
+      ],
+      "extractable_facts": [
+        "pet age: 10 years old"
+      ]
+    },
+    {
+      "id": "F064",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I commute by bicycle",
+      "entities": [
+        "bicycle"
+      ],
+      "extractable_facts": [
+        "commute: bicycle"
+      ],
+      "distractor": {
+        "id": "F064d",
+        "type": "hierarchical",
+        "statement": "I do not commute by bicycle",
+        "shared_concept": "commute"
+      }
+    },
+    {
+      "id": "F065",
+      "domain": "personal",
+      "fact_type": "unique_id",
+      "statement": "My house is at 50 Street, 161, Unit 1487",
+      "entities": [
+        "50 Street, 161, Unit 1487"
+      ],
+      "extractable_facts": [
+        "house: 50 Street, 161, Unit 1487"
+      ]
+    },
+    {
+      "id": "F066",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I've been living here for 3 years",
+      "entities": [
+        "3 years"
+      ],
+      "extractable_facts": [
+        "residence duration: 3 years"
+      ],
+      "distractor": {
+        "id": "F066d",
+        "type": "hierarchical",
+        "statement": "I have not been living here for 3 years",
+        "shared_concept": "residence duration"
+      }
+    },
+    {
+      "id": "F067",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "Before moving, I lived in Quantum City",
+      "entities": [
+        "lived in Quantum City"
+      ],
+      "extractable_facts": [
+        "before moving: lived in Quantum City"
+      ],
+      "distractor": {
+        "id": "F067d",
+        "type": "conditional",
+        "statement": "I did not live in Quantum City before moving",
+        "shared_concept": "before moving"
+      }
+    },
+    {
+      "id": "F068",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "There's a park near my place",
+      "entities": [
+        "park near my place"
+      ],
+      "extractable_facts": [
+        "park near my place"
+      ]
+    },
+    {
+      "id": "F069",
+      "domain": "personal",
+      "fact_type": "unique_id",
+      "statement": "The maintenance fee is 290,000 won",
+      "entities": [
+        "290,000 won"
+      ],
+      "extractable_facts": [
+        "maintenance fee: 290,000 won"
+      ],
+      "distractor": {
+        "id": "F069d",
+        "type": "conditional",
+        "statement": "The maintenance fee is not 290,000 won",
+        "shared_concept": "maintenance fee"
+      }
+    },
+    {
+      "id": "F070",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "There is a parking lot. It's underground.",
+      "entities": [
+        "available (underground)"
+      ],
+      "extractable_facts": [
+        "parking lot: yes (underground)"
+      ],
+      "distractor": {
+        "id": "F070d",
+        "type": "exact_substitute",
+        "statement": "There is a parking lot. It's underground.",
+        "shared_concept": "parking lot"
+      }
+    },
+    {
+      "id": "F071",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I'm not close with my neighbors",
+      "entities": [
+        "not close"
+      ],
+      "extractable_facts": [
+        "neighbor relationship: not close"
+      ],
+      "distractor": {
+        "id": "F071d",
+        "type": "negative",
+        "statement": "I am close with my neighbors",
+        "shared_concept": "neighbor relationship"
+      }
+    },
+    {
+      "id": "F072",
+      "domain": "personal",
+      "fact_type": "unique_id",
+      "statement": "There are 2 rooms",
+      "entities": [
+        "2 rooms"
+      ],
+      "extractable_facts": [
+        "number of rooms: 2"
+      ]
+    },
+    {
+      "id": "F073",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "It's an officetel",
+      "entities": [
+        "officetel"
+      ],
+      "extractable_facts": [
+        "housing type: officetel"
+      ]
+    },
+    {
+      "id": "F074",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I clean every Monday",
+      "entities": [
+        "every Monday"
+      ],
+      "extractable_facts": [
+        "cleaning: every Monday"
+      ],
+      "distractor": {
+        "id": "F074d",
+        "type": "partial_match",
+        "statement": "I clean every Monday",
+        "shared_concept": "cleaning"
+      }
+    },
+    {
+      "id": "F075",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I do laundry every other day",
+      "entities": [
+        "every other day"
+      ],
+      "extractable_facts": [
+        "laundry: every other day"
+      ]
+    },
+    {
+      "id": "F076",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I try to sleep early. Before midnight.",
+      "entities": [
+        "try to sleep early"
+      ],
+      "extractable_facts": [
+        "sleep habit: try to sleep early"
+      ]
+    },
+    {
+      "id": "F077",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I drink a glass of water in the early morning",
+      "entities": [
+        "drink a glass of water in the early morning"
+      ],
+      "extractable_facts": [
+        "morning routine: drink a glass of water in the early morning"
+      ]
+    },
+    {
+      "id": "F078",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I shower in the morning",
+      "entities": [
+        "morning"
+      ],
+      "extractable_facts": [
+        "shower: morning"
+      ],
+      "distractor": {
+        "id": "F078d",
+        "type": "negative",
+        "statement": "I do not shower in the morning",
+        "shared_concept": "shower"
+      }
+    },
+    {
+      "id": "F079",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I make and drink coffee at home",
+      "entities": [
+        "make and drink at home"
+      ],
+      "extractable_facts": [
+        "coffee: make and drink at home"
+      ],
+      "distractor": {
+        "id": "F079d",
+        "type": "hierarchical",
+        "statement": "I do not make and drink coffee at home",
+        "shared_concept": "coffee"
+      }
+    },
+    {
+      "id": "F080",
+      "domain": "personal",
+      "fact_type": "natural_language",
+      "statement": "I order delivery food twice a week",
+      "entities": [
+        "order twice a week"
+      ],
+      "extractable_facts": [
+        "delivery food: order twice a week"
+      ],
+      "distractor": {
+        "id": "F080d",
+        "type": "conditional",
+        "statement": "I do not order delivery food twice a week",
+        "shared_concept": "delivery food"
+      }
+    },
+    {
+      "id": "F081",
+      "domain": "temporal",
+      "fact_type": "unique_id",
+      "statement": "I joined on March 7, 2023",
+      "entities": [
+        "2023",
+        "March",
+        "7"
+      ],
+      "extractable_facts": [
+        "Join Date: March 7, 2023"
+      ],
+      "distractor": {
+        "id": "F081d",
+        "type": "exact_substitute",
+        "statement": "I joined on July 16, 2024",
+        "shared_concept": "Join Date"
+      }
+    },
+    {
+      "id": "F082",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "Team meeting is every Thursday",
+      "entities": [
+        "Thursday"
+      ],
+      "extractable_facts": [
+        "Team Meeting: every Thursday"
+      ],
+      "distractor": {
+        "id": "F082d",
+        "type": "hierarchical",
+        "statement": "Team meeting is every Thursday(not)",
+        "shared_concept": "Team Meeting"
+      }
+    },
+    {
+      "id": "F083",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I get paid on the 13th of every month",
+      "entities": [
+        "13th"
+      ],
+      "extractable_facts": [
+        "Payday: 13th of every month"
+      ],
+      "distractor": {
+        "id": "F083d",
+        "type": "partial_match",
+        "statement": "I get paid on the 13th(not) of every month",
+        "shared_concept": "Payday"
+      }
+    },
+    {
+      "id": "F084",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I go on vacation every Summer",
+      "entities": [
+        "go"
+      ],
+      "extractable_facts": [
+        "Vacation: go every Summer"
+      ],
+      "distractor": {
+        "id": "F084d",
+        "type": "partial_match",
+        "statement": "I go on vacation(not) every Summer",
+        "shared_concept": "Vacation every Summer"
+      }
+    },
+    {
+      "id": "F085",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I go to work at 7 AM every day",
+      "entities": [
+        "go to work at 7 AM"
+      ],
+      "extractable_facts": [
+        "go to work at 7 AM"
+      ]
+    },
+    {
+      "id": "F086",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I wake up at 6 AM every day",
+      "entities": [
+        "wake up at 6 AM"
+      ],
+      "extractable_facts": [
+        "wake up at 6 AM"
+      ]
+    },
+    {
+      "id": "F087",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I go to sleep at 11 PM every day",
+      "entities": [
+        "go to sleep at 11 PM"
+      ],
+      "extractable_facts": [
+        "go to sleep at 11 PM"
+      ]
+    },
+    {
+      "id": "F088",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I exercise 3 times a week",
+      "entities": [
+        "exercise 3 times a week"
+      ],
+      "extractable_facts": [
+        "exercise 3 times a week"
+      ]
+    },
+    {
+      "id": "F089",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I do a monthly retrospective on the first Monday of every month",
+      "entities": [
+        "first Monday"
+      ],
+      "extractable_facts": [
+        "Monthly Retrospective: first Monday"
+      ]
+    },
+    {
+      "id": "F090",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I check OKRs quarterly",
+      "entities": [
+        "quarterly"
+      ],
+      "extractable_facts": [
+        "OKR Check: quarterly"
+      ],
+      "distractor": {
+        "id": "F090d",
+        "type": "conditional",
+        "statement": "I check OKRs quarterly(not)",
+        "shared_concept": "OKR Check"
+      }
+    },
+    {
+      "id": "F091",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I moved last year",
+      "entities": [
+        "last year"
+      ],
+      "extractable_facts": [
+        "Moved: last year"
+      ],
+      "temporal_updates": [
+        {
+          "id": "F091u1",
+          "statement": "Moved changed to last year. Previously it was last year",
+          "replaces_extractable": "Moved: last year"
+        }
+      ],
+      "distractor": {
+        "id": "F091d",
+        "type": "hierarchical",
+        "statement": "I moved last year(not)",
+        "shared_concept": "Moved"
+      }
+    },
+    {
+      "id": "F092",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "My first job was at Quantumleap",
+      "entities": [
+        "Quantumleap"
+      ],
+      "extractable_facts": [
+        "First Job: Quantumleap"
+      ]
+    },
+    {
+      "id": "F093",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I've been at this company for 5 years",
+      "entities": [
+        "company"
+      ],
+      "extractable_facts": [
+        "5 years: company"
+      ]
+    },
+    {
+      "id": "F094",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I do code reviews every Friday",
+      "entities": [
+        "code reviews every Friday"
+      ],
+      "extractable_facts": [
+        "code reviews every Friday"
+      ]
+    },
+    {
+      "id": "F095",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "We deploy at the end of every month",
+      "entities": [
+        "end of every month"
+      ],
+      "extractable_facts": [
+        "Deployment: end of every month"
+      ]
+    },
+    {
+      "id": "F096",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "Sprints are 2 weeks long",
+      "entities": [
+        "2 weeks"
+      ],
+      "extractable_facts": [
+        "Sprint: 2 weeks"
+      ],
+      "distractor": {
+        "id": "F096d",
+        "type": "hierarchical",
+        "statement": "Sprints are 2 weeks(not) long",
+        "shared_concept": "Sprint"
+      }
+    },
+    {
+      "id": "F097",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I write reports by the 28th of every month",
+      "entities": [
+        "write reports by the 28th"
+      ],
+      "extractable_facts": [
+        "Report: write reports by the 28th"
+      ]
+    },
+    {
+      "id": "F098",
+      "domain": "temporal",
+      "fact_type": "unique_id",
+      "statement": "I have 12 days of annual leave left",
+      "entities": [
+        "12 days left"
+      ],
+      "extractable_facts": [
+        "Annual Leave: 12 days left"
+      ]
+    },
+    {
+      "id": "F099",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "My goal this year is project launch",
+      "entities": [
+        "project launch"
+      ],
+      "extractable_facts": [
+        "This Year's Goal: project launch"
+      ],
+      "distractor": {
+        "id": "F099d",
+        "type": "conditional",
+        "statement": "My goal this year is project launch(not)",
+        "shared_concept": "This Year's Goal"
+      }
+    },
+    {
+      "id": "F100",
+      "domain": "temporal",
+      "fact_type": "natural_language",
+      "statement": "I'm going to have a health checkup next month",
+      "entities": [
+        "going to"
+      ],
+      "extractable_facts": [
+        "Next Month's Health Checkup: going to"
+      ]
+    },
+    {
+      "id": "F101",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I work at Stormbase Platform",
+      "entities": [
+        "Stormbase",
+        "Platform"
+      ],
+      "extractable_facts": [
+        "company: Stormbase",
+        "department: Platform"
+      ],
+      "distractor": {
+        "id": "F101d",
+        "type": "hierarchical",
+        "statement": "I work at Stormbase Data Solutions",
+        "shared_concept": "Same company, different department"
+      },
+      "temporal_updates": [
+        {
+          "id": "F101u1",
+          "statement": "I changed to Ironseed. It used to be Stormbase.",
+          "replaces_extractable": "company: Stormbase"
+        }
+      ]
+    },
+    {
+      "id": "F102",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "The office is on the 8th floor.",
+      "entities": [
+        "8th floor"
+      ],
+      "extractable_facts": [
+        "floor: 8th floor"
+      ]
+    },
+    {
+      "id": "F103",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "My extension number is 2247.",
+      "entities": [
+        "2247"
+      ],
+      "extractable_facts": [
+        "extension_number: 2247"
+      ],
+      "distractor": {
+        "id": "F103d",
+        "type": "negative",
+        "statement": "My extension number is not 2247.",
+        "shared_concept": "extension number"
+      }
+    },
+    {
+      "id": "F104",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I prefer remote work.",
+      "entities": [
+        "remote"
+      ],
+      "extractable_facts": [
+        "preference: remote"
+      ],
+      "distractor": {
+        "id": "F104d",
+        "type": "partial_match",
+        "statement": "I do not prefer remote work.",
+        "shared_concept": "preference"
+      }
+    },
+    {
+      "id": "F105",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I come to the office twice a week.",
+      "entities": [
+        "come to the office twice a week"
+      ],
+      "extractable_facts": [
+        "office_attendance: twice a week"
+      ]
+    },
+    {
+      "id": "F106",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I eat lunch at 12 PM.",
+      "entities": [
+        "eat lunch at 12 PM"
+      ],
+      "extractable_facts": [
+        "lunch: eat at 12 PM"
+      ],
+      "distractor": {
+        "id": "F106d",
+        "type": "conditional",
+        "statement": "I do not eat lunch at 12 PM.",
+        "shared_concept": "lunch"
+      }
+    },
+    {
+      "id": "F107",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I eat lunch with my colleagues.",
+      "entities": [
+        "eat lunch with"
+      ],
+      "extractable_facts": [
+        "colleagues: eat lunch with"
+      ]
+    },
+    {
+      "id": "F108",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "3 PR reviewers are required.",
+      "entities": [
+        "3 PR reviewers are required"
+      ],
+      "extractable_facts": [
+        "PR_reviewers_required: 3"
+      ]
+    },
+    {
+      "id": "F109",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "Maintain test coverage at 65%.",
+      "entities": [
+        "Maintain test coverage at 65%"
+      ],
+      "extractable_facts": [
+        "test_coverage_target: 65%"
+      ]
+    },
+    {
+      "id": "F110",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "Our messenger is Discord",
+      "entities": [
+        "Discord"
+      ],
+      "extractable_facts": [
+        "internal_messenger: Discord"
+      ],
+      "distractor": {
+        "id": "F110d",
+        "type": "exact_substitute",
+        "statement": "Our messenger is not Discord.",
+        "shared_concept": "internal messenger"
+      }
+    },
+    {
+      "id": "F111",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I use Google Workspace for email",
+      "entities": [
+        "Google Workspace"
+      ],
+      "extractable_facts": [
+        "email: Google Workspace"
+      ]
+    },
+    {
+      "id": "F112",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I use Linear for docs",
+      "entities": [
+        "Linear"
+      ],
+      "extractable_facts": [
+        "documentation: Linear"
+      ],
+      "distractor": {
+        "id": "F112d",
+        "type": "exact_substitute",
+        "statement": "I do not use Linear for docs.",
+        "shared_concept": "documentation"
+      }
+    },
+    {
+      "id": "F113",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I use Amplitude for A/B testing",
+      "entities": [
+        "Amplitude"
+      ],
+      "extractable_facts": [
+        "A/B testing: Amplitude"
+      ]
+    },
+    {
+      "id": "F114",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "I write tech blogs on Medium",
+      "entities": [
+        "Medium"
+      ],
+      "extractable_facts": [
+        "tech_blogs: Medium"
+      ]
+    },
+    {
+      "id": "F115",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "There are 3 team members.",
+      "entities": [],
+      "extractable_facts": [
+        "team_members: 3"
+      ]
+    },
+    {
+      "id": "F116",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "My co-founder is Geon",
+      "entities": [
+        "Geon"
+      ],
+      "extractable_facts": [
+        "co-founder: Geon"
+      ]
+    },
+    {
+      "id": "F117",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "The DAU target is 174.",
+      "entities": [
+        "174"
+      ],
+      "extractable_facts": [
+        "DAU_target: 174"
+      ],
+      "distractor": {
+        "id": "F117d",
+        "type": "conditional",
+        "statement": "The DAU target is not 174.",
+        "shared_concept": "DAU target"
+      }
+    },
+    {
+      "id": "F118",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "The subscription price is 19000 won.",
+      "entities": [
+        "19000 won"
+      ],
+      "extractable_facts": [
+        "subscription_price: 19000 won"
+      ],
+      "temporal_updates": [
+        {
+          "id": "F118u1",
+          "statement": "I changed the subscription to Haneul-gu. It used to be 19000 won.",
+          "replaces_extractable": "subscription_price: 19000 won"
+        }
+      ]
+    },
+    {
+      "id": "F119",
+      "domain": "work",
+      "fact_type": "unique_id",
+      "statement": "We received 200 million won in investment.",
+      "entities": [
+        "200 million won"
+      ],
+      "extractable_facts": [
+        "investment_received: 200 million won"
+      ]
+    },
+    {
+      "id": "F120",
+      "domain": "work",
+      "fact_type": "natural_language",
+      "statement": "Team retrospective is on Friday",
+      "entities": [
+        "Friday"
+      ],
+      "extractable_facts": [
+        "team_retrospective: Friday"
+      ],
+      "distractor": {
+        "id": "F120d",
+        "type": "hierarchical",
+        "statement": "Team retrospective is not on Friday.",
+        "shared_concept": "team retrospective"
+      }
+    },
+    {
+      "id": "F121",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I'm allergic to Peanut",
+      "entities": [
+        "Peanut"
+      ],
+      "extractable_facts": [
+        "allergy: Peanut"
+      ],
+      "distractor": {
+        "id": "F121d",
+        "type": "exact_substitute",
+        "statement": "I'm allergic to Peach",
+        "shared_concept": "allergy"
+      }
+    },
+    {
+      "id": "F122",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I take Melatonin-X 41mg daily",
+      "entities": [
+        "Melatonin-X",
+        "41mg"
+      ],
+      "extractable_facts": [
+        "medication: Melatonin-X 41mg"
+      ]
+    },
+    {
+      "id": "F123",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I exercise 5 times a week",
+      "entities": [
+        "5 times a week"
+      ],
+      "extractable_facts": [
+        "exercise: 5 times a week"
+      ]
+    },
+    {
+      "id": "F124",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I mainly do Swimming",
+      "entities": [
+        "mainly Swimming"
+      ],
+      "extractable_facts": [
+        "exercise: mainly Swimming"
+      ]
+    },
+    {
+      "id": "F125",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I sleep 6 hours",
+      "entities": [
+        "6 hours"
+      ],
+      "extractable_facts": [
+        "sleep: 6 hours"
+      ],
+      "distractor": {
+        "id": "F125d",
+        "type": "hierarchical",
+        "statement": "I sleep 6 hours (not)",
+        "shared_concept": "sleep"
+      }
+    },
+    {
+      "id": "F126",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I snore",
+      "entities": [
+        "yes"
+      ],
+      "extractable_facts": [
+        "snoring: yes"
+      ]
+    },
+    {
+      "id": "F127",
+      "domain": "health",
+      "fact_type": "unique_id",
+      "statement": "My body fat percentage is 16%",
+      "entities": [
+        "16%"
+      ],
+      "extractable_facts": [
+        "body_fat_percentage: 16%"
+      ]
+    },
+    {
+      "id": "F128",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "My blood pressure is normal",
+      "entities": [
+        "normal"
+      ],
+      "extractable_facts": [
+        "blood_pressure: normal"
+      ],
+      "distractor": {
+        "id": "F128d",
+        "type": "hierarchical",
+        "statement": "My blood pressure is normal (not)",
+        "shared_concept": "blood_pressure"
+      }
+    },
+    {
+      "id": "F129",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I stretch daily",
+      "entities": [
+        "daily"
+      ],
+      "extractable_facts": [
+        "stretching: daily"
+      ]
+    },
+    {
+      "id": "F130",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I get a health checkup yearly",
+      "entities": [
+        "yearly"
+      ],
+      "extractable_facts": [
+        "health checkup: yearly"
+      ]
+    },
+    {
+      "id": "F131",
+      "domain": "health",
+      "fact_type": "unique_id",
+      "statement": "I wear glasses. The prescription is 4.5",
+      "entities": [
+        "4.5"
+      ],
+      "extractable_facts": [
+        "glasses_prescription: 4.5"
+      ],
+      "distractor": {
+        "id": "F131d",
+        "type": "hierarchical",
+        "statement": "I wear glasses. The prescription is 4.5 (not)",
+        "shared_concept": "glasses_prescription"
+      }
+    },
+    {
+      "id": "F132",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I go to the dentist every 8 months",
+      "entities": [
+        "every 8 months"
+      ],
+      "extractable_facts": [
+        "dentist_visit: every 8 months"
+      ]
+    },
+    {
+      "id": "F133",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I take Vitamin C",
+      "entities": [
+        "Vitamin C"
+      ],
+      "extractable_facts": [
+        "vitamin_c_intake: yes"
+      ]
+    },
+    {
+      "id": "F134",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I drink 1 liter of water daily",
+      "entities": [
+        "1 liter of water daily"
+      ],
+      "extractable_facts": [
+        "water_intake: 1 liter daily"
+      ]
+    },
+    {
+      "id": "F135",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I don't drink caffeine after 2 PM",
+      "entities": [
+        "after 2 PM not drink"
+      ],
+      "extractable_facts": [
+        "caffeine_intake: after 2 PM not drink"
+      ],
+      "distractor": {
+        "id": "F135d",
+        "type": "conditional",
+        "statement": "I drink caffeine anytime",
+        "shared_concept": "caffeine_intake_restriction"
+      }
+    },
+    {
+      "id": "F136",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I don't meditate",
+      "entities": [
+        "doesn't do"
+      ],
+      "extractable_facts": [
+        "meditation: doesn't"
+      ],
+      "distractor": {
+        "id": "F136d",
+        "type": "negative",
+        "statement": "I meditate daily",
+        "shared_concept": "meditation_status"
+      }
+    },
+    {
+      "id": "F137",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I don't smoke",
+      "entities": [
+        "doesn't do"
+      ],
+      "extractable_facts": [
+        "smoking: doesn't"
+      ],
+      "distractor": {
+        "id": "F137d",
+        "type": "negative",
+        "statement": "I smoke",
+        "shared_concept": "smoking_status"
+      }
+    },
+    {
+      "id": "F138",
+      "domain": "health",
+      "fact_type": "unique_id",
+      "statement": "My hospital registration number is MC-2862-OM",
+      "entities": [
+        "MC-2862-OM"
+      ],
+      "extractable_facts": [
+        "hospital_registration_number: MC-2862-OM"
+      ]
+    },
+    {
+      "id": "F139",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I take medication in the morning",
+      "entities": [
+        "morning"
+      ],
+      "extractable_facts": [
+        "medication_time: morning"
+      ]
+    },
+    {
+      "id": "F140",
+      "domain": "health",
+      "fact_type": "natural_language",
+      "statement": "I eat meals regularly",
+      "entities": [
+        "regularly"
+      ],
+      "extractable_facts": [
+        "meals: regularly"
+      ]
+    },
+    {
+      "id": "F141",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "My best friend Ian is a Perfumer",
+      "entities": [
+        "Ian",
+        "Perfumer"
+      ],
+      "extractable_facts": [
+        "Best friend: Ian",
+        "Occupation: Perfumer"
+      ],
+      "distractor": {
+        "id": "F141d",
+        "type": "exact_substitute",
+        "statement": "My best friend Sungmin is a Librarian",
+        "shared_concept": "Best friend's name/occupation"
+      }
+    },
+    {
+      "id": "F142",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I've known Ian since 2022",
+      "entities": [
+        "2022"
+      ],
+      "extractable_facts": [
+        "Year known: 2022"
+      ],
+      "distractor": {
+        "id": "F142d",
+        "type": "conditional",
+        "statement": "I've known Ian since 2022 (not)",
+        "shared_concept": "Year known"
+      }
+    },
+    {
+      "id": "F143",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I do cooking with Arin",
+      "entities": [
+        "Arin",
+        "cooking group"
+      ],
+      "extractable_facts": [
+        "With Arin: cooking group"
+      ],
+      "distractor": {
+        "id": "F143d",
+        "type": "negative",
+        "statement": "I don't do cooking with Arin",
+        "shared_concept": "With Arin"
+      }
+    },
+    {
+      "id": "F144",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I don't use social media",
+      "entities": [
+        "doesn't use"
+      ],
+      "extractable_facts": [
+        "Social media: doesn't use"
+      ],
+      "distractor": {
+        "id": "F144d",
+        "type": "negative",
+        "statement": "I use social media often",
+        "shared_concept": "Social media usage"
+      }
+    },
+    {
+      "id": "F145",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "The meeting is once a week",
+      "entities": [
+        "once a week"
+      ],
+      "extractable_facts": [
+        "Meeting: once a week"
+      ],
+      "distractor": {
+        "id": "F145d",
+        "type": "hierarchical",
+        "statement": "The meeting is once a week (not)",
+        "shared_concept": "Meeting"
+      }
+    },
+    {
+      "id": "F146",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I live in Busan",
+      "entities": [
+        "lives in Busan"
+      ],
+      "extractable_facts": [
+        "Geon: lives in Busan"
+      ],
+      "distractor": {
+        "id": "F146d",
+        "type": "negative",
+        "statement": "Geon does not live in Busan",
+        "shared_concept": "Geon"
+      }
+    },
+    {
+      "id": "F147",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I have a neighborhood friend Jungho",
+      "entities": [
+        "have a neighborhood friend Jungho"
+      ],
+      "extractable_facts": [
+        "Have a neighborhood friend Jungho"
+      ]
+    },
+    {
+      "id": "F148",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I have a college classmate Lua",
+      "entities": [
+        "have a college classmate Lua"
+      ],
+      "extractable_facts": [
+        "Have a college classmate Lua"
+      ]
+    },
+    {
+      "id": "F149",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I don't change my phone number often",
+      "entities": [
+        "don't change often"
+      ],
+      "extractable_facts": [
+        "Phone number: don't change often"
+      ],
+      "distractor": {
+        "id": "F149d",
+        "type": "conditional",
+        "statement": "I don't change my phone number often",
+        "shared_concept": "Phone number"
+      }
+    },
+    {
+      "id": "F150",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I make birthday gifts myself",
+      "entities": [
+        "make myself"
+      ],
+      "extractable_facts": [
+        "Birthday gift: make myself"
+      ],
+      "distractor": {
+        "id": "F150d",
+        "type": "conditional",
+        "statement": "I don't make birthday gifts myself",
+        "shared_concept": "Birthday gift"
+      }
+    },
+    {
+      "id": "F151",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I have 5 close friends",
+      "entities": [
+        "have 5 close friends"
+      ],
+      "extractable_facts": [
+        "Have 5 close friends"
+      ]
+    },
+    {
+      "id": "F152",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I don't manage my network",
+      "entities": [
+        "doesn't manage"
+      ],
+      "extractable_facts": [
+        "Network management: doesn't manage"
+      ]
+    },
+    {
+      "id": "F153",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I don't talk much in meetings",
+      "entities": [
+        "quiet type"
+      ],
+      "extractable_facts": [
+        "Meeting: quiet type"
+      ],
+      "distractor": {
+        "id": "F153d",
+        "type": "negative",
+        "statement": "I tend to lead in meetings",
+        "shared_concept": "Meeting tendency"
+      }
+    },
+    {
+      "id": "F154",
+      "domain": "social",
+      "fact_type": "unique_id",
+      "statement": "Sungmin's last 4 digits are 6755",
+      "entities": [
+        "Sungmin's last 4 digits are 6755"
+      ],
+      "extractable_facts": [
+        "Sungmin's last 4 digits are 6755"
+      ]
+    },
+    {
+      "id": "F155",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "We meet every year-end",
+      "entities": [
+        "meet every year-end"
+      ],
+      "extractable_facts": [
+        "Meet every year-end"
+      ]
+    },
+    {
+      "id": "F156",
+      "domain": "social",
+      "fact_type": "unique_id",
+      "statement": "I have 3 group chats",
+      "entities": [
+        "have 3 group chats"
+      ],
+      "extractable_facts": [
+        "Have 3 group chats"
+      ]
+    },
+    {
+      "id": "F157",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I often go to restaurants with Siu",
+      "entities": [
+        "go to good restaurants with Siu often"
+      ],
+      "extractable_facts": [
+        "Go to good restaurants with Siu often"
+      ]
+    },
+    {
+      "id": "F158",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I travel with friends",
+      "entities": [
+        "travel with friends"
+      ],
+      "extractable_facts": [
+        "Travel: travel with friends"
+      ],
+      "distractor": {
+        "id": "F158d",
+        "type": "hierarchical",
+        "statement": "Travel to Jungang-gu",
+        "shared_concept": "Travel"
+      }
+    },
+    {
+      "id": "F159",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "Yuna's birthday is April 17th",
+      "entities": [
+        "April 17th"
+      ],
+      "extractable_facts": [
+        "Yuna's birthday: April 17th"
+      ]
+    },
+    {
+      "id": "F160",
+      "domain": "social",
+      "fact_type": "natural_language",
+      "statement": "I have a mentor Geon",
+      "entities": [
+        "have a mentor Geon"
+      ],
+      "extractable_facts": [
+        "Have a mentor Geon"
+      ]
+    },
+    {
+      "id": "F161",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "The monthly rent is 2,030,000 won.",
+      "entities": [
+        "2030000 won"
+      ],
+      "extractable_facts": [
+        "Monthly rent: 2030000 won"
+      ],
+      "distractor": {
+        "id": "F161d",
+        "type": "exact_substitute",
+        "statement": "The monthly rent is 3,710,000 won.",
+        "shared_concept": "Monthly rent"
+      }
+    },
+    {
+      "id": "F162",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "I deposit 4,900,000 won into savings each month.",
+      "entities": [
+        "4900000 won"
+      ],
+      "extractable_facts": [
+        "Savings: 4900000 won/month"
+      ]
+    },
+    {
+      "id": "F163",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I don't invest.",
+      "entities": [
+        "don't do"
+      ],
+      "extractable_facts": [
+        "Investment: doesn't"
+      ],
+      "distractor": {
+        "id": "F163d",
+        "type": "negative",
+        "statement": "I invest in stocks.",
+        "shared_concept": "Investment status"
+      }
+    },
+    {
+      "id": "F164",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I use Samsung Card",
+      "entities": [
+        "use Samsung Card"
+      ],
+      "extractable_facts": [
+        "Card: use Samsung Card"
+      ]
+    },
+    {
+      "id": "F165",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "My bank is K Bank",
+      "entities": [
+        "K Bank"
+      ],
+      "extractable_facts": [
+        "Bank account: K Bank"
+      ],
+      "distractor": {
+        "id": "F165d",
+        "type": "exact_substitute",
+        "statement": "My bank is Kakao Bank",
+        "shared_concept": "Bank account"
+      }
+    },
+    {
+      "id": "F166",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "The last four digits of my account are 6009.",
+      "entities": [
+        "last four digits of account are 6009"
+      ],
+      "extractable_facts": [
+        "Last four digits of account: last four digits of account are 6009"
+      ]
+    },
+    {
+      "id": "F167",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "My monthly salary is 5,290,000 won.",
+      "entities": [
+        "5290000 won"
+      ],
+      "extractable_facts": [
+        "Monthly salary: 5290000 won"
+      ]
+    },
+    {
+      "id": "F168",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "My food expenses are 460,000 won per month.",
+      "entities": [
+        "460000 won per month"
+      ],
+      "extractable_facts": [
+        "Food expenses: 460000 won/month"
+      ],
+      "distractor": {
+        "id": "F168d",
+        "type": "exact_substitute",
+        "statement": "My food expenses are 460,000 won per month (not).",
+        "shared_concept": "Food expenses"
+      }
+    },
+    {
+      "id": "F169",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "My transportation expenses are 110,000 won.",
+      "entities": [
+        "110000 won"
+      ],
+      "extractable_facts": [
+        "Transportation expenses: 110000 won"
+      ]
+    },
+    {
+      "id": "F170",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I use 3 subscription services.",
+      "entities": [
+        "use 3 subscription services"
+      ],
+      "extractable_facts": [
+        "Subscription services: use 3 subscription services"
+      ]
+    },
+    {
+      "id": "F171",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I often use Naver Pay.",
+      "entities": [
+        "often use Naver Pay"
+      ],
+      "extractable_facts": [
+        "Payment method: often use Naver Pay"
+      ]
+    },
+    {
+      "id": "F172",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I rarely use cash.",
+      "entities": [
+        "rarely use"
+      ],
+      "extractable_facts": [
+        "Cash: doesn't use"
+      ],
+      "distractor": {
+        "id": "F172d",
+        "type": "negative",
+        "statement": "I often use cash.",
+        "shared_concept": "Cash usage"
+      }
+    },
+    {
+      "id": "F173",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I keep a household ledger.",
+      "entities": [
+        "keep"
+      ],
+      "extractable_facts": [
+        "Household ledger: keeps"
+      ]
+    },
+    {
+      "id": "F174",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "I have 6,940,000 won in emergency funds.",
+      "entities": [
+        "have 6940000 won in emergency funds"
+      ],
+      "extractable_facts": [
+        "Emergency funds: have 6940000 won in emergency funds"
+      ]
+    },
+    {
+      "id": "F175",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I have no loans.",
+      "entities": [
+        "none"
+      ],
+      "extractable_facts": [
+        "Loans: none"
+      ],
+      "distractor": {
+        "id": "F175d",
+        "type": "negative",
+        "statement": "I have 27,480,000 won in loans.",
+        "shared_concept": "Loan status"
+      }
+    },
+    {
+      "id": "F176",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "My insurance is health insurance only",
+      "entities": [
+        "health insurance only"
+      ],
+      "extractable_facts": [
+        "Insurance: health insurance only"
+      ],
+      "distractor": {
+        "id": "F176d",
+        "type": "exact_substitute",
+        "statement": "My insurance is health insurance only(not)",
+        "shared_concept": "Insurance"
+      }
+    },
+    {
+      "id": "F177",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "My savings rate is 21%.",
+      "entities": [
+        "21%"
+      ],
+      "extractable_facts": [
+        "Savings rate: 21%"
+      ],
+      "distractor": {
+        "id": "F177d",
+        "type": "negative",
+        "statement": "My savings rate is 21% (not).",
+        "shared_concept": "Savings rate"
+      }
+    },
+    {
+      "id": "F178",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "For premium services, I use one",
+      "entities": [
+        "use one"
+      ],
+      "extractable_facts": [
+        "Premium services: use one"
+      ]
+    },
+    {
+      "id": "F179",
+      "domain": "finance",
+      "fact_type": "unique_id",
+      "statement": "I spend about 1,430,000 won per year on congratulatory and condolence money.",
+      "entities": [
+        "spend about 1430000 won per year"
+      ],
+      "extractable_facts": [
+        "Congratulatory and condolence money: spend about 1430000 won per year"
+      ]
+    },
+    {
+      "id": "F180",
+      "domain": "finance",
+      "fact_type": "natural_language",
+      "statement": "I have no side income.",
+      "entities": [
+        "none"
+      ],
+      "extractable_facts": [
+        "Side income: none"
+      ]
+    },
+    {
+      "id": "F181",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "My hobby is Kirami",
+      "entities": [
+        "Kirami"
+      ],
+      "extractable_facts": [
+        "Hobby: Kirami"
+      ],
+      "distractor": {
+        "id": "F181d",
+        "type": "exact_substitute",
+        "statement": "My hobby is Indoor Climbing",
+        "shared_concept": "Hobby"
+      }
+    },
+    {
+      "id": "F182",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I do my hobby at Iron Square",
+      "entities": [
+        "Iron Square"
+      ],
+      "extractable_facts": [
+        "Location: Iron Square"
+      ],
+      "distractor": {
+        "id": "F182d",
+        "type": "partial_match",
+        "statement": "I do my hobby at Blue Creek Center",
+        "shared_concept": "Same hobby different location"
+      }
+    },
+    {
+      "id": "F183",
+      "domain": "hobby",
+      "fact_type": "unique_id",
+      "statement": "Board Games ranking is 3.81",
+      "entities": [
+        "3.81"
+      ],
+      "extractable_facts": [
+        "Ranking: 3.81"
+      ],
+      "distractor": {
+        "id": "F183d",
+        "type": "conditional",
+        "statement": "Board Games ranking is not 3.81",
+        "shared_concept": "Ranking"
+      }
+    },
+    {
+      "id": "F184",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "On weekends I usually cooking",
+      "entities": [
+        "usually cooking"
+      ],
+      "extractable_facts": [
+        "Usually cooking"
+      ]
+    },
+    {
+      "id": "F185",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I like Jazz music",
+      "entities": [
+        "like Jazz"
+      ],
+      "extractable_facts": [
+        "Music: like Jazz"
+      ]
+    },
+    {
+      "id": "F186",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I also like taking pictures",
+      "entities": [
+        "also like"
+      ],
+      "extractable_facts": [
+        "Taking pictures: also like"
+      ],
+      "distractor": {
+        "id": "F186d",
+        "type": "exact_substitute",
+        "statement": "I don't like taking pictures",
+        "shared_concept": "Taking pictures"
+      }
+    },
+    {
+      "id": "F187",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "My camera is Sony A7C",
+      "entities": [
+        "Sony A7C"
+      ],
+      "extractable_facts": [
+        "Camera: Sony A7C"
+      ],
+      "distractor": {
+        "id": "F187d",
+        "type": "partial_match",
+        "statement": "My camera is not Sony A7C",
+        "shared_concept": "Camera"
+      }
+    },
+    {
+      "id": "F188",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "The lens is 24-70mm",
+      "entities": [
+        "24-70mm"
+      ],
+      "extractable_facts": [
+        "Lens: 24-70mm"
+      ]
+    },
+    {
+      "id": "F189",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "For reading, I like SF",
+      "entities": [
+        "like SF"
+      ],
+      "extractable_facts": [
+        "Reading: like SF"
+      ],
+      "distractor": {
+        "id": "F189d",
+        "type": "hierarchical",
+        "statement": "For reading, I don't like SF",
+        "shared_concept": "Reading"
+      }
+    },
+    {
+      "id": "F190",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I read 2 books a month",
+      "entities": [
+        "read 2 books a month"
+      ],
+      "extractable_facts": [
+        "Read 2 books a month"
+      ]
+    },
+    {
+      "id": "F191",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I don't do Crabim",
+      "entities": [
+        "don't do"
+      ],
+      "extractable_facts": [
+        "Crabim: doesn't do"
+      ],
+      "distractor": {
+        "id": "F191d",
+        "type": "negative",
+        "statement": "I like Crabim",
+        "shared_concept": "Crabim status"
+      }
+    },
+    {
+      "id": "F192",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "cooking is my hobby",
+      "entities": [
+        "cooking is my hobby"
+      ],
+      "extractable_facts": [
+        "cooking is my hobby"
+      ]
+    },
+    {
+      "id": "F193",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "The cooking I'm good at is Pasta",
+      "entities": [
+        "cooking is Pasta"
+      ],
+      "extractable_facts": [
+        "Good at cooking: cooking is Pasta"
+      ]
+    },
+    {
+      "id": "F194",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I fly drones",
+      "entities": [
+        "fly drones"
+      ],
+      "extractable_facts": [
+        "Fly drones"
+      ]
+    },
+    {
+      "id": "F195",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I like Astronomy",
+      "entities": [
+        "like Astronomy"
+      ],
+      "extractable_facts": [
+        "Like Astronomy"
+      ]
+    },
+    {
+      "id": "F196",
+      "domain": "hobby",
+      "fact_type": "unique_id",
+      "statement": "The telescope is a 99mm reflector",
+      "entities": [
+        "99mm reflector"
+      ],
+      "extractable_facts": [
+        "Telescope: 99mm reflector"
+      ],
+      "distractor": {
+        "id": "F196d",
+        "type": "hierarchical",
+        "statement": "The telescope is not a 99mm reflector",
+        "shared_concept": "Telescope"
+      }
+    },
+    {
+      "id": "F197",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I go Hiking sometimes",
+      "entities": [
+        "sometimes go"
+      ],
+      "extractable_facts": [
+        "Hiking: sometimes go"
+      ],
+      "distractor": {
+        "id": "F197d",
+        "type": "negative",
+        "statement": "I don't go Hiking sometimes",
+        "shared_concept": "Hiking"
+      }
+    },
+    {
+      "id": "F198",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "The mountain I recently climbed is Geon Silver Ridge",
+      "entities": [
+        "recently climbed Geon Silver Ridge"
+      ],
+      "extractable_facts": [
+        "Recently climbed Geon Silver Ridge"
+      ]
+    },
+    {
+      "id": "F199",
+      "domain": "hobby",
+      "fact_type": "unique_id",
+      "statement": "Indoor Climbing is V5 level",
+      "entities": [
+        ""
+      ],
+      "extractable_facts": [
+        "Indoor Climbing level: V5"
+      ]
+    },
+    {
+      "id": "F200",
+      "domain": "hobby",
+      "fact_type": "natural_language",
+      "statement": "I make Terrariums",
+      "entities": [
+        "make Terrariums"
+      ],
+      "extractable_facts": [
+        "Make Terrariums"
+      ]
+    }
+  ]
 }
