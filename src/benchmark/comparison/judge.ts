@@ -17,6 +17,7 @@
 
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { convertV2ToV1 } from "./convert-v2-to-v1.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ interface SavedResult {
 	judge: string;
 	llm: string;
 	runs: number;
+	judge_results?: Record<string, Record<string, JudgeResult>>;
 	results: Array<{
 		adapter: string;
 		description: string;
@@ -91,10 +93,18 @@ function buildJudgePrompt(
 		expected_not_contains?: string[];
 		fail_signal?: string[];
 		min_expected?: number;
+		scoring?: { score_3?: string[]; score_2?: string[]; score_1?: string[]; score_0?: string[] };
 	},
 	capName: string,
 	response: string,
 ): string {
+	const partialHint = q.scoring?.score_2?.length
+		? `\n부분 점수 키워드 (대부분 맞음): [${q.scoring.score_2.join(", ")}]`
+		: "";
+	const relatedHint = q.scoring?.score_1?.length
+		? `\n관련은 하지만 틀린 키워드: [${q.scoring.score_1.join(", ")}]`
+		: "";
+
 	if (capName === "abstention") {
 		return `[채점] abstention (환각 방지)
 질문: "${q.query || q.verify}"
@@ -120,7 +130,7 @@ AI 응답: "${response}"
 		return `[채점] ${capName}
 질문: "${q.query || q.verify}"
 AI 응답: "${response}"
-기대 키워드 중 ${min}개 이상: [${q.expected_any.join(", ")}]
+기대 키워드 중 ${min}개 이상: [${q.expected_any.join(", ")}]${partialHint}${relatedHint}
 AI 응답이 위 키워드 중 ${min}개 이상을 의미적으로 포함하면 PASS.
 첫 줄에 PASS 또는 FAIL, 둘째 줄에 이유 한 줄.`;
 	}
@@ -131,7 +141,7 @@ AI 응답이 위 키워드 중 ${min}개 이상을 의미적으로 포함하면 
 AI 응답: "${response}"
 기대 키워드: [${q.expected_contains.join(", ")}]
 ${q.expected_not_contains?.length ? `금지 키워드: [${q.expected_not_contains.join(", ")}]` : ""}
-${q.fail_signal?.length ? `FAIL 신호: [${q.fail_signal.join(", ")}]` : ""}
+${q.fail_signal?.length ? `FAIL 신호: [${q.fail_signal.join(", ")}]` : ""}${partialHint}${relatedHint}
 기대 키워드 중 하나라도 의미적으로 포함하면 PASS.
 첫 줄에 PASS 또는 FAIL, 둘째 줄에 이유 한 줄.`;
 	}
@@ -500,6 +510,7 @@ async function main() {
 	let batchSize = 10;
 	let categories: string[] | null = null;
 	let dryRun = false;
+	let forceRejudge = false;
 
 	for (const arg of args) {
 		if (arg.startsWith("--input=")) inputPath = arg.split("=")[1];
@@ -509,11 +520,12 @@ async function main() {
 		if (arg.startsWith("--categories="))
 			categories = arg.split("=")[1].split(",");
 		if (arg === "--dry-run") dryRun = true;
+		if (arg === "--force") forceRejudge = true;
 	}
 
 	if (!inputPath) {
 		console.error(
-			"Usage: judge.ts --input=<path> [--judge=gemini-pro-cli|glm-api|claude-cli|keyword] [--batch-size=10] [--categories=a,b] [--dry-run]",
+			"Usage: judge.ts --input=<path> [--judge=gemini-pro-cli|glm-api|claude-cli|keyword] [--batch-size=10] [--categories=a,b] [--dry-run] [--force]",
 		);
 		process.exit(1);
 	}
@@ -531,13 +543,27 @@ async function main() {
 	// Load query templates to get expected_contains etc.
 	const langSuffix =
 		inputPath.includes("-en-") || inputPath.includes(".en.") ? ".en" : "";
-	const templatesPath = langSuffix
-		? new URL("../query-templates.en.json", import.meta.url).pathname
-		: new URL("../query-templates.json", import.meta.url).pathname;
+	const isV2 =
+		inputPath.includes("v2") ||
+		args.includes("--v2") ||
+		saved.version?.includes("v2") ||
+		saved.results?.[0]?.details?.[0]?.scoringV2;
+	const v2Suffix = isV2 ? "-v2" : "";
+	const templatesPath = new URL(
+		`../query-templates${v2Suffix}${langSuffix}.json`,
+		import.meta.url,
+	).pathname;
 
 	let templates: any = null;
 	try {
-		templates = JSON.parse(readFileSync(templatesPath, "utf-8"));
+		const templatesRaw = JSON.parse(readFileSync(templatesPath, "utf-8"));
+		templates =
+			templatesRaw.version === 2 && templatesRaw.queries
+				? convertV2ToV1(templatesRaw)
+				: templatesRaw;
+		console.log(
+			`  Templates: ${templatesPath.split("/").pop()} (${isV2 ? "v2 converted" : "v1 native"})`,
+		);
 	} catch {
 		console.warn(
 			"  ⚠ Could not load query templates — will judge from response only",
@@ -554,6 +580,10 @@ async function main() {
 
 	startTime = Date.now();
 
+	// Ensure judge_results structure exists
+	if (!saved.judge_results) saved.judge_results = {};
+	if (!saved.judge_results[judgeMode]) saved.judge_results[judgeMode] = {};
+
 	for (const result of saved.results) {
 		console.log(`\n${"═".repeat(60)}`);
 		console.log(
@@ -561,7 +591,7 @@ async function main() {
 		);
 		console.log(`${"═".repeat(60)}\n`);
 
-		// Collect items to judge
+		// Collect items to judge (skip already judged unless --force)
 		const items: Array<{
 			detailIdx: number;
 			q: any;
@@ -573,6 +603,14 @@ async function main() {
 			const d = result.details[i];
 			if (categories && !categories.includes(d.capability)) continue;
 			if (!d.response?.trim()) continue;
+
+			// Checkpoint resume: skip if already judged by this mode
+			if (!forceRejudge && saved.judge_results[judgeMode][d.id]) {
+				const cached = saved.judge_results[judgeMode][d.id];
+				d.pass = cached.pass;
+				d.reason = cached.reason;
+				continue;
+			}
 
 			// Find matching query template for expected_contains etc.
 			const capQueries = queryLookup.get(d.capability) ?? [];
@@ -588,26 +626,48 @@ async function main() {
 			});
 		}
 
+		const skippedCount = result.details.length - items.length - result.details.filter(d => !d.response?.trim() || (categories && !categories.includes(d.capability))).length;
+
 		if (dryRun) {
-			console.log(`  Would judge ${items.length} items with ${judgeMode}`);
+			console.log(`  Would judge ${items.length} items with ${judgeMode} (${skippedCount} cached)`);
 			continue;
 		}
 
-		console.log(`  Judging ${items.length} items...\n`);
+		if (items.length === 0) {
+			console.log(`  All items already judged by ${judgeMode} — nothing to do.`);
+			const scored = rescore(result.details);
+			result.core = scored.core; result.bonus = scored.bonus; result.grade = scored.grade; result.byCapability = scored.byCapability;
+			continue;
+		}
+
+		console.log(`  Judging ${items.length} items (${skippedCount} cached from previous run)...\n`);
 
 		if (judgeMode === "keyword") {
 			for (const item of items) {
 				const v = keywordJudge(item.response, item.q, item.capName);
 				const d = result.details[item.detailIdx];
-				if (d) { d.pass = v.pass; d.reason = v.reason; }
+				if (d) {
+					d.pass = v.pass;
+					d.reason = v.reason;
+					saved.judge_results[judgeMode][d.id] = v;
+				}
 			}
+			saved.judge = judgeMode;
+			saved.timestamp = new Date().toISOString();
+			const scored = rescore(result.details);
+			result.core = scored.core; result.bonus = scored.bonus; result.grade = scored.grade; result.byCapability = scored.byCapability;
+			writeFileSync(inputPath, JSON.stringify(saved, null, 2));
 		} else if (judgeMode === "claude-cli") {
 			for (const item of items) {
 				const singlePrompt = buildJudgePrompt(item.q, item.capName, item.response);
 				const singleRaw = callClaudeCli(singlePrompt);
 				const v = singleRaw ? parseVerdict(singleRaw) : keywordJudge(item.response, item.q, item.capName);
 				const d = result.details[item.detailIdx];
-				if (d) { d.pass = v.pass; d.reason = v.reason; }
+				if (d) {
+					d.pass = v.pass;
+					d.reason = v.reason;
+					saved.judge_results[judgeMode][d.id] = v;
+				}
 				totalPromptChars += singlePrompt.length;
 				totalCompletionChars += singleRaw.length;
 				judgeCallCount++;
@@ -639,14 +699,22 @@ async function main() {
 					for (const item of batch) {
 						const v = keywordJudge(item.response, item.q, item.capName);
 						const d = result.details[item.detailIdx];
-						if (d) { d.pass = v.pass; d.reason = v.reason; }
+						if (d) {
+							d.pass = v.pass;
+							d.reason = v.reason;
+							saved.judge_results[judgeMode][d.id] = v;
+						}
 					}
 				} else {
 					const batchResults = parseBatchVerdict(raw, batch.length);
 					for (let j = 0; j < batch.length; j++) {
 						const v = batchResults[j];
 						const d = result.details[batch[j].detailIdx];
-						if (d && v) { d.pass = v.pass; d.reason = v.reason; }
+						if (d && v) {
+							d.pass = v.pass;
+							d.reason = v.reason;
+							saved.judge_results[judgeMode][d.id] = v;
+						}
 					}
 					totalPromptChars += prompt.length;
 					totalCompletionChars += raw.length;
