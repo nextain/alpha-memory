@@ -86,7 +86,7 @@ async function extractBatch(
 Rules:
 - Each fact = ONE self-contained statement
 - Each fact MUST match the language of its specific episode, not the batch as a whole
-- Be specific: "사용자 직업: 소프트웨어 엔지니어" not "사용자가 직업에 대해 말했다"
+- Be specific: "User occupation: software engineer" not "User mentioned their occupation"
 - 1-5 facts per episode. If no extractable facts exist, return []
 - Skip greetings, meta-commentary, questions without answers
 - Do NOT invent facts not present in the input

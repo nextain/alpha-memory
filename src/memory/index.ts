@@ -542,8 +542,17 @@ export class MemorySystem {
 
 		const parts: string[] = [];
 
+		const hasKorean = (s: string) => /[가-힣]/.test(s);
+		const detectLang = (): "ko" | "en" => {
+			if (hasKorean(firstMessage)) return "ko";
+			if (facts.some((f) => hasKorean(f.content))) return "ko";
+			if (episodes.some((e) => hasKorean(e.content))) return "ko";
+			return "en";
+		};
+		const lang = detectLang();
+
 		if (facts.length > 0) {
-			parts.push("## 관련 기억");
+			parts.push(lang === "ko" ? "## 관련 기억" : "## Related Memories");
 			for (const fact of facts) {
 				parts.push(`- ${fact.content}`);
 			}
@@ -553,32 +562,30 @@ export class MemorySystem {
 		// Episodes capture conversations not yet consolidated into facts (consolidation runs
 		// on a background timer — episodes may be more up-to-date than the fact store).
 		if (episodes.length > 0) {
-			parts.push("## 이전 대화에서");
+			parts.push(lang === "ko" ? "## 이전 대화에서" : "## From Previous Conversation");
 			for (const ep of episodes) {
-				// ep.role can be any string at runtime (JSON deserialization from older stores)
 				const roleStr: string | undefined = ep.role;
 				let prefix: string;
 				if (roleStr === "user") {
-					prefix = "사용자";
+					prefix = lang === "ko" ? "사용자" : "User";
 				} else if (roleStr === "assistant") {
 					prefix = "Naia";
 				} else if (roleStr === "tool") {
-					prefix = "도구";
+					prefix = lang === "ko" ? "도구" : "Tool";
 				} else if (roleStr === undefined) {
-					prefix = "기록";
+					prefix = lang === "ko" ? "기록" : "Record";
 				} else {
-					// Unexpected role value (e.g., corrupted stored data) — log for observability
 					console.warn(
 						`[MemorySystem] sessionRecall: unexpected episode role: ${roleStr}`,
 					);
-					prefix = "기록";
+					prefix = lang === "ko" ? "기록" : "Record";
 				}
 				parts.push(`- ${prefix}: ${ep.content}`);
 			}
 		}
 
 		if (reflections.length > 0) {
-			parts.push("## 과거 경험에서 배운 것");
+			parts.push(lang === "ko" ? "## 과거 경험에서 배운 것" : "## Lessons from Past Experience");
 			for (const ref of reflections) {
 				parts.push(`- ${ref.task}: ${ref.correction}`);
 			}
