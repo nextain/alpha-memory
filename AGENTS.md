@@ -308,43 +308,83 @@ reports/
 - `index.ts:546-581` sessionRecall() 한국어 헤더 → LLM이 EN 쿼리에 한국어 응답
 - 수정 후 naia-local EN: 16% → 21% (keyword), 22% → 27% (GLM)
 
+## Architecture Review (2026-04-24, 4-AI Cross-Review)
+
+**참여 AI**: Claude Sonnet 4, GLM-4-Plus, Gemini 2.5 Pro (3-AI × 2라운드)
+
+### R10 soft re-ranking 실패 분석
+
+importance를 multiply에서 additive로 전환 → net zero (recall up, precision down more).
+4-AI 만장일치: 가중치 조정이 아닌 **구조적 변경** 필요.
+
+### 아키텍처 컨셉 검증 (2라운드)
+
+**최초 결론 (1라운드)**: Importance gating을 검색에서 제거, 순수 vector search로 전환
+**아키텍트 반박**: "망각은 버그"는 저장 삭제에만 해당. 컨텍스트 주입 필터링으로서의 망각은 필수
+**2라운드 합의**: 아키텍트의 반박이 맞음. **Semantic forgetting(저장 삭제)은 버그, Pragmatic forgetting(컨텍스트 필터링)은 필수 기능**
+
+### Three-Layer Architecture (만장일치 채택)
+
+```
+Storage Layer:      모든 episode 무조건 저장 (gate 없음, 삭제 없음)
+                     Ebbinghaus decay는 archival priority에만 사용
+    ↓
+Retrieval Layer:    Broad vector + keyword recall (top 100-500)
+                     importance无关, 순수 관련성 signal
+    ↓
+Context Injection:   Multi-signal ranking → context budget allocation
+                     (vector × recency × frequency × importance/emotion)
+                     제한된 context window에 최적의 subset 주입
+```
+
+### 3-axis scoring 재포지셔닝
+
+- **기존**: Encoding gate (무엇을 저장할지) → **실패**
+- **수정**: Context budget allocator (무엇을 보여줄지) → **타당**
+
+### 스케일별 crossover point
+
+| 메모리 수 | Vector만 | 추가 signal |
+|-----------|:--------:|:-----------:|
+| < 1,000 | 충분 | No |
+| 1,000-10,000 | crossover | Recency |
+| 10,000+ | 노이즈 | Importance/Emotion 필수 |
+
 ## Implementation Roadmap
 
-### P0: Importance Gating → Soft Re-ranking (1-2 스프린트)
+### P0: Two-Stage Retrieval (현재 진행)
 
-- [ ] Hard filter → weighted re-ranking 전환: `score = 0.6*vector + 0.4*importance`
-- [ ] 동적 threshold: 쿼리 intent 분류 → threshold 조정 (탐색적 0.5, 사실적 0.85)
-- [ ] semantic_search 2/18 → 10/18+ 목표, 전체 recall -13.5pp 회복
+- [x] Stage 1: Broad vector + keyword recall (importance无关)
+- [x] Stage 2: Re-rank with importance/strength among candidates only
+- [ ] R10 KO+EN 벤치마크 검증 (R9 대비 개선 확인)
+- [ ] Context budget allocator 설계 (3-axis → context-worthiness score)
 
-### P0 (병렬): unchanged_persistence 수정 (1-2 스프린트)
+### P0 (병렬): unchanged_persistence 수정
 
 - [ ] 메모리 스키마에 `status` 필드 추가 (active/contradicted/archived)
 - [ ] Contradiction update 시 물리적 삭제 → 상태 변경만
 - [ ] Cascade delete 로직 제거, 대상 메모리 ID 1개만 업데이트
-- [ ] 0/11 → 8/11+ 목표
 
-### P1: multi_fact_synthesis 구현 (1-2 스프린트)
+### P1: Context Budget Allocator
+
+- [ ] 3-axis scoring을 encoding gate → context injection ranking으로 전환
+- [ ] Token budget 기반 메모리 선택 (context-worthiness score)
+- [ ] Query-type별 가중치 동적 조정 (사실적 vs 탐색적 vs 감정적)
+
+### P2: Dual-Path Retrieval
+
+- [ ] Raw episode 보존 + fact extraction 병렬 운영
+- [ ] Episode path + Graph path 동시 검색 → Contextual fusion
+- [ ] Consolidation을 source of truth가 아닌 index/cache로 격하
+
+### P3: multi_fact_synthesis
 
 - [ ] Query Decomposition: LLM이 복합 쿼리를 서브쿼리로 분해
 - [ ] Multi-hop 검색: 1차 결과에서 엔티티 추출 → 2차 검색
-- [ ] LLM 합성: 수집 팩트 컨텍스트로 종합 답변 생성
-- [ ] 0/15 → 5/15+ 목표
-
-### P2: Consolidation + Temporal 고도화 (1 분기)
-
-- [ ] 통합 시 뉘앙스 손실 최소화
-- [ ] Temporal 버전 관리: 과거 상태 보존 (temporal 3/20 → 10/20+)
-- [ ] Bi-temporal 모델 검토
-
-### P3: LocalAdapter 벡터 검색 (#5, #12)
-
-- [ ] Wire offline embedding (all-MiniLM-L6-v2) into LocalAdapter
-- [ ] Switch benchmark + production to LocalAdapter — mem0 LLM dedup kills Korean
 
 ### P4: Judge 시스템 2.0
 
 - [ ] Binary PASS/FAIL → 다차원 평가 (Accuracy, Completeness, Relevance)
-- [ ] F1-Score 최적화 기준 확립
 - [ ] HITL 캘리브레이션 세트 (50-100개 인간 평가 항목)
 
 ### Token Embedding Gating (Experimental — Post-Patent)
