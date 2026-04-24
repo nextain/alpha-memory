@@ -386,13 +386,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			deepRecall = false,
 		): Promise<Fact[]> => {
 			const now = Date.now();
-			// Lowered baseline threshold to reduce "stifling" (Gemini critique)
-			const BASE_THRESHOLD = 0.65;
+			const BROAD_FACTOR = 3;
 
-			// Vector search path
 			const queryVec = await this.embedWithCache(query);
 
-			// Prepare keyword scoring
 			const queryTokens = tokenize(query);
 			const activatedEntities = this.kg.spreadingActivation(
 				queryTokens,
@@ -404,16 +401,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				activationMap.set(entity, activation);
 			}
 
-			const scored = this.store.facts
+			// Stage 1: Broad recall — pure relevance signals, no importance/strength
+			const broadK = topK * BROAD_FACTOR;
+			const candidates = this.store.facts
 				.map((fact) => {
-					const strength = calculateStrength(
-						fact.importance,
-						fact.createdAt,
-						fact.recallCount,
-						fact.lastAccessed,
-						now,
-					);
-
 					const factVec = this.store.factEmbeddings?.[fact.id];
 					const vectorScore =
 						factVec && queryVec ? cosineSimilarity(queryVec, factVec) : 0;
@@ -428,21 +419,39 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					let entityBonus = 0;
 					for (const qt of queryTokens) {
 						if (fact.entities.some((e) => e.toLowerCase().includes(qt))) {
-							entityBonus += 0.3; // Increased from 0.2 (GLM critique)
+							entityBonus += 0.3;
 						}
 					}
 
-					// 4. Relevance Filter
 					const isRelevant =
-						vectorScore >= 0.15 || kScore >= 0.2 || entityBonus >= 0.3;
+						vectorScore >= 0.12 || kScore >= 0.15 || entityBonus >= 0.2;
 
 					if (!isRelevant && !deepRecall)
-						return { fact, score: 0, strength, vectorScore: 0 };
+						return null;
 
-					// 5. Revised Hybrid Weights
-					const hybridScore =
-						vectorScore * 0.5 + kScore * 0.2 + entityBonus * 0.3;
-					const finalScore = deepRecall ? hybridScore : hybridScore * strength;
+					const relevanceScore =
+						vectorScore * 0.6 + kScore * 0.15 + entityBonus * 0.25;
+
+					return { fact, relevanceScore, vectorScore };
+				})
+				.filter((x): x is NonNullable<typeof x> => x !== null)
+				.sort((a, b) => b.relevanceScore - a.relevanceScore)
+				.slice(0, broadK);
+
+			// Stage 2: Re-rank with importance/strength only among candidates
+			const scored = candidates
+				.map(({ fact, relevanceScore, vectorScore }) => {
+					const strength = calculateStrength(
+						fact.importance,
+						fact.createdAt,
+						fact.recallCount,
+						fact.lastAccessed,
+						now,
+					);
+
+					const finalScore = deepRecall
+						? relevanceScore
+						: relevanceScore * 0.7 + strength * 0.3;
 
 					return { fact, score: finalScore, strength, vectorScore };
 				})
