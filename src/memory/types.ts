@@ -113,6 +113,8 @@ export interface Fact extends Record<string, unknown> {
 	lastAccessed: number;
 	/** Current strength (Ebbinghaus decay) */
 	strength: number;
+	/** Lifecycle status — superseded facts are hidden from default search */
+	status: "active" | "superseded" | "archived";
 	/** Source episode IDs that contributed to this fact */
 	sourceEpisodes: string[];
 	/** Cosine similarity score from vector search (0.0–1.0, optional) */

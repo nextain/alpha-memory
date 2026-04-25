@@ -60,7 +60,7 @@ function parseArgs() {
 	let skipEncode = false;
 	let lang = "ko";
 	let embedder = "gemini";
-	let topK = 10;
+	let topK = 50;
 	let v2 = false;
 
 	for (const arg of args) {

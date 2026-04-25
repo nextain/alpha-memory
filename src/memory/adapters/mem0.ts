@@ -382,6 +382,7 @@ export class Mem0Adapter implements MemoryAdapter {
 				recallCount: 0,
 				lastAccessed: Date.now(),
 				strength: 0.5,
+				status: "active" as const,
 				sourceEpisodes: [],
 			}));
 		},

@@ -17,7 +17,8 @@ import crypto, { randomUUID } from "node:crypto";
 import { LocalAdapter } from "./adapters/local.js";
 import { QdrantAdapter } from "./adapters/qdrant.js";
 import type { EmbeddingProvider } from "./embeddings.js";
-import { scoreImportance, shouldStore } from "./importance.js";
+import { scoreImportance } from "./importance.js";
+import { allocateBudget } from "./context-budget.js";
 import { findContradictions } from "./reconsolidation.js";
 import type {
 	BackupCapable,
@@ -392,12 +393,8 @@ export class MemorySystem {
 	async encode(
 		input: MemoryInput,
 		context: EncodingContext,
-	): Promise<Episode | null> {
+	): Promise<Episode> {
 		const score = scoreImportance(input);
-
-		if (!shouldStore(score)) {
-			return null; // Gated out — not worth storing
-		}
 
 		const now = input.timestamp ?? Date.now();
 		const episode: Episode = {
@@ -464,9 +461,17 @@ export class MemorySystem {
 				const newImportance = Math.max(fact.importance, importance, 0.7);
 				await this.adapter.semantic.upsert({
 					...fact,
-					content: result.updatedContent,
+					status: "superseded",
 					updatedAt: now,
-					lastAccessed: now, // Strengthening on reactivation
+				});
+				await this.adapter.semantic.upsert({
+					...fact,
+					id: `${fact.id}-v${Date.now()}`,
+					content: result.updatedContent,
+					status: "active",
+					createdAt: now,
+					updatedAt: now,
+					lastAccessed: now,
 					importance: newImportance,
 					strength: newImportance,
 					sourceEpisodes: [...new Set([...fact.sourceEpisodes, episodeId])],
@@ -531,67 +536,28 @@ export class MemorySystem {
 	async sessionRecall(
 		firstMessage: string,
 		context: RecallContext,
+		tokenBudget?: number,
 	): Promise<string> {
 		const { episodes, facts, reflections } = await this.recall(firstMessage, {
 			...context,
-			topK: 10,
+			topK: 20,
 		});
 
 		if (facts.length === 0 && reflections.length === 0 && episodes.length === 0)
 			return "";
 
-		const parts: string[] = [];
-
 		const hasKorean = (s: string) => /[가-힣]/.test(s);
-		const detectLang = (): "ko" | "en" => {
-			if (hasKorean(firstMessage)) return "ko";
-			if (facts.some((f) => hasKorean(f.content))) return "ko";
-			if (episodes.some((e) => hasKorean(e.content))) return "ko";
-			return "en";
-		};
-		const lang = detectLang();
+		const lang: "ko" | "en" =
+			hasKorean(firstMessage) ||
+			facts.some((f) => hasKorean(f.content)) ||
+			episodes.some((e) => hasKorean(e.content))
+				? "ko"
+				: "en";
 
-		if (facts.length > 0) {
-			parts.push(lang === "ko" ? "## 관련 기억" : "## Related Memories");
-			for (const fact of facts) {
-				parts.push(`- ${fact.content}`);
-			}
-		}
-
-		// Surface recent episodes alongside facts, or as sole context when no facts exist yet.
-		// Episodes capture conversations not yet consolidated into facts (consolidation runs
-		// on a background timer — episodes may be more up-to-date than the fact store).
-		if (episodes.length > 0) {
-			parts.push(lang === "ko" ? "## 이전 대화에서" : "## From Previous Conversation");
-			for (const ep of episodes) {
-				const roleStr: string | undefined = ep.role;
-				let prefix: string;
-				if (roleStr === "user") {
-					prefix = lang === "ko" ? "사용자" : "User";
-				} else if (roleStr === "assistant") {
-					prefix = "Naia";
-				} else if (roleStr === "tool") {
-					prefix = lang === "ko" ? "도구" : "Tool";
-				} else if (roleStr === undefined) {
-					prefix = lang === "ko" ? "기록" : "Record";
-				} else {
-					console.warn(
-						`[MemorySystem] sessionRecall: unexpected episode role: ${roleStr}`,
-					);
-					prefix = lang === "ko" ? "기록" : "Record";
-				}
-				parts.push(`- ${prefix}: ${ep.content}`);
-			}
-		}
-
-		if (reflections.length > 0) {
-			parts.push(lang === "ko" ? "## 과거 경험에서 배운 것" : "## Lessons from Past Experience");
-			for (const ref of reflections) {
-				parts.push(`- ${ref.task}: ${ref.correction}`);
-			}
-		}
-
-		return parts.join("\n");
+		return allocateBudget(facts, episodes, reflections, {
+			maxTokens: tokenBudget ?? 2000,
+			lang,
+		});
 	}
 
 	// ─── Procedural Learning ──────────────────────────────────────────────
@@ -740,9 +706,17 @@ export class MemorySystem {
 								);
 								await this.adapter.semantic.upsert({
 									...fact,
-									content: result.updatedContent,
+									status: "superseded",
 									updatedAt: now,
-									lastAccessed: now, // Strengthening on reactivation
+								});
+								await this.adapter.semantic.upsert({
+									...fact,
+									id: `${fact.id}-v${Date.now()}`,
+									content: result.updatedContent,
+									status: "active",
+									createdAt: now,
+									updatedAt: now,
+									lastAccessed: now,
 									importance: newImportance,
 									strength: newImportance,
 									sourceEpisodes: [
@@ -779,6 +753,7 @@ export class MemorySystem {
 							recallCount: 0,
 							lastAccessed: now,
 							strength: newImportance,
+							status: "active",
 							sourceEpisodes: ef.sourceEpisodeIds,
 						};
 						await this.adapter.semantic.upsert(newFact);

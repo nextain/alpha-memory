@@ -150,17 +150,3 @@ export function scoreImportance(input: MemoryInput): ImportanceScore {
 
 	return { importance, surprise, emotion, utility };
 }
-
-/** Minimum utility threshold for storing a memory (gating) */
-export const STORAGE_GATE_THRESHOLD = 0.15;
-
-/**
- * Determine if an input is worth storing as a memory.
- * Below the gate threshold, the input is considered noise.
- *
- * Note: user messages with no keyword hits score utility = 0.3 * 0.5 = 0.15
- * exactly. Using >= ensures plain factual statements from users are stored.
- */
-export function shouldStore(score: ImportanceScore): boolean {
-	return score.utility >= STORAGE_GATE_THRESHOLD;
-}

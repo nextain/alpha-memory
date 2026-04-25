@@ -122,6 +122,66 @@ function tokenize(text: string): string[] {
 		.filter((t) => t.length > 1);
 }
 
+class BM25 {
+	private k1 = 1.2;
+	private b = 0.75;
+	private docTokens: Map<string, string[]> = new Map();
+	private avgDl = 0;
+	private N = 0;
+	private df: Map<string, number> = new Map();
+
+	index(docs: Map<string, string>): void {
+		this.docTokens.clear();
+		this.df.clear();
+		this.N = docs.size;
+		let totalLen = 0;
+
+		for (const [id, text] of docs) {
+			const tokens = tokenize(text);
+			this.docTokens.set(id, tokens);
+			totalLen += tokens.length;
+			const seen = new Set<string>();
+			for (const t of tokens) {
+				if (!seen.has(t)) {
+					seen.add(t);
+					this.df.set(t, (this.df.get(t) ?? 0) + 1);
+				}
+			}
+		}
+		this.avgDl = this.N > 0 ? totalLen / this.N : 1;
+	}
+
+	score(query: string, docId: string): number {
+		const queryTokens = tokenize(query);
+		const docTokens = this.docTokens.get(docId);
+		if (!docTokens || queryTokens.length === 0) return 0;
+
+		const dl = docTokens.length;
+		const tfMap = new Map<string, number>();
+		for (const t of docTokens) {
+			tfMap.set(t, (tfMap.get(t) ?? 0) + 1);
+		}
+
+		let total = 0;
+		const docLower = docTokens.join(" ");
+
+		for (const qt of queryTokens) {
+			let tf = tfMap.get(qt) ?? 0;
+			if (tf === 0) {
+				const idx = docLower.indexOf(qt);
+				if (idx !== -1) tf = 0.8;
+			}
+			if (tf === 0) continue;
+
+			const dfVal = this.df.get(qt) ?? 0;
+			const idf = Math.log(1 + (this.N - dfVal + 0.5) / (dfVal + 0.5));
+			const tfNorm = (tf * (this.k1 + 1)) / (tf + this.k1 * (1 - this.b + this.b * dl / this.avgDl));
+			total += idf * tfNorm;
+		}
+		return total;
+	}
+}
+
 /**
  * Score relevance of a document to a query.
  * Uses substring matching as fallback for Korean particles (e.g., "TypeScript로")
@@ -184,7 +244,12 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			if (existsSync(this.storePath)) {
 				const raw = readFileSync(this.storePath, "utf-8");
 				const parsed = JSON.parse(raw) as MemoryStore;
-				if (parsed.version === 1) return parsed;
+				if (parsed.version === 1) {
+					for (const f of parsed.facts) {
+						if (!f.status) f.status = "active";
+					}
+					return parsed;
+				}
 			}
 		} catch {
 			// Corrupted file — start fresh
@@ -342,7 +407,6 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const existing = this.store.facts.find((f) => f.id === fact.id);
 			const contentChanged = !existing || existing.content !== fact.content;
 			if (existing) {
-				// Reconsolidation: update content, merge entities/topics, refresh timestamp
 				existing.content = fact.content;
 				existing.entities = [
 					...new Set([...existing.entities, ...fact.entities]),
@@ -353,6 +417,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				existing.sourceEpisodes = [
 					...new Set([...existing.sourceEpisodes, ...fact.sourceEpisodes]),
 				];
+				existing.status = fact.status ?? existing.status;
 			} else {
 				this.store.facts.push(fact);
 			}
@@ -401,45 +466,69 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				activationMap.set(entity, activation);
 			}
 
-			// Stage 1: Broad recall — pure relevance signals, no importance/strength
+			// Stage 1: Broad recall — BM25 + vector via RRF
 			const broadK = topK * BROAD_FACTOR;
-			const candidates = this.store.facts
-				.map((fact) => {
-					const factVec = this.store.factEmbeddings?.[fact.id];
-					const vectorScore =
-						factVec && queryVec ? cosineSimilarity(queryVec, factVec) : 0;
+			const RRF_K = 60;
 
-					const searchText = [
-						fact.content,
-						...fact.entities,
-						...fact.topics,
-					].join(" ");
-					const kScore = keywordScore(query, searchText);
+			const bm25 = new BM25();
+			const docMap = new Map<string, string>();
+			for (const f of this.store.facts) {
+				docMap.set(f.id, [f.content, ...f.entities, ...f.topics].join(" "));
+			}
+			bm25.index(docMap);
 
-					let entityBonus = 0;
-					for (const qt of queryTokens) {
-						if (fact.entities.some((e) => e.toLowerCase().includes(qt))) {
-							entityBonus += 0.3;
-						}
+			const allFacts = this.store.facts;
+			const vectorScores: Map<string, number> = new Map();
+			const bm25Scores: Map<string, number> = new Map();
+			const entityBonuses: Map<string, number> = new Map();
+
+			for (const fact of allFacts) {
+				const factVec = this.store.factEmbeddings?.[fact.id];
+				const vs = factVec && queryVec ? cosineSimilarity(queryVec, factVec) : 0;
+				vectorScores.set(fact.id, vs);
+
+				const bs = bm25.score(query, fact.id);
+				bm25Scores.set(fact.id, bs);
+
+				let eb = 0;
+				for (const qt of queryTokens) {
+					if (fact.entities.some((e) => e.toLowerCase().includes(qt))) {
+						eb += 0.3;
 					}
+				}
+				entityBonuses.set(fact.id, eb);
+			}
 
-					const isRelevant =
-						vectorScore >= 0.12 || kScore >= 0.15 || entityBonus >= 0.2;
+			const byVector = [...allFacts].sort((a, b) => (vectorScores.get(b.id) ?? 0) - (vectorScores.get(a.id) ?? 0));
+			const byBM25 = [...allFacts].sort((a, b) => (bm25Scores.get(b.id) ?? 0) - (bm25Scores.get(a.id) ?? 0));
 
-					if (!isRelevant && !deepRecall)
-						return null;
+			const vectorRank = new Map<string, number>();
+			for (let i = 0; i < byVector.length; i++) vectorRank.set(byVector[i].id, i + 1);
 
-					const relevanceScore =
-						vectorScore * 0.6 + kScore * 0.15 + entityBonus * 0.25;
+			const bm25Rank = new Map<string, number>();
+			for (let i = 0; i < byBM25.length; i++) bm25Rank.set(byBM25[i].id, i + 1);
 
-					return { fact, relevanceScore, vectorScore };
+			const candidates = allFacts
+				.map((fact) => {
+					const vs = vectorScores.get(fact.id) ?? 0;
+					const bs = bm25Scores.get(fact.id) ?? 0;
+					const eb = entityBonuses.get(fact.id) ?? 0;
+
+					const isRelevant = vs >= 0.12 || bs > 0 || eb >= 0.2;
+					if (!isRelevant && !deepRecall) return null;
+
+					const rrfScore =
+						1 / (RRF_K + (vectorRank.get(fact.id) ?? allFacts.length)) +
+						1 / (RRF_K + (bm25Rank.get(fact.id) ?? allFacts.length));
+
+					return { fact, relevanceScore: rrfScore, vectorScore: vs };
 				})
 				.filter((x): x is NonNullable<typeof x> => x !== null)
 				.sort((a, b) => b.relevanceScore - a.relevanceScore)
 				.slice(0, broadK);
 
 			// Stage 2: Re-rank with importance/strength only among candidates
-			const scored = candidates
+			let scored = candidates
 				.map(({ fact, relevanceScore, vectorScore }) => {
 					const strength = calculateStrength(
 						fact.importance,
@@ -456,8 +545,13 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					return { fact, score: finalScore, strength, vectorScore };
 				})
 				.filter((x) => x.score > 0)
-				.sort((a, b) => b.score - a.score)
-				.slice(0, topK);
+				.sort((a, b) => b.score - a.score);
+
+			if (!deepRecall) {
+				scored = scored.filter(f => f.fact.status !== "superseded");
+			}
+
+			scored = scored.slice(0, topK);
 
 			// Update recall counts
 			for (const { fact } of scored) {

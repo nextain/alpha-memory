@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
 	scoreImportance,
-	shouldStore,
-	STORAGE_GATE_THRESHOLD,
 } from "../importance.js";
 import type { MemoryInput } from "../types.js";
 
@@ -24,12 +22,6 @@ function input(overrides: Partial<MemoryInput> = {}): MemoryInput {
 }
 
 // ─── IM-01 (C-GUARD) constant ──────────────────────────────────────────
-
-describe("STORAGE_GATE_THRESHOLD constant guard", () => {
-	it("IM-01 equals 0.15", () => {
-		expect(STORAGE_GATE_THRESHOLD).toBe(0.15);
-	});
-});
 
 // ─── IM-02 — output range ───────────────────────────────────────────────
 
@@ -162,43 +154,6 @@ describe("scoreImportance — magnitude per hit (IM-06 / IM-06b — IMPLEMENTATI
 	});
 });
 
-// ─── IM-07 / IM-10 — shouldStore semantics ─────────────────────────────
-
-describe("shouldStore — utility-only threshold (IM-07 / IM-10)", () => {
-	it("IM-07 uses ONLY utility, not aggregate", () => {
-		// High importance + high surprise but manually crafted to not exceed
-		// utility threshold via arousal path. This test pins that aggregation
-		// happens in scoreImportance (via utility), not in shouldStore.
-		const low: { utility: number; importance: number; surprise: number; emotion: number } = {
-			utility: 0.1,
-			importance: 0.9,
-			surprise: 0.9,
-			emotion: 0.5,
-		};
-		expect(shouldStore(low)).toBe(false);
-	});
-
-	it("IM-10 boundary: utility === 0.15 exactly → shouldStore FALSE (exclusive `>`, D.3 IM-12 fix)", () => {
-		const at: { utility: number; importance: number; surprise: number; emotion: number } = {
-			utility: 0.15,
-			importance: 0,
-			surprise: 0,
-			emotion: 0.5,
-		};
-		expect(shouldStore(at)).toBe(false);
-	});
-
-	it("IM-10 just below: utility === 0.149 → shouldStore false", () => {
-		const below: { utility: number; importance: number; surprise: number; emotion: number } = {
-			utility: 0.149,
-			importance: 0,
-			surprise: 0,
-			emotion: 0.5,
-		};
-		expect(shouldStore(below)).toBe(false);
-	});
-});
-
 // ─── IM-08 — arousal U-shape ───────────────────────────────────────────
 
 describe("scoreImportance — arousal U-shape (IM-08)", () => {
@@ -257,7 +212,6 @@ describe("scoreImportance — role weights (IM-09, all three roles)", () => {
 		const s = scoreImportance(input({ content: "plain", role: "tool" }));
 		expect(s.importance).toBe(0);
 		expect(s.utility).toBe(0);
-		expect(shouldStore(s)).toBe(false);
 	});
 });
 
@@ -277,55 +231,17 @@ describe("scoreImportance — monotonicity in marker hits (IM-11)", () => {
 	});
 });
 
-// ─── IM-12 — B-BUG: marker-free user always stores ────────────────────
+// ─── IM-12 — marker-free user utility preserved ────────────────────
 
-describe("IM-12 decoupling (D.3 fixed)", () => {
-	it("marker-free user: utility stays at 0.15 (coincidence preserved) but shouldStore=false", () => {
-		// D.3 Option (b): strict `>` threshold. The numeric collision
-		// roleWeight×0.5 === STORAGE_GATE_THRESHOLD is acceptable because
-		// the gate behaviour is now decoupled from the boundary value.
+describe("IM-12 marker-free user scoring (P1: gate removed, scoring preserved)", () => {
+	it("marker-free user: utility stays at 0.15", () => {
 		const s = scoreImportance(input({ content: "ok", role: "user" }));
-		expect(s.utility).toBe(STORAGE_GATE_THRESHOLD);
-		expect(shouldStore(s)).toBe(false);
+		expect(s.utility).toBe(0.15);
 	});
 
-	it("marker-free user is now classified as noise (JSDoc intent restored)", () => {
+	it("marker-free user scoring is deterministic", () => {
 		const s = scoreImportance(input({ content: "hello", role: "user" }));
-		expect(shouldStore(s)).toBe(false);
-	});
-});
-
-// ─── IM-24 anti-over-correction (R7 + D.3 outline §5) ──────────────────
-
-describe("shouldStore — strict monotonicity across boundary (IM-24)", () => {
-	const make = (utility: number) => ({
-		utility,
-		importance: 0,
-		surprise: 0,
-		emotion: 0.5,
-	});
-
-	it("just-above boundary → true", () => {
-		expect(shouldStore(make(0.15 + Number.EPSILON * 16))).toBe(true);
-	});
-
-	it("exactly at boundary (0.15) → false (exclusive)", () => {
-		expect(shouldStore(make(0.15))).toBe(false);
-	});
-
-	it("just below boundary → false", () => {
-		expect(shouldStore(make(0.149))).toBe(false);
-	});
-
-	it("well above boundary → true", () => {
-		expect(shouldStore(make(0.5))).toBe(true);
-	});
-
-	it("marker-driven user utility > 0.15 → still stores", () => {
-		// 1 IMPORTANCE marker: utility = (0.3 + 0.15) * 0.5 = 0.225
-		const s = scoreImportance(input({ content: "always remember", role: "user" }));
-		expect(s.utility).toBeGreaterThan(0.15);
-		expect(shouldStore(s)).toBe(true);
+		expect(s.utility).toBe(0.15);
 	});
 });
 

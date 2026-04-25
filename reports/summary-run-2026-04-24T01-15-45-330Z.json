@@ -1,0 +1,10 @@
+{
+  "runId": "run-2026-04-24T01-15-45-330Z",
+  "summary": [
+    {
+      "adapter": "naia-local",
+      "score": 0.37398373983739835,
+      "grade": "F"
+    }
+  ]
+}

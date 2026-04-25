@@ -1508,3 +1508,187 @@
 - LLM: gemini-flash-lite
 - Judge: keyword
   - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 24. 오전 10:08:03
+- Run ID: `run-2026-04-24T01-08-03-619Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 24. 오전 10:15:45
+- Run ID: `run-2026-04-24T01-15-45-330Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 10:33:05
+- Run ID: `run-2026-04-25T01-33-05-627Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오전 10:33:14
+- Run ID: `run-2026-04-25T01-33-14-531Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 10:48:22
+- Run ID: `run-2026-04-25T01-48-22-811Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 10:50:56
+- Run ID: `run-2026-04-25T01-50-56-193Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 10:57:06
+- Run ID: `run-2026-04-25T01-57-06-179Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:02:38
+- Run ID: `run-2026-04-25T02-02-38-164Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:07:07
+- Run ID: `run-2026-04-25T02-07-07-319Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:11:42
+- Run ID: `run-2026-04-25T02-11-42-748Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:17:17
+- Run ID: `run-2026-04-25T02-17-17-292Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:46:48
+- Run ID: `run-2026-04-25T02-46-48-175Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:51:16
+- Run ID: `run-2026-04-25T02-51-16-792Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오전 11:58:06
+- Run ID: `run-2026-04-25T02-58-06-017Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: -899, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:05:03
+- Run ID: `run-2026-04-25T03-05-03-765Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: -899, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:07:59
+- Run ID: `run-2026-04-25T03-07-59-187Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: -899, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:12:21
+- Run ID: `run-2026-04-25T03-12-21-954Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:24:40
+- Run ID: `run-2026-04-25T03-24-40-970Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:29:56
+- Run ID: `run-2026-04-25T03-29-56-353Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 12:42:53
+- Run ID: `run-2026-04-25T03-42-53-163Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 2:30:53
+- Run ID: `run-2026-04-25T05-30-53-620Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 2:38:32
+- Run ID: `run-2026-04-25T05-38-32-255Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 5:21:10
+- Run ID: `run-2026-04-25T08-21-10-130Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 25. 오후 5:44:08
+- Run ID: `run-2026-04-25T08-44-08-213Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)

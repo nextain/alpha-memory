@@ -94,25 +94,25 @@ describe("MemorySystem.encode", () => {
 		await system.close();
 	});
 
-	it("MS-02 [D.3 IM-12 integration] marker-free user → null, nothing stored", async () => {
+	it("MS-02 [P1] marker-free user → stored (encoding gate removed)", async () => {
 		const { system } = makeSystem();
 		const ep = await system.encode(
 			input({ content: "the weather is nice today" }),
 			DEFAULT_CTX,
 		);
-		expect(ep).toBeNull();
-		const { episodes } = await system.recall("weather", RECALL_CTX);
-		expect(episodes).toHaveLength(0);
+		expect(ep).not.toBeNull();
+		expect(ep!.content).toBe("the weather is nice today");
 		await system.close();
 	});
 
-	it("MS-03 assistant-role + no markers → null", async () => {
+	it("MS-03 [P1] assistant-role + no markers → stored (encoding gate removed)", async () => {
 		const { system } = makeSystem();
 		const ep = await system.encode(
 			input({ content: "Sure, I can help you with that.", role: "assistant" }),
 			DEFAULT_CTX,
 		);
-		expect(ep).toBeNull();
+		expect(ep).not.toBeNull();
+		expect(ep!.content).toBe("Sure, I can help you with that.");
 		await system.close();
 	});
 
@@ -160,12 +160,11 @@ describe("MemorySystem.encode", () => {
 		await system.close();
 	});
 
-	it("MS-10 [IM-12 boundary] marker-free user utility === 0.15 exactly → encode returns null", async () => {
+	it("MS-10 [P1] marker-free user utility === 0.15 → encode returns episode (gate removed)", async () => {
 		const { system } = makeSystem();
-		// "hello" has no markers; user roleWeight 0.3 → importance 0.3 →
-		// utility 0.15 → shouldStore false (D.3 strict >).
 		const ep = await system.encode(input({ content: "hello" }), DEFAULT_CTX);
-		expect(ep).toBeNull();
+		expect(ep).not.toBeNull();
+		expect(ep!.importance.utility).toBe(0.15);
 		await system.close();
 	});
 });
@@ -400,13 +399,13 @@ describe("MemorySystem.consolidateNow", () => {
 		await system.close();
 	});
 
-	it("MC-12 [D.3 IM-12 cross-cut] marker-free input never reaches consolidation", async () => {
+	it("MC-12 [P1] both marker-free and marker-rich episodes stored and consolidated", async () => {
 		const ts = Date.now() - 10 * 60 * 1000;
 		const { system } = makeSystem({
 			factExtractor: oneFactPerEpisodeExtractor(),
 		});
 		await system.encode(
-			input({ content: "weather is pleasant", timestamp: ts }), // IM-12 drops
+			input({ content: "weather is pleasant", timestamp: ts }),
 			DEFAULT_CTX,
 		);
 		await system.encode(
@@ -417,10 +416,8 @@ describe("MemorySystem.consolidateNow", () => {
 			DEFAULT_CTX,
 		);
 		const r = await system.consolidateNow(false);
-		// Only the marker-rich episode was actually stored (MS-02) so
-		// consolidate only sees 1.
-		expect(r.episodesProcessed).toBe(1);
-		expect(r.factsCreated).toBe(1);
+		expect(r.episodesProcessed).toBe(2);
+		expect(r.factsCreated).toBe(2);
 		await system.close();
 	});
 });

@@ -14,7 +14,7 @@ src/
 │   ├── decay.ts               # Ebbinghaus forgetting curve
 │   ├── reconsolidation.ts     # Contradiction detection on retrieval
 │   ├── knowledge-graph.ts     # Entity/relation extraction + spreading activation
-│   ├── embeddings.ts          # Gemini text-embedding-004 (768d)
+│   ├── embeddings.ts          # gemini-embedding-001 (3072d) / multilingual-e5-large (1024d) / offline
 │   └── adapters/
 │       ├── local.ts           # SQLite + hnswlib (default, no API key)
 │       ├── mem0.ts            # mem0 OSS backend
@@ -56,11 +56,18 @@ src/
 # Install
 pnpm install
 
-# Run benchmark (Korean, keyword judge)
-GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia,mem0 --judge=keyword --lang=ko
+# API Keys (pick one):
+# 1. GEMINI_API_KEY — GCP Naia-OS project "Gemini API Key v2" (permanent, no expiry)
+#    gcloud services api-keys get-key-string projects/181404717065/locations/global/keys/f7a5ed14-1090-4afd-a0be-c2ac09b7c6ae
+# 2. GATEWAY_URL + GATEWAY_MASTER_KEY — any-llm gateway (Vertex AI routing)
+#    prod: https://naia-gateway-181404717065.asia-northeast3.run.app
+#    dev:  https://naia-gateway-dev-181404717065.asia-northeast3.run.app (key in agents-rules.json)
 
-# Run benchmark (English, with gateway)
-GATEWAY_URL=xxx GATEWAY_MASTER_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia --judge=keyword --lang=en
+# Run benchmark (Korean, keyword judge)
+GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=ko
+
+# Run benchmark (English)
+GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=en
 
 # Re-judge existing results
 pnpm exec tsx src/benchmark/comparison/judge.ts --input=reports/xxx.json --judge=gemini-pro-cli
@@ -308,20 +315,92 @@ reports/
 - `index.ts:546-581` sessionRecall() 한국어 헤더 → LLM이 EN 쿼리에 한국어 응답
 - 수정 후 naia-local EN: 16% → 21% (keyword), 22% → 27% (GLM)
 
-## Architecture Review (2026-04-24, 4-AI Cross-Review)
+### R10 KO Two-Stage Retrieval (2026-04-24, 2-Judge 완료, mem0 미실행)
 
-**참여 AI**: Claude Sonnet 4, GLM-4-Plus, Gemini 2.5 Pro (3-AI × 2라운드)
+**변경사항**: Three-Layer Architecture의 Retrieval Layer 개선 — Stage 1 broad recall (importance无关) + Stage 2 re-rank with importance/strength.
+
+#### R10 naia-local KO vs R9 mem0 KO (동일 judge 조건)
+
+| Category | R10 naia (gemini) | R9 mem0 (gemini) | Gap | R10 naia (kw) | R9 mem0 (kw) | Gap |
+|----------|:-----------------:|:----------------:|:---:|:-------------:|:------------:|:---:|
+| contradiction_direct | 14/20 | 18/20 | -4 | 1/20 | 2/20 | -1 |
+| contradiction_indirect | 11/15 | 14/15 | -3 | 9/15 | 10/15 | -1 |
+| abstention | 18/20 | 14/20 | **+4** | 15/20 | 12/20 | **+3** |
+| irrelevant_isolation | 15/15 | 14/15 | **+1** | 15/15 | 15/15 | = |
+| semantic_search | 7/18 | 6/18 | **+1** | 4/18 | 6/18 | -2 |
+| entity_disambiguation | 9/20 | 11/20 | -2 | 11/20 | 7/20 | **+4** |
+| noise_resilience | 15/20 | 14/20 | **+1** | 12/20 | 5/20 | **+7** |
+| proactive_recall | 10/18 | 14/18 | -4 | 9/18 | 11/18 | -2 |
+| direct_recall | 9/49 | 18/49 | **-9** | 8/49 | 12/49 | -4 |
+| unchanged_persistence | 1/11 | 0/11 | **+1** | 0/11 | 0/11 | = |
+| temporal | 2/20 | 3/20 | -1 | 2/20 | 3/20 | -1 |
+| multi_fact_synthesis | 0/15 | 4/15 | -4 | 0/15 | 1/15 | -1 |
+| **TOTAL** | **111/241 (46%)** | **130/241 (54%)** | **-8pp** | **86/241 (37%)** | **84/241 (34%)** | **+3pp** |
+
+**Gemini judge: mem0 +8pp 우세. Keyword judge: naia +3pp 우세.**
+
+#### naia 구조적 우위 (judge 무관)
+- **abstention**: naia 90% vs mem0 70-80% — 노이즈 필터링으로 "모른다" 정확
+- **irrelevant_isolation**: naia 100% vs mem0 93% — 개인정보 무단 노출 제로
+- **noise_resilience**: keyword 기준 naia 60% vs mem0 25% (+35pp)
+- **contradiction detection**: 구조적 기능 (mem0엔 없음)
+
+#### naia 구조적 열위
+- **direct_recall**: naia 18% vs mem0 37% (gemini) — recall 자체가 부족
+- **multi_fact_synthesis**: 양쪽 모두 0-27% — RAG 구조적 한계
+- **unchanged_persistence**: 양쪽 모두 0-9% — cascade delete 구조적 버그
+
+**미완료**: R10 mem0 KO 실실행, R10 EN, GLM judge
+
+### R14 KO P0+P1+P2 Integrated Results (2026-04-25, fresh DB, 2-Judge)
+
+**변경사항**: P0(topK+status) + P1(Context Budget Allocator, encoding gate 제거) + P2(Hybrid Search RRF) 전체 적용. Fresh DB에서 재실행.
+
+#### R14 vs R10 비교
+
+| Category | R10 kw | R14 kw | Δ kw | R10 gem | R14 gem | Δ gem |
+|----------|:------:|:------:|:----:|:-------:|:-------:|:-----:|
+| direct_recall | 8/49 | 13/49 | **+5** | 9/49 | 18/49 | **+9** |
+| semantic_search | 4/18 | 5/18 | +1 | 7/18 | 8/18 | +1 |
+| proactive_recall | 9/18 | 6/18 | -3 | 10/18 | 7/18 | -3 |
+| abstention | 15/20 | 8/20 | **-7** | 18/20 | 14/20 | **-4** |
+| irrelevant_isolation | 15/15 | 15/15 | = | 15/15 | 15/15 | = |
+| multi_fact_synthesis | 0/15 | 1/15 | +1 | 0/15 | 2/15 | **+2** |
+| entity_disambiguation | 11/20 | 9/20 | -2 | 9/20 | 4/20 | **-5** |
+| contradiction_direct | 1/20 | 3/20 | +2 | 14/20 | 12/20 | -2 |
+| contradiction_indirect | 9/15 | 13/15 | **+4** | 11/15 | 15/15 | **+4** |
+| noise_resilience | 12/20 | 15/20 | **+3** | 15/20 | 17/20 | +2 |
+| unchanged_persistence | 0/11 | 1/11 | +1 | 1/11 | 2/11 | +1 |
+| temporal | 2/20 | 3/20 | +1 | 2/20 | 3/20 | +1 |
+| **TOTAL** | **86/241** | **92/241** | **+6** | **111/241** | **117/241** | **+6** |
+| | (36%) | (38%) | **+2pp** | (46%) | (49%) | **+3pp** |
+
+#### Key Findings
+
+- **전체 +2-3pp 개선** — P0+P1+P2 통합 효과는 미미
+- **direct_recall 대폭 개선**: kw +5, gem +9 — encoding gate 제거로 더 많은 fact 저장 + context budget allocator로 더 관련성 높은 선택
+- **contradiction_indirect 완벽**: 15/15 (100%) — RRF hybrid search가 간접 모순 탐지 향상
+- **noise_resilience 향상**: +2-3 — hybrid search 노이즈 필터링 개선
+- **abstention 하락**: kw -7, gem -4 — encoding gate 제거로 더 많은 fact가 검색되어 "모른다" 감소. 구조적 trade-off
+- **entity_disambiguation 하락**: gem -5 — 더 많은 후보가 검색되어 disambiguation 어려워짐
+- **unchanged_persistence 여전히 낮음**: 1-2/11 — P0 status field로 약간 개선되었으나 근본적 한계
+
+#### P2 Hybrid Search 결론
+
+RRF (Reciprocal Rank Fusion)은 contradiction_indirect에서 효과적이나 전체 개선은 +2-3pp에 불과. BM25 단독(R12: 86/241) 대비 RRF(R14: 92/241)가 +6 keyword 개선. encoding gate 제거가 더 큰 기여.
+
+## Architecture Review Round 1 (2026-04-24, Gemini 2.5 Pro + Claude Sonnet 4)
 
 ### R10 soft re-ranking 실패 분석
 
 importance를 multiply에서 additive로 전환 → net zero (recall up, precision down more).
-4-AI 만장일치: 가중치 조정이 아닌 **구조적 변경** 필요.
+만장일치: 가중치 조정이 아닌 **구조적 변경** 필요.
 
 ### 아키텍처 컨셉 검증 (2라운드)
 
 **최초 결론 (1라운드)**: Importance gating을 검색에서 제거, 순수 vector search로 전환
 **아키텍트 반박**: "망각은 버그"는 저장 삭제에만 해당. 컨텍스트 주입 필터링으로서의 망각은 필수
-**2라운드 합의**: 아키텍트의 반박이 맞음. **Semantic forgetting(저장 삭제)은 버그, Pragmatic forgetting(컨텍스트 필터링)은 필수 기능**
+**2라운드 합의**: **Semantic forgetting(저장 삭제)은 버그, Pragmatic forgetting(컨텍스트 필터링)은 필수 기능**
 
 ### Three-Layer Architecture (만장일치 채택)
 
@@ -350,49 +429,98 @@ Context Injection:   Multi-signal ranking → context budget allocation
 | 1,000-10,000 | crossover | Recency |
 | 10,000+ | 노이즈 | Importance/Emotion 필수 |
 
+## Architecture Review Round 2 (2026-04-25, Gemini 2.5 Pro + Claude Sonnet 4)
+
+**목적**: R1의 "다 버려라" 결론에 대한 반론과 정밀 분석.
+
+### 핵심 합의: "비유가 틀린 게 아니라 구현이 미흡했다"
+
+| 구성요소 | R1 결론 | R2 수정 |
+|---|---|---|
+| 4-Store Architecture | "비유가 틀림" | **"4개 중 1개만 구현됨 — 구현이 미흡"** |
+| 3-Axis Scoring | "개념이 틀림" | **"키워드 정규식 수준 — 구현이 틀림"** |
+| Ebbinghaus Decay | "AI에 불필요" | **"컨텍스트 윈도우에 적용하면 의미 있음"** |
+
+### naia의 진짜 구조적 우위 (양 AI 확인)
+
+1. **Contradiction detection** (`reconsolidation.ts`): mem0엔 없는 기능
+2. **Importance gating → abstention 90%**: 노이즈 필터링이 "모른다" 정확도 향상
+3. **irrelevant_isolation 100%**: 개인정보 무단 노출 제로
+
+### mem0 46% 실패 원인 분석
+
+- **검색(recall) 실패 + 생성(generation) 실패 복합**
+- 시간 관계 추론 불가 (temporal 15%)
+- 복합 질문 조합 불가 (multi_fact_synthesis 27%)
+- 부정문/이중부정 인식 한계 (contradiction_direct 30%)
+
+### 개선 로드맵 (양 AI 공통 제안, 예상 43% → 70%)
+
+1. **unchanged_persistence 수정** (status field) — 확실 +9pp, 2일
+2. **Query decomposition** (multi_fact_synthesis) — 최대 +27pp, 1주
+3. **Contradiction detection 유지/강화** — naia 핵심 차별점
+4. **Hybrid search** (BM25 + vector) — recall 향상
+5. **Memory-as-a-Tool** — 장기 아키텍처 전환
+
+### 3-Axis Scoring 진화 방향
+
+LLM 기반 scoring (latency/cost 문제) 대신:
+- **v1**: 키워드 정규식 (현재, "나쁘지 않음")
+- **v2**: 사전 학습 토큰 임베딩 코사인 유사도 (ms 단위, 정확)
+- **v3**: 하이브리드 (키워드 + 임베딩)
+
+Gate: F1 ≥ 5% 개선, latency < 10ms/query
+
 ## Implementation Roadmap
 
-### P0: Two-Stage Retrieval (현재 진행)
+### P0: Two-Stage Retrieval (완료)
 
 - [x] Stage 1: Broad vector + keyword recall (importance无关)
 - [x] Stage 2: Re-rank with importance/strength among candidates only
-- [ ] R10 KO+EN 벤치마크 검증 (R9 대비 개선 확인)
-- [ ] Context budget allocator 설계 (3-axis → context-worthiness score)
+- [x] R10 KO naia-local keyword 37%, gemini 46% (mem0 미실행)
 
-### P0 (병렬): unchanged_persistence 수정
+### P0 (병렬): unchanged_persistence 수정 (완료)
 
-- [ ] 메모리 스키마에 `status` 필드 추가 (active/contradicted/archived)
-- [ ] Contradiction update 시 물리적 삭제 → 상태 변경만
-- [ ] Cascade delete 로직 제거, 대상 메모리 ID 1개만 업데이트
+- [x] 메모리 스키마에 `status` 필드 추가 (active/superseded/archived)
+- [x] Contradiction update 시 물리적 삭제 → 상태 변경만
+- [x] Cascade delete 로직 제거, 대상 메모리 ID 1개만 업데이트
 
-### P1: Context Budget Allocator
+### P1: Context Budget Allocator (완료)
 
-- [ ] 3-axis scoring을 encoding gate → context injection ranking으로 전환
-- [ ] Token budget 기반 메모리 선택 (context-worthiness score)
-- [ ] Query-type별 가중치 동적 조정 (사실적 vs 탐색적 vs 감정적)
+- [x] Encoding gate 제거 — Storage Layer는 모든 episode 저장
+- [x] `context-budget.ts` — token budget 기반 context-worthiness ranking
+- [x] `sessionRecall()`에 budget allocator 통합 (default 2000 tokens)
+- [x] `shouldStore()` / `STORAGE_GATE_THRESHOLD` dead code 제거
 
-### P2: Dual-Path Retrieval
+### P2: Hybrid Search (완료, #16)
 
-- [ ] Raw episode 보존 + fact extraction 병렬 운영
+- [x] BM25 구현 (`local.ts`) — R12: 86/241, direct_recall +3 but contradiction -11
+- [x] RRF (Reciprocal Rank Fusion) 결합 — R14: 92/241 keyword (+6 vs R12), contradiction_indirect 100%
+- [x] R14 통합 검증 — P0+P1+P2 전체: kw 92/241 (38%), gem 117/241 (49%)
+- **결론**: RRF는 contradiction_indirect에 효과적, 전체 +2-3pp. encoding gate 제거가 더 큰 기여.
+
+### P3: Dual-Path Retrieval
+
+- [ ] Raw episode 보존 + fact extraction 병렬 운영 (Episodic Store 구현)
 - [ ] Episode path + Graph path 동시 검색 → Contextual fusion
 - [ ] Consolidation을 source of truth가 아닌 index/cache로 격하
 
-### P3: multi_fact_synthesis
+### P4: multi_fact_synthesis
 
 - [ ] Query Decomposition: LLM이 복합 쿼리를 서브쿼리로 분해
 - [ ] Multi-hop 검색: 1차 결과에서 엔티티 추출 → 2차 검색
 
-### P4: Judge 시스템 2.0
+### P5: Judge 시스템 2.0
 
 - [ ] Binary PASS/FAIL → 다차원 평가 (Accuracy, Completeness, Relevance)
 - [ ] HITL 캘리브레이션 세트 (50-100개 인간 평가 항목)
 
-### Token Embedding Gating (Experimental — Post-Patent)
+### P6: Token Embedding Scoring (keyword → token embedding 진화)
 
-Evaluate replacing keyword heuristic in `importance.ts` with token-embedding-based scoring:
+Replace keyword heuristic in `importance.ts` with token-embedding-based scoring:
 
 - **Phase 1 (prototype)**: Extract static token embeddings from pre-trained model (all-MiniLM-L6-v2 or LLM embedding layer). Compute cosine similarity between input tokens and pre-defined emotion/importance/surprise seed vectors. Run parallel with existing keyword scorer.
-- **Phase 2 (benchmark)**: Compare keyword vs embedding vs hybrid on R5/R6 identical conditions. Gate: F1 ≥ 5% improvement, latency < 10ms/query.
+- **Phase 2 (benchmark)**: Compare keyword vs embedding vs hybrid on identical conditions. Gate: F1 ≥ 5% improvement, latency < 10ms/query.
 - **Phase 3 (integration)**: If Phase 2 passes, add `ScoringProvider` interface to `scoreImportance()` with keyword (default) / embedding / hybrid modes.
 
 **Risk**: Static token embeddings are context-independent (same limitation as keywords). The improvement may be marginal for the added complexity. Benchmark data required before committing.
@@ -404,3 +532,4 @@ Evaluate replacing keyword heuristic in `importance.ts` with token-embedding-bas
 - Language: English for code/docs, Korean for discussions
 - Package: `@nextain/alpha-memory` (Apache-2.0)
 - Part of Naia OS ecosystem
+- **Anti-overfitting**: 벤치마크 카테고리를 알고 튜닝하는 건 과적합. 프로덕션에선 쿼리 카테고리를 모름. 카테고리별 적응형 가중치, 카테고리별 threshold 등 벤치카테고리 구조에 의존하는 최적화는 금지. 범용 단일 전략만 허용.

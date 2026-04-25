@@ -32,21 +32,22 @@ function makeEpisode(content: string): Episode {
 	};
 }
 
-function makeFact(content: string): Fact {
-	return {
-		id: randomUUID(),
-		content,
-		entities: ["test"],
-		topics: ["testing"],
-		createdAt: Date.now(),
-		updatedAt: Date.now(),
-		importance: 0.8,
-		recallCount: 0,
-		lastAccessed: Date.now(),
-		strength: 0.8,
-		sourceEpisodes: [],
-	};
-}
+	function makeFact(content: string): Fact {
+		return {
+			id: randomUUID(),
+			content,
+			entities: ["test"],
+			topics: ["testing"],
+			createdAt: Date.now(),
+			updatedAt: Date.now(),
+			importance: 0.8,
+			recallCount: 0,
+			lastAccessed: Date.now(),
+			strength: 0.8,
+			status: "active",
+			sourceEpisodes: [],
+		};
+	}
 
 describe("LocalAdapter backup", () => {
 	it("export/import round-trips all data", async () => {

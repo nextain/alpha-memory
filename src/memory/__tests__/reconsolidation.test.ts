@@ -18,22 +18,23 @@ import type { Fact } from "../types.js";
  * ships, forcing coordinated test cleanup.
  */
 
-function makeFact(overrides: Partial<Fact> = {}): Fact {
-	return {
-		id: "fact-1",
-		content: "test fact",
-		entities: [],
-		topics: [],
-		createdAt: 0,
-		updatedAt: 0,
-		importance: 0.5,
-		recallCount: 0,
-		lastAccessed: 0,
-		strength: 0.5,
-		sourceEpisodes: [],
-		...overrides,
-	};
-}
+	function makeFact(overrides: Partial<Fact> = {}): Fact {
+		return {
+			id: "fact-1",
+			content: "test fact",
+			entities: [],
+			topics: [],
+			createdAt: 0,
+			updatedAt: 0,
+			importance: 0.5,
+			recallCount: 0,
+			lastAccessed: 0,
+			strength: 0.5,
+			status: "active",
+			sourceEpisodes: [],
+			...overrides,
+		};
+	}
 
 // ─── RC-01 (C-GUARD) identity ───────────────────────────────────────────
 

@@ -84,11 +84,11 @@ export class NaiaLocalAdapter implements BenchmarkAdapter {
 	async addFact(content: string, date?: string): Promise<boolean> {
 		if (!this.system) throw new Error("Not initialized");
 		const timestamp = date ? new Date(date).getTime() : undefined;
-		const episode = await this.system.encode(
+		await this.system.encode(
 			{ content, role: "user", timestamp },
 			{ project: "benchmark" },
 		);
-		return episode !== null;
+		return true;
 	}
 
 	async search(query: string, topK: number): Promise<string[]> {
