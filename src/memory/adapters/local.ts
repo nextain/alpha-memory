@@ -452,6 +452,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		): Promise<Fact[]> => {
 			const now = Date.now();
 			const BROAD_FACTOR = 3;
+			const searchMode = process.env.NAIA_SEARCH_MODE ?? "vector-only";
 
 			const queryVec = await this.embedWithCache(query);
 
@@ -466,29 +467,34 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				activationMap.set(entity, activation);
 			}
 
-			// Stage 1: Broad recall — BM25 + vector via RRF
 			const broadK = topK * BROAD_FACTOR;
 			const RRF_K = 60;
-
-			const bm25 = new BM25();
-			const docMap = new Map<string, string>();
-			for (const f of this.store.facts) {
-				docMap.set(f.id, [f.content, ...f.entities, ...f.topics].join(" "));
-			}
-			bm25.index(docMap);
+			const useBM25 = searchMode !== "vector-only";
 
 			const allFacts = this.store.facts;
 			const vectorScores: Map<string, number> = new Map();
 			const bm25Scores: Map<string, number> = new Map();
 			const entityBonuses: Map<string, number> = new Map();
 
+			let bm25Instance: InstanceType<typeof BM25> | null = null;
+			if (useBM25) {
+				bm25Instance = new BM25();
+				const docMap = new Map<string, string>();
+				for (const f of this.store.facts) {
+					docMap.set(f.id, [f.content, ...f.entities, ...f.topics].join(" "));
+				}
+				bm25Instance.index(docMap);
+			}
+
 			for (const fact of allFacts) {
 				const factVec = this.store.factEmbeddings?.[fact.id];
 				const vs = factVec && queryVec ? cosineSimilarity(queryVec, factVec) : 0;
 				vectorScores.set(fact.id, vs);
 
-				const bs = bm25.score(query, fact.id);
-				bm25Scores.set(fact.id, bs);
+				if (bm25Instance) {
+					const bs = bm25Instance.score(query, fact.id);
+					bm25Scores.set(fact.id, bs);
+				}
 
 				let eb = 0;
 				for (const qt of queryTokens) {
@@ -500,13 +506,15 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			}
 
 			const byVector = [...allFacts].sort((a, b) => (vectorScores.get(b.id) ?? 0) - (vectorScores.get(a.id) ?? 0));
-			const byBM25 = [...allFacts].sort((a, b) => (bm25Scores.get(b.id) ?? 0) - (bm25Scores.get(a.id) ?? 0));
-
 			const vectorRank = new Map<string, number>();
 			for (let i = 0; i < byVector.length; i++) vectorRank.set(byVector[i].id, i + 1);
 
-			const bm25Rank = new Map<string, number>();
-			for (let i = 0; i < byBM25.length; i++) bm25Rank.set(byBM25[i].id, i + 1);
+			let bm25Rank: Map<string, number> | null = null;
+			if (useBM25) {
+				const byBM25 = [...allFacts].sort((a, b) => (bm25Scores.get(b.id) ?? 0) - (bm25Scores.get(a.id) ?? 0));
+				bm25Rank = new Map<string, number>();
+				for (let i = 0; i < byBM25.length; i++) bm25Rank.set(byBM25[i].id, i + 1);
+			}
 
 			const candidates = allFacts
 				.map((fact) => {
@@ -517,11 +525,16 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					const isRelevant = vs >= 0.12 || bs > 0 || eb >= 0.2;
 					if (!isRelevant && !deepRecall) return null;
 
-					const rrfScore =
-						1 / (RRF_K + (vectorRank.get(fact.id) ?? allFacts.length)) +
-						1 / (RRF_K + (bm25Rank.get(fact.id) ?? allFacts.length));
+					let relevanceScore: number;
+					if (searchMode === "vector-only") {
+						relevanceScore = vs + eb;
+					} else {
+						relevanceScore =
+							1 / (RRF_K + (vectorRank.get(fact.id) ?? allFacts.length)) +
+							1 / (RRF_K + (bm25Rank!.get(fact.id) ?? allFacts.length));
+					}
 
-					return { fact, relevanceScore: rrfScore, vectorScore: vs };
+					return { fact, relevanceScore, vectorScore: vs };
 				})
 				.filter((x): x is NonNullable<typeof x> => x !== null)
 				.sort((a, b) => b.relevanceScore - a.relevanceScore)
