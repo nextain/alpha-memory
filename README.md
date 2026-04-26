@@ -1,4 +1,4 @@
-# Alpha Memory
+# Naia Memory (formerly Alpha Memory)
 
 **Cognitive memory architecture for AI agents** — importance-gated encoding, vector retrieval, knowledge graph, Ebbinghaus decay, and a head-to-head benchmark suite against popular memory systems.
 
@@ -75,7 +75,7 @@ src/
         ├── run-comparison.ts        # Main benchmark runner
         ├── types.ts                 # BenchmarkAdapter interface
         ├── judge.ts                 # Standalone re-judge script
-        ├── adapter-naia.ts          # Alpha Memory (this project)
+        ├── adapter-naia.ts          # Naia Memory (formerly Alpha Memory) (this project)
         ├── adapter-mem0.ts          # mem0 OSS
         ├── adapter-sillytavern.ts   # SillyTavern
         ├── adapter-letta.ts         # Letta (formerly MemGPT)
@@ -92,15 +92,15 @@ src/
 ## Installation
 
 ```bash
-npm install @nextain/alpha-memory
+npm install @nextain/naia-memory
 # or
-pnpm add @nextain/alpha-memory
+pnpm add @nextain/naia-memory
 ```
 
 ## Usage
 
 ```typescript
-import { MemorySystem } from "@nextain/alpha-memory";
+import { MemorySystem } from "@nextain/naia-memory";
 
 // Initialize with local SQLite backend (no API key needed)
 const memory = new MemorySystem({ adapter: "local" });

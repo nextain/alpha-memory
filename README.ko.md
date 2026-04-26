@@ -1,4 +1,4 @@
-# Alpha Memory
+# Naia Memory (formerly Alpha Memory)
 
 **AI 에이전트용 인지 메모리 아키텍처** — 중요도 게이팅 인코딩, 벡터 검색, 지식 그래프, 에빙하우스 망각 곡선, 그리고 주요 메모리 시스템과의 헤드투헤드 벤치마크를 포함합니다.
 
@@ -73,7 +73,7 @@ src/
     └── comparison/
         ├── run-comparison.ts       # 메인 벤치마크 러너
         ├── types.ts                # BenchmarkAdapter 인터페이스
-        ├── adapter-naia.ts         # Alpha Memory (이 프로젝트)
+        ├── adapter-naia.ts         # Naia Memory (formerly Alpha Memory) (이 프로젝트)
         ├── adapter-mem0.ts         # mem0 OSS
         ├── adapter-sillytavern.ts  # SillyTavern (vectra + transformers.js)
         ├── adapter-letta.ts        # Letta (구 MemGPT)
@@ -88,15 +88,15 @@ src/
 ## 설치
 
 ```bash
-npm install @nextain/alpha-memory
+npm install @nextain/naia-memory
 # 또는
-pnpm add @nextain/alpha-memory
+pnpm add @nextain/naia-memory
 ```
 
 ## 사용법
 
 ```typescript
-import { MemorySystem } from "@nextain/alpha-memory";
+import { MemorySystem } from "@nextain/naia-memory";
 
 // 로컬 SQLite 백엔드로 초기화 (API 키 불필요)
 const memory = new MemorySystem({ adapter: "local" });

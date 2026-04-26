@@ -1,4 +1,4 @@
-# Alpha Memory
+# Naia Memory (formerly Alpha Memory)
 
 **Cognitive memory architecture for AI agents** — Naia OS의 핵심 메모리 패키지.
 importance-gated encoding, vector retrieval, knowledge graph, Ebbinghaus decay, head-to-head benchmark suite.
@@ -29,7 +29,7 @@ src/
 │       ├── run-comparison.ts  # Main benchmark runner
 │       ├── types.ts           # BenchmarkAdapter interface
 │       ├── judge.ts           # Standalone re-judge script
-│       ├── adapter-naia.ts    # Alpha Memory adapter
+│       ├── adapter-naia.ts    # Naia Memory (formerly Alpha Memory) adapter
 │       ├── adapter-mem0.ts    # mem0 OSS
 │       ├── adapter-sillytavern.ts
 │       ├── adapter-letta.ts
@@ -196,5 +196,5 @@ reports/
 ## Conventions
 
 - Language: English for code/docs, Korean for discussions
-- Package: `@nextain/alpha-memory` (Apache-2.0)
+- Package: `@nextain/naia-memory` (Apache-2.0)
 - Part of Naia OS ecosystem
