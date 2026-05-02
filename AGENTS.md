@@ -16,9 +16,9 @@ src/
 │   ├── knowledge-graph.ts     # Entity/relation extraction + spreading activation
 │   ├── embeddings.ts          # gemini-embedding-001 (3072d) / multilingual-e5-large (1024d) / offline
 │   └── adapters/
-│       ├── local.ts           # SQLite + hnswlib (default, no API key)
-│       ├── mem0.ts            # mem0 OSS backend
-│       └── qdrant.ts          # Qdrant vector DB backend
+│       ├── local.ts           # 독자 엔진: JSON + cosine + BM25 + KG (default, 실제 사용중)
+│       ├── mem0.ts            # mem0 OSS backend (존재하나 미사용)
+│       └── qdrant.ts          # Qdrant vector DB backend (존재하나 미사용)
 ├── benchmark/
 │   ├── fact-bank.json         # 1000 Korean facts (fictional persona)
 │   ├── fact-bank.en.json      # 1000 English facts
@@ -251,7 +251,7 @@ reports/
 
 **설계**: v2 합성 팩트뱅크(200 허구 팩트, 241 쿼리)로 LLM 사전지식 경로 차단. airi baseline 33.9%→15%로 차단 확인.
 
-**아키텍처 관계**: `naia-local = mem0 (vector search base) + Naia Layer (importance gating, consolidation, contradiction detection)`
+**아키텍처 관계**: `naia-local = 독자 엔진 (LocalAdapter: JSON + vector + BM25 + KG) + Naia Layer (importance gating, LLM consolidation, contradiction detection)`. mem0 코드 전혀 미사용. 서버(`mem0-api.ts`)는 mem0 REST 프로토콜만 호환.
 
 **이중 순위 (공정성 vs 사용자 경험)**:
 

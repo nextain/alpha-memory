@@ -6,22 +6,22 @@
 
 ## Place in the Naia ecosystem
 
-Alpha Memory is one of four repos in the Naia open-source AI platform:
+Naia Memory is one of four repos in the Naia open-source AI platform:
 
 | Repo | Role |
 |------|------|
 | [naia-os](https://github.com/nextain/naia-os) | Desktop shell + OS image (host) |
 | [naia-agent](https://github.com/nextain/naia-agent) | Runtime engine (loop · tools · compaction) |
 | [naia-adk](https://github.com/nextain/naia-adk) | Workspace format + skills library |
-| **alpha-memory** (this) | Memory implementation |
+| **naia-memory** (this) | Memory implementation |
 
 ### Interfaces, not dependencies
 
-Alpha Memory is **one implementation of the `MemoryProvider` contract** specified in `@nextain/agent-types`:
+Naia Memory is **one implementation of the `MemoryProvider` contract** specified in `@nextain/agent-types`:
 
-- **Transparent** — the contract is public. Any memory system that implements it can replace Alpha Memory without touching runtime code.
-- **Non-binding** — alpha-memory does not depend on naia-agent's runtime. naia-agent treats this package as a black box behind the interface.
-- **Abstracted** — swap Alpha Memory for another implementation (mem0, Letta, custom) and nothing else in the Naia ecosystem changes.
+- **Transparent** — the contract is public. Any memory system that implements it can replace Naia Memory without touching runtime code.
+- **Non-binding** — naia-memory does not depend on naia-agent's runtime. naia-agent treats this package as a black box behind the interface.
+- **Abstracted** — swap Naia Memory for another implementation (mem0, Letta, custom) and nothing else in the Naia ecosystem changes.
 
 Part of the broader Naia principle: repos couple through **published interfaces**, not runtime dependencies. See [naia-agent README](https://github.com/nextain/naia-agent) for the full picture.
 
@@ -29,7 +29,7 @@ Part of the broader Naia principle: repos couple through **published interfaces*
 
 ## Overview
 
-Alpha Memory implements a 4-store memory architecture inspired by cognitive science:
+Naia Memory implements a 4-store memory architecture inspired by cognitive science:
 
 | Store | Brain Analog | What it holds |
 |-------|-------------|---------------|
@@ -62,9 +62,9 @@ src/
 │   ├── knowledge-graph.ts  # Entity/relation extraction + spreading activation
 │   ├── embeddings.ts       # Embedding abstraction (Gemini text-embedding-004)
 │   └── adapters/
-│       ├── local.ts        # SQLite + hnswlib (local, no API key required)
-│       ├── mem0.ts         # mem0 OSS backend
-│       └── qdrant.ts       # Qdrant vector DB backend
+│       ├── local.ts        # 독자 엔진: JSON + vector + BM25 + KG (default, 실제 사용중)
+│       ├── mem0.ts         # mem0 OSS backend (존재하나 미사용)
+│       └── qdrant.ts       # Qdrant vector DB backend (존재하나 미사용)
 └── benchmark/
     ├── fact-bank.json          # 1000 Korean facts (fictional persona)
     ├── fact-bank.en.json       # 1000 English facts
@@ -75,7 +75,7 @@ src/
         ├── run-comparison.ts        # Main benchmark runner
         ├── types.ts                 # BenchmarkAdapter interface
         ├── judge.ts                 # Standalone re-judge script
-        ├── adapter-naia.ts          # Naia Memory (formerly Alpha Memory) (this project)
+        ├── adapter-naia.ts          # Naia Memory (this project)
         ├── adapter-mem0.ts          # mem0 OSS
         ├── adapter-sillytavern.ts   # SillyTavern
         ├── adapter-letta.ts         # Letta (formerly MemGPT)
@@ -162,7 +162,7 @@ pnpm exec tsx src/benchmark/comparison/judge.ts \
 
 | ID | System | Backend |
 |----|--------|---------|
-| `naia` | Alpha Memory (this project) | SQLite + vector + KG |
+| `naia` | Naia Memory (this project) | JSON + vector + BM25 + KG |
 | `mem0` | [mem0 OSS](https://github.com/mem0ai/mem0) | Vector + LLM dedup |
 | `sillytavern` | [SillyTavern](https://github.com/SillyTavern/SillyTavern) | vectra + transformers.js |
 | `letta` | [Letta](https://github.com/letta-ai/letta) | Archival memory + vector |
@@ -206,7 +206,7 @@ pnpm exec tsx src/benchmark/comparison/judge.ts \
 |:----:|--------|:-----:|:-----:|
 | 1 | Letta | 87.5% | F(abs) |
 | 2 | Open-LLM-VTuber | 85.2% | F(abs) |
-| 3 | **Alpha Memory (Naia)** | **84.0%** | F(abs) |
+| 3 | **Naia Memory** | **84.0%** | F(abs) |
 | 4 | mem0 | 83.1% | F(abs) |
 | 5 | SillyTavern | 79.8% | F(abs) |
 | 6 | SAP | 74.1% | F(abs) |
@@ -226,7 +226,7 @@ pnpm exec tsx src/benchmark/comparison/judge.ts \
 | Rank | System | Score | EN R5 | Drop |
 |:----:|--------|:-----:|:-----:|:----:|
 | 1 | Letta | 67.5% | 87.5% | -20pp |
-| 2 | **Alpha Memory (Naia)** | **24.7%** | 84.0% | -60pp |
+| 2 | **Naia Memory** | **24.7%** | 84.0% | -60pp |
 | 3 | mem0 | 24.0% | 83.1% | -59pp |
 | 4 | SillyTavern | 17.6% | 79.8% | -62pp |
 | 5 | Baseline (no memory) | 16.0% | 33.9% | -18pp |
@@ -238,7 +238,7 @@ pnpm exec tsx src/benchmark/comparison/judge.ts \
 **Key findings:**
 - Korean language is a system-level barrier: most systems drop 50–70pp vs EN
 - Letta alone retains meaningful Korean performance — internal multilingual LLM processing
-- **Alpha Memory ranks #2 in KO** (24.7%), narrowly ahead of mem0 (24.0%) — same EN-optimized pipeline; improvement path is LocalAdapter + gemini-embedding-001
+- **Naia Memory ranks #2 in KO** (24.7%), narrowly ahead of mem0 (24.0%) — same EN-optimized pipeline; improvement path is LocalAdapter + gemini-embedding-001
 - Memory systems largely fail to beat the no-memory baseline in Korean — retrieval quality collapses at the LLM synthesis layer
 
 > Grade legend: A ≥90% · B ≥75% · C ≥60% · F <60% · F(abs) = abstention criterion failed
