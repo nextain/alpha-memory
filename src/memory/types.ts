@@ -1,5 +1,5 @@
 /**
- * Alpha Memory System — Type definitions
+ * Naia Memory System — Type definitions
  *
  * 4-store architecture inspired by Tulving's memory taxonomy + CLS theory:
  * - Episodic (Hippocampus): timestamped events with context
@@ -119,6 +119,8 @@ export interface Fact extends Record<string, unknown> {
 	sourceEpisodes: string[];
 	/** Cosine similarity score from vector search (0.0–1.0, optional) */
 	relevanceScore?: number;
+	/** Encoding context inherited from source episodes — used for project-scoped retrieval */
+	encodingContext?: EncodingContext;
 }
 
 // ─── Procedural Memory (Basal Ganglia / Cerebellum) ──────────────────────────
@@ -198,7 +200,7 @@ export interface MemoryAdapter {
 		/** Insert or update a fact (includes reconsolidation logic) */
 		upsert(fact: Fact): Promise<void>;
 		/** Search facts by query string. deepRecall ignores decay for long-term retrieval. */
-		search(query: string, topK: number, deepRecall?: boolean): Promise<Fact[]>;
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */

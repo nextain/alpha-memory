@@ -1,5 +1,5 @@
 /**
- * MemorySystem — Orchestrator for Alpha's memory architecture.
+ * MemorySystem — Orchestrator for Naia Memory architecture.
  *
  * Coordinates the 4-store memory system:
  * - Working Memory: managed by ContextManager (#65)
@@ -425,6 +425,7 @@ export class MemorySystem {
 			episode.id,
 			score.utility,
 			now,
+			context.project,
 		);
 
 		// Strengthen associations between entities in the encoding context
@@ -449,9 +450,10 @@ export class MemorySystem {
 		episodeId: string,
 		importance: number,
 		now: number,
+		project?: string,
 	): Promise<void> {
 		// Search for semantically similar facts instead of loading all
-		const candidates = await this.adapter.semantic.search(newInfo, 10);
+		const candidates = await this.adapter.semantic.search(newInfo, 10, false, { project });
 		const contradictions = findContradictions(candidates, newInfo);
 
 		// Update ALL contradicted facts to prevent stale contradictory data
@@ -499,7 +501,7 @@ export class MemorySystem {
 
 		const [episodes, facts, reflections] = await Promise.all([
 			this.adapter.episode.recall(query, { ...context, topK }),
-			this.adapter.semantic.search(query, topK, context.deepRecall),
+			this.adapter.semantic.search(query, topK, context.deepRecall, { project: context.project }),
 			this.adapter.procedural.getReflections(query, topK),
 		]);
 
@@ -653,10 +655,16 @@ export class MemorySystem {
 
 				// 3. For each extracted fact, check contradictions and upsert
 				for (const ef of extracted) {
+					const srcEp = readyEpisodes.find((e) =>
+						ef.sourceEpisodeIds.includes(e.id),
+					);
+					const efProject = srcEp?.encodingContext?.project;
 					// Search for semantically similar facts instead of getAll() — O(topK) not O(N)
 					const existingFacts = await this.adapter.semantic.search(
 						ef.content,
 						10,
+						false,
+						efProject ? { project: efProject } : undefined,
 					);
 
 					// Check for exact/near identity to prevent semantic redundancy (#4)
@@ -725,6 +733,7 @@ export class MemorySystem {
 											...ef.sourceEpisodeIds,
 										]),
 									],
+									encodingContext: fact.encodingContext ?? srcEp?.encodingContext,
 								});
 								factsUpdated++;
 							}
@@ -755,6 +764,7 @@ export class MemorySystem {
 							strength: newImportance,
 							status: "active",
 							sourceEpisodes: ef.sourceEpisodeIds,
+							encodingContext: srcEp?.encodingContext,
 						};
 						await this.adapter.semantic.upsert(newFact);
 						factsCreated++;
@@ -950,7 +960,7 @@ export class MemorySystem {
 	//
 	// Implements the shape of @nextain/agent-types `CompactableCapable`
 	// structurally — no type-level import of that package is required,
-	// keeping alpha-memory's zero-dep guarantee on external ecosystem
+	// keeping naia-memory's zero-dep guarantee on external ecosystem
 	// packages.
 	//
 	// v0: deterministic summarizer that compresses a message window into a

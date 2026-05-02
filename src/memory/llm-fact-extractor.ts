@@ -1,5 +1,5 @@
 /**
- * LLM-based atomic fact extractor for Alpha Memory consolidation.
+ * LLM-based atomic fact extractor for Naia Memory consolidation.
  *
  * Replaces heuristicFactExtractor (which copies episode content verbatim)
  * with a Gemini Flash call that distills each episode into 1-5 atomic facts.
@@ -55,7 +55,6 @@ export function buildLLMFactExtractor(
 	return async (episodes: Episode[]): Promise<ExtractedFact[]> => {
 		const results: ExtractedFact[] = [];
 
-		// Process in batches to reduce API round-trips
 		for (let i = 0; i < episodes.length; i += batchSize) {
 			const batch = episodes.slice(i, i + batchSize);
 			const extracted = await extractBatch(batch, { apiKey, baseURL, model });
@@ -73,12 +72,22 @@ export function buildLLMFactExtractor(
 async function extractBatch(
 	episodes: Episode[],
 	opts: Required<Omit<LLMFactExtractorOptions, "batchSize">>,
+	retries = 3,
 ): Promise<ExtractedFact[]> {
 	const { apiKey, baseURL, model } = opts;
 
-	// Build numbered list of episode contents
 	const episodeList = episodes
-		.map((ep, i) => `[${i + 1}] ${ep.content}`)
+		.map((ep, i) => {
+			// LoCoMo dataset uses Unix seconds; JS Date expects ms.
+			// Heuristic: timestamps below 1e12 are seconds, otherwise ms.
+			const ts = ep.timestamp;
+			const tsMs = ts && ts < 1e12 ? ts * 1000 : ts;
+			const dateStr = tsMs
+				? new Date(tsMs).toISOString().split("T")[0]
+				: "";
+			const dateTag = dateStr ? ` [Date: ${dateStr}]` : "";
+			return `[${i + 1}]${dateTag} ${ep.content}`;
+		})
 		.join("\n");
 
 	const prompt = `You are a memory fact extractor. Given conversation turns, extract atomic facts about the user and any actionable information (preferences, constraints, environment details, tool results).
@@ -90,6 +99,7 @@ Rules:
 - 1-5 facts per episode. If no extractable facts exist, return []
 - Skip greetings, meta-commentary, questions without answers
 - Do NOT invent facts not present in the input
+- CRITICAL: When the turn mentions relative time ("yesterday", "last week", "last night"), resolve it using the [Date: YYYY-MM-DD] tag. Example: if tagged [Date: 2023-05-08] and text says "yesterday", write the fact as "User went to the LGBTQ support group on 2023-05-07" or "on 7 May 2023".
 
 Conversation turns:
 ${episodeList}
@@ -97,8 +107,8 @@ ${episodeList}
 Respond with ONLY a JSON object mapping episode number to fact array. No other text.
 Format: {"1": ["fact", ...], "2": ["fact", ...], ...}`;
 
-	try {
-		const response = await fetch(`${baseURL}chat/completions`, {
+	const call = () =>
+		fetch(`${baseURL}chat/completions`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -113,12 +123,38 @@ Format: {"1": ["fact", ...], "2": ["fact", ...], ...}`;
 			}),
 		});
 
-		if (!response.ok) {
-			throw new Error(`API ${response.status}: ${await response.text()}`);
+	let response: Response | undefined;
+	for (let attempt = 1; attempt <= retries; attempt++) {
+		try {
+			response = await call();
+			if (response.ok || response.status < 500) break;
+			const delay = Math.min(2000 * attempt, 10000);
+			console.warn(
+				`[LLMFactExtractor] API ${response.status}, retry ${attempt}/${retries} in ${delay}ms`,
+			);
+			await new Promise((r) => setTimeout(r, delay));
+		} catch (err: any) {
+			if (attempt === retries) {
+				console.warn(
+					`[LLMFactExtractor] Batch failed after ${retries} retries (${episodes.length} episodes), skipping`,
+				);
+				return [];
+			}
+			await new Promise((r) => setTimeout(r, 2000 * attempt));
 		}
+	}
 
+	if (!response || !response.ok) {
+		console.warn(
+			`[LLMFactExtractor] API ${response?.status ?? "timeout"}, skipping ${episodes.length} episodes`,
+		);
+		return [];
+	}
+
+	try {
 		const data = await response.json();
-		const raw = data.choices?.[0]?.message?.content ?? "{}";
+		let raw = data.choices?.[0]?.message?.content ?? "{}";
+		raw = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 		const parsed: Record<string, unknown> = JSON.parse(raw);
 
 		return episodes.flatMap((ep, i) => {
@@ -131,20 +167,7 @@ Format: {"1": ["fact", ...], "2": ["fact", ...], ...}`;
 			const facts: string[] = Array.isArray(rawFacts)
 				? rawFacts.filter((f): f is string => typeof f === "string")
 				: [];
-			if (facts.length === 0) {
-				// Fallback: keep episode content to avoid data loss
-				return [
-					{
-						content: ep.content,
-						entities: [],
-						topics: ep.encodingContext.project
-							? [ep.encodingContext.project]
-							: [],
-						importance: ep.importance.utility,
-						sourceEpisodeIds: [ep.id],
-					},
-				];
-			}
+			if (facts.length === 0) return [];
 			return facts.map((fact) => ({
 				content: fact,
 				entities: [],
@@ -154,17 +177,7 @@ Format: {"1": ["fact", ...], "2": ["fact", ...], ...}`;
 			}));
 		});
 	} catch (err) {
-		console.warn(
-			`[LLMFactExtractor] Batch failed (${episodes.length} episodes), falling back to heuristic:`,
-			err,
-		);
-		// Graceful fallback: return episodes as-is (same as heuristicFactExtractor)
-		return episodes.map((ep) => ({
-			content: ep.content,
-			entities: [],
-			topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
-			importance: ep.importance.utility,
-			sourceEpisodeIds: [ep.id],
-		}));
+		console.warn(`[LLMFactExtractor] Parse error, skipping batch:`, err);
+		return [];
 	}
 }

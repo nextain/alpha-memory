@@ -1759,3 +1759,25 @@
 - Language: ko
 - LLM: gemini-flash-lite
 - Judge: keyword
+
+### 🚀 Run Started: 2026. 4. 26. 오후 10:44:42
+- Run ID: `run-2026-04-26T13-44-42-112Z`
+- Adapters: naia-local
+- Language: en
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 4. 26. 오후 10:49:55
+- Run ID: `run-2026-04-26T13-49-55-628Z`
+- Adapters: naia, mem0
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: claude-cli
+
+### 🚀 Run Started: 2026. 4. 26. 오후 10:50:53
+- Run ID: `run-2026-04-26T13-50-53-769Z`
+- Adapters: naia, mem0
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: claude-cli

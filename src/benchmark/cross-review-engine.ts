@@ -101,7 +101,7 @@ REQUIRED FIXES: List the top 3 changes needed to ensure robustness.`;
 	console.log("⚖️ Chief Auditor (Opus) is synthesizing...");
 	const finalVerdict = await callModel(config.claude, synthesisPrompt, env);
 
-	const reportDir = "/var/home/luke/dev/alpha-memory/reports/cross-reviews";
+	const reportDir = "/var/home/luke/dev/naia-memory/reports/cross-reviews";
 	if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
 	const reportPath = join(reportDir, `audit-${config.phase}-${Date.now()}.md`);
 

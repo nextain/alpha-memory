@@ -96,7 +96,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 /** LocalAdapter constructor options */
 export interface LocalAdapterOptions {
-	/** Path to the JSON store file (default: ~/.naia/memory/alpha-memory.json) */
+	/** Path to the JSON store file (default: ~/.naia/memory/naia-memory.json) */
 	storePath?: string;
 	/** Optional embedding provider for vector search.
 	 *  When set, facts and episodes are embedded on write and retrieved by cosine similarity.
@@ -209,6 +209,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	private store: MemoryStore;
 	private readonly storePath: string;
 	private dirty = false;
+	private saveTimer: NodeJS.Timeout | null = null;
+	private readonly SAVE_DEBOUNCE_MS = 2000;
 	private kg: KnowledgeGraph;
 	/** Optional vector embedding provider (null = keyword-only mode) */
 	private readonly embedder: EmbeddingProvider | null;
@@ -225,7 +227,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		this.embedder =
 			typeof options === "object" ? (options.embeddingProvider ?? null) : null;
 		this.storePath =
-			storePath ?? join(homedir(), ".naia", "memory", "alpha-memory.json");
+			storePath ?? join(homedir(), ".naia", "memory", "naia-memory.json");
 		this.store = this.load();
 		// Initialize knowledge graph from persisted state
 		if (!this.store.knowledgeGraph) {
@@ -258,6 +260,21 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	}
 
 	private save(): void {
+		if (!this.dirty) return;
+		// Throttle pattern — first dirty mark schedules a flush in SAVE_DEBOUNCE_MS.
+		// Subsequent calls within that window do NOT reset the timer, so we get a
+		// guaranteed flush at most every SAVE_DEBOUNCE_MS even under sustained writes.
+		if (this.saveTimer) return;
+		this.saveTimer = setTimeout(() => {
+			this.saveImmediate();
+		}, this.SAVE_DEBOUNCE_MS);
+	}
+
+	saveImmediate(): void {
+		if (this.saveTimer) {
+			clearTimeout(this.saveTimer);
+			this.saveTimer = null;
+		}
 		if (!this.dirty) return;
 		const dir = dirname(this.storePath);
 		mkdirSync(dir, { recursive: true });
@@ -445,11 +462,12 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			this.save();
 		},
 
-		search: async (
-			query: string,
-			topK: number,
-			deepRecall = false,
-		): Promise<Fact[]> => {
+ 		search: async (
+ 			query: string,
+ 			topK: number,
+ 			deepRecall = false,
+ 			context?: { project?: string },
+ 		): Promise<Fact[]> => {
 			const now = Date.now();
 			const BROAD_FACTOR = 3;
 			const searchMode = process.env.NAIA_SEARCH_MODE ?? "vector-only";
@@ -471,7 +489,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const RRF_K = 60;
 			const useBM25 = searchMode !== "vector-only";
 
-			const allFacts = this.store.facts;
+			const proj = context?.project;
+			const allFacts = proj
+				? this.store.facts.filter(
+						(f) =>
+							f.encodingContext?.project === proj ||
+							(f.topics?.includes(proj) ?? false),
+					)
+				: this.store.facts;
 			const vectorScores: Map<string, number> = new Map();
 			const bm25Scores: Map<string, number> = new Map();
 			const entityBonuses: Map<string, number> = new Map();
@@ -583,7 +608,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				this.save();
 			}
 
-			return scored.map((s) => s.fact);
+			return scored.map((s) => {
+				s.fact.relevanceScore = s.score;
+				return s.fact;
+			});
 		},
 
 		decay: async (now: number): Promise<number> => {

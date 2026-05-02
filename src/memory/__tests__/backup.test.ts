@@ -12,7 +12,7 @@ import { MemorySystem } from "../index.js";
 import type { BackupCapable, Episode, Fact } from "../index.js";
 
 function makeTmpAdapter(): LocalAdapter {
-	const path = join(tmpdir(), `alpha-memory-test-${randomUUID()}.json`);
+	const path = join(tmpdir(), `naia-memory-test-${randomUUID()}.json`);
 	return new LocalAdapter(path);
 }
 
@@ -196,7 +196,7 @@ describe("MemorySystem backup delegation", () => {
 	function makeTmpSystem(): MemorySystem {
 		const path = join(
 			tmpdir(),
-			`alpha-memory-system-test-${randomUUID()}.json`,
+			`naia-memory-system-test-${randomUUID()}.json`,
 		);
 		return new MemorySystem({ adapter: new LocalAdapter(path) });
 	}
@@ -246,7 +246,7 @@ describe("MemorySystem backup delegation", () => {
 		// Encode a fact via MemorySystem so it is stored
 		const path = join(
 			tmpdir(),
-			`alpha-memory-system-import-test-${randomUUID()}.json`,
+			`naia-memory-system-import-test-${randomUUID()}.json`,
 		);
 		const srcAdapter = new LocalAdapter(path);
 		await srcAdapter.semantic.upsert(makeFact("MemorySystem import test fact"));
