@@ -63,6 +63,7 @@ export interface ReconsolidationCapableProvider {
 
 export interface TemporalCapableProvider {
 	applyDecay(): Promise<number>;
+	recallWithHistory(query: string, atTimestamp: number, opts?: RecallOptions): Promise<MemoryHit[]>;
 }
 
 export type AnyCapability =
@@ -75,7 +76,7 @@ const CAPABILITY_METHODS: Record<string, string[]> = {
 	BackupCapableProvider: ["exportBackup", "importBackup"],
 	ImportanceScoringCapable: ["scoreImportance"],
 	ReconsolidationCapableProvider: ["findContradictions"],
-	TemporalCapableProvider: ["applyDecay"],
+	TemporalCapableProvider: ["applyDecay", "recallWithHistory"],
 };
 
 export function isCapable(

@@ -154,7 +154,35 @@ export class NaiaMemoryProvider
 	// ─── Capability: Temporal ─────────────────────────────────────────────────
 
 	async applyDecay(): Promise<number> {
-		return (this.system as any).applyDecay();
+		const adapter = this.system["adapter"] as MemoryAdapter;
+		return adapter.semantic.decay(Date.now());
+	}
+
+	async recallWithHistory(
+		query: string,
+		atTimestamp: number,
+		opts?: RecallOptions,
+	): Promise<MemoryHit[]> {
+		const result = await this.system.recall(query, {
+			project: opts?.project,
+			topK: opts?.topK ?? 50,
+		});
+
+		const hits: MemoryHit[] = result.facts
+			.filter((f) => f.createdAt <= atTimestamp)
+			.map((f) => ({
+				id: f.id,
+				content: f.content,
+				score: f.relevanceScore ?? 0,
+				createdAt: f.createdAt,
+				updatedAt: f.updatedAt,
+				metadata: {
+					type: "fact" as const,
+					status: f.status,
+				},
+			}));
+
+		return hits;
 	}
 }
 

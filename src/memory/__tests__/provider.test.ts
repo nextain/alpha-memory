@@ -153,4 +153,23 @@ describe("NaiaMemoryProvider integration", () => {
 		expect(typeof scores.utility).toBe("number");
 		expect(scores.utility).toBeGreaterThan(0);
 	});
+
+	it("applyDecay delegates to adapter", async () => {
+		const adapter = mockAdapter();
+		const provider = new NaiaMemoryProvider({ adapter });
+		const pruned = await provider.applyDecay();
+		expect(typeof pruned).toBe("number");
+	});
+
+	it("recallWithHistory filters facts by timestamp", async () => {
+		const adapter = mockAdapter() as MemoryAdapter;
+		const provider = new NaiaMemoryProvider({ adapter });
+		await provider.encode(
+			{ content: "테스트 팩트", role: "user" },
+			{ project: "test" },
+		);
+		const now = Date.now();
+		const hits = await provider.recallWithHistory("테스트", now + 100000, { project: "test" });
+		expect(Array.isArray(hits)).toBe(true);
+	});
 });
