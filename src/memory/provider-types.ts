@@ -1,0 +1,88 @@
+/**
+ * MemoryProvider interface — local definition.
+ *
+ * TODO: Swap to @nextain/agent-types when published (plan §3.8).
+ * This file mirrors the interface defined in naia-agent/packages/types/src/memory.ts.
+ * When @nextain/agent-types is available, replace this file with a re-export:
+ *   export type { MemoryProvider, ... } from "@nextain/agent-types/memory";
+ */
+
+export interface MemoryProviderInput {
+	content: string;
+	role: "user" | "assistant" | "tool";
+	timestamp?: number;
+	context?: string;
+}
+
+export interface MemoryHit {
+	id: string;
+	content: string;
+	score: number;
+	createdAt: number;
+	updatedAt?: number;
+	metadata?: Record<string, unknown>;
+}
+
+export interface RecallOptions {
+	project?: string;
+	topK?: number;
+	sessionId?: string;
+}
+
+export interface ConsolidationSummary {
+	factsCreated: number;
+	factsUpdated: number;
+	episodesProcessed: number;
+	durationMs: number;
+}
+
+export interface MemoryProvider {
+	encode(input: MemoryProviderInput, opts?: { project?: string }): Promise<void>;
+	recall(query: string, opts?: RecallOptions): Promise<MemoryHit[]>;
+	consolidate(): Promise<ConsolidationSummary>;
+	close(): Promise<void>;
+}
+
+// ─── Capability interfaces (optional, detected via isCapable<>) ────────────
+
+export interface BackupCapableProvider {
+	exportBackup(password: string): Promise<Uint8Array>;
+	importBackup(blob: Uint8Array, password: string): Promise<void>;
+}
+
+export interface ImportanceScoringCapable {
+	scoreImportance(text: string): { importance: number; surprise: number; emotion: number; utility: number };
+}
+
+export interface ReconsolidationCapableProvider {
+	findContradictions(
+		newContent: string,
+		existingIds?: string[],
+	): Promise<{ conflictingId: string; conflictType: "direct" | "indirect"; reason: string }[]>;
+}
+
+export interface TemporalCapableProvider {
+	applyDecay(): Promise<number>;
+}
+
+export type AnyCapability =
+	| BackupCapableProvider
+	| ImportanceScoringCapable
+	| ReconsolidationCapableProvider
+	| TemporalCapableProvider;
+
+const CAPABILITY_METHODS: Record<string, string[]> = {
+	BackupCapableProvider: ["exportBackup", "importBackup"],
+	ImportanceScoringCapable: ["scoreImportance"],
+	ReconsolidationCapableProvider: ["findContradictions"],
+	TemporalCapableProvider: ["applyDecay"],
+};
+
+export function isCapable(
+	provider: MemoryProvider & Partial<AnyCapability>,
+	capName: string,
+): boolean {
+	const methods = CAPABILITY_METHODS[capName];
+	if (!methods) return false;
+	return methods.every((m) => typeof (provider as any)[m] === "function");
+}
