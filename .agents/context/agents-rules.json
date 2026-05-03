@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "project": "naia-memory",
+  "updated": "2026-05-03",
+  "sot": ".agents/progress/plan-v3-anchor-2026-05-02.md",
+
+  "forbidden_actions": [
+    {
+      "id": "F-MEM-01",
+      "pattern": "Define new MemoryProvider interface or MemoryEngine type",
+      "reason": "Already defined in @nextain/agent-types (plan §0.1.2)",
+      "decision_ref": "decision-matrix §A01"
+    },
+    {
+      "id": "F-MEM-02",
+      "pattern": "Fork, vendor, or deeply import mem0 source code into src/",
+      "reason": "User directive 2026-05-02: stack on top, no codebase fusion",
+      "decision_ref": "decision-matrix §B01, plan §0.2.1"
+    },
+    {
+      "id": "F-MEM-03",
+      "pattern": "Implement natural language intent parsing in naia-memory",
+      "reason": "naia-agent responsibility — naia-memory handles search logic only",
+      "decision_ref": "decision-matrix §B02, plan §2.2"
+    },
+    {
+      "id": "F-MEM-04",
+      "pattern": "Make abstention or response decisions in naia-memory",
+      "reason": "Agent + LLM responsibility, not memory layer",
+      "decision_ref": "decision-matrix §B03, plan §2.2"
+    },
+    {
+      "id": "F-MEM-05",
+      "pattern": "Create 5-layer hybrid or mem0+naia codebase fusion",
+      "reason": "User directive: mem0 is one adapter option, not architecture",
+      "decision_ref": "decision-matrix §B04, plan §0.2.2"
+    },
+    {
+      "id": "F-MEM-06",
+      "pattern": "Category-specific adaptive weights or per-category thresholds",
+      "reason": "Anti-overfitting — production queries have unknown categories",
+      "decision_ref": "AGENTS.md Conventions"
+    },
+    {
+      "id": "F-MEM-07",
+      "pattern": "Move ko-time-parser or temporal NL parsing into naia-memory",
+      "reason": "Agent responsibility — plan §3.7 explicitly moves to naia-agent",
+      "decision_ref": "decision-matrix §B02, plan §3.7 temporal row"
+    },
+    {
+      "id": "F-MEM-08",
+      "pattern": "Log raw PII content to stdout/stderr/files",
+      "reason": "PII policy — hash only (plan §3.4)",
+      "decision_ref": "plan §3.4, §3.9"
+    },
+    {
+      "id": "F-MEM-09",
+      "pattern": "Expose API key values in logs or error messages",
+      "reason": "Security — env var names OK, values never",
+      "decision_ref": "plan §3.9"
+    }
+  ],
+
+  "locked_decisions": [
+    {
+      "id": "A01",
+      "summary": "MemoryProvider interface adopted from @nextain/agent-types",
+      "immutable": true
+    },
+    {
+      "id": "A02",
+      "summary": "Capability pattern (BackupCapable, ImportanceCapable, etc.)",
+      "immutable": true
+    },
+    {
+      "id": "A03",
+      "summary": "Adapter pattern — LocalAdapter, Mem0Adapter, QdrantAdapter",
+      "immutable": true
+    },
+    {
+      "id": "A06",
+      "summary": "mem0 위에 stack on top — no code coupling",
+      "immutable": true
+    }
+  ],
+
+  "phase": {
+    "current": "R1",
+    "slices": {
+      "R1.0": "done",
+      "R1.1": "done",
+      "R1.2": "next",
+      "R1.3": "pending",
+      "R1.4": "done",
+      "R1.5": "in_progress",
+      "R1.6": "pending"
+    }
+  }
+}
