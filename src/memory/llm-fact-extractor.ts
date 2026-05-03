@@ -101,6 +101,14 @@ Rules:
 - Do NOT invent facts not present in the input
 - CRITICAL: When the turn mentions relative time ("yesterday", "last week", "last night"), resolve it using the [Date: YYYY-MM-DD] tag. Example: if tagged [Date: 2023-05-08] and text says "yesterday", write the fact as "User went to the LGBTQ support group on 2023-05-07" or "on 7 May 2023".
 
+Korean-specific rules (apply when episode is Korean):
+- 한국어 에피소드에서는 반드시 한국어로 fact를 작성. 영어로 번역하지 마라.
+- 조사(은/는/이/가/을/를)는 생략하고 명사구 중심으로 작성: "사용자 직업: 소프트웨어 엔지니어"
+- 고유명사(회사명, 제품명, 사람 이름)는 원형 그대로 보존.
+- 영어 혼용(Konglish)은 원문 그대로 유지: "VS Code", "React", "TypeScript"
+- 한국어 fact 예시:
+  {"1": ["사용자 선호 에디터: VS Code", "사용자 코딩 스타일: 탭 들여쓰기", "사용자 거주지: 서울"]}
+
 Conversation turns:
 ${episodeList}
 
