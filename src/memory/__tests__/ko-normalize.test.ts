@@ -3,7 +3,7 @@
  * Verify Korean text tokenization for BM25 search integration.
  */
 import { describe, expect, it } from "vitest";
-import { tokenize, stripParticle, normalize } from "../ko-normalize.js";
+import { tokenize, stripParticle, normalize, normalizeEnding } from "../ko-normalize.js";
 
 describe("ko-normalize", () => {
 	describe("stripParticle", () => {
@@ -61,6 +61,30 @@ describe("ko-normalize", () => {
 			const result = normalize("고양이가 밥을 먹었어요");
 			expect(typeof result).toBe("string");
 			expect(result.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("normalizeEnding", () => {
+		it("normalizes 하다 conjugations", () => {
+			expect(normalizeEnding("했어요")).toBe("하다");
+			expect(normalizeEnding("했습니다")).toBe("하다");
+			expect(normalizeEnding("했다")).toBe("하다");
+			expect(normalizeEnding("해요")).toBe("하다");
+		});
+
+		it("normalizes 먹다 conjugations", () => {
+			expect(normalizeEnding("먹었어요")).toBe("먹다");
+			expect(normalizeEnding("먹었다")).toBe("먹다");
+		});
+
+		it("normalizes 가다 conjugations", () => {
+			expect(normalizeEnding("갔어요")).toBe("가다");
+			expect(normalizeEnding("갔다")).toBe("가다");
+		});
+
+		it("preserves non-matching tokens", () => {
+			expect(normalizeEnding("고양이")).toBe("고양이");
+			expect(normalizeEnding("neovim")).toBe("neovim");
 		});
 	});
 });
