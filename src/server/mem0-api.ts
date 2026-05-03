@@ -5,6 +5,7 @@ import { LocalAdapter } from "../memory/adapters/local.js";
 import { Mem0Adapter } from "../memory/adapters/mem0.js";
 import { buildLLMFactExtractor } from "../memory/llm-fact-extractor.js";
 import { OpenAICompatEmbeddingProvider } from "../memory/embeddings.js";
+import { createConsolidationGate } from "./consolidation-gate.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -93,8 +94,14 @@ const factExtractor = buildLLMFactExtractor({
 });
 const system = new MemorySystem({ adapter, factExtractor });
 
-let needsConsolidation = false;
-let consolidating = false;
+const gate = createConsolidationGate({
+	consolidate: async () => {
+		const r = await system.consolidateNow(true);
+		console.log(
+			`Consolidated: ${r.factsCreated} new facts, ${r.factsUpdated} updated`,
+		);
+	},
+});
 let addCount = 0;
 const CONSOLIDATE_EVERY = 10;
 
@@ -113,25 +120,9 @@ const unconsolidatedCount = (adapter as any).store?.episodes?.filter(
 	(e: any) => !e.consolidated,
 ).length ?? 0;
 if (unconsolidatedCount > 0) {
-	needsConsolidation = true;
 	console.log(`Found ${unconsolidatedCount} unconsolidated episodes, consolidating...`);
-	ensureConsolidated();
-}
-
-async function ensureConsolidated() {
-	if (!needsConsolidation || consolidating) return;
-	consolidating = true;
-	try {
-		const r = await system.consolidateNow(true);
-		console.log(
-			`Consolidated: ${r.factsCreated} new facts, ${r.factsUpdated} updated`,
-		);
-		needsConsolidation = false;
-	} catch (err: any) {
-		console.error("Consolidation error:", err.message?.slice(0, 200));
-	} finally {
-		consolidating = false;
-	}
+	gate.markDirty();
+	gate.ensureConsolidated();
 }
 
 interface SearchResult {
@@ -161,10 +152,10 @@ app.post("/memories", async (req, res) => {
 			{ project: user_id },
 		);
 
-		needsConsolidation = true;
+		gate.markDirty();
 		addCount++;
 		if (addCount % CONSOLIDATE_EVERY === 0) {
-			ensureConsolidated();
+			gate.ensureConsolidated();
 		}
 
 		res.json({ results: [] });
@@ -176,7 +167,7 @@ app.post("/memories", async (req, res) => {
 
 app.post("/consolidate", async (_req, res) => {
 	try {
-		await ensureConsolidated();
+		await gate.ensureConsolidated();
 		res.json({ status: "ok" });
 	} catch (err: any) {
 		res.status(500).json({ error: err.message?.slice(0, 200) });
@@ -192,7 +183,7 @@ app.post("/search", async (req, res) => {
 		}
 		const topK = limit || 50;
 
-		await ensureConsolidated();
+		await gate.ensureConsolidated();
 
 		const result = await system.recall(query, {
 			project: user_id,
