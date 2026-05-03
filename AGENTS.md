@@ -108,17 +108,15 @@ PORT=9876 STORE_PATH=/tmp/naia.json pnpm exec tsx src/server/mem0-api.ts
 2. **multi_fact_synthesis 0-2/15** — query decomposition 필요 (P4)
 3. **temporal 3/20** — TemporalCapable 구현 필요 (R2.3)
 
-## Phase R1 Progress (2026-05-03)
+## Phase Progress
 
-| Slice | Status | Commit |
-|-------|--------|--------|
-| R1.0 Anti-drift lockdown | ✅ | 165f62f |
-| R1.1 Server race fix | ✅ | dbde8f5 |
-| R1.2 v3/ cleanup | ✅ | 651d3c6 |
-| R1.3 NaiaMemoryProvider | ✅ | baa1674 |
-| R1.4 AGENTS.md 통합 | ✅ | db28467 |
-| R1.5 agents-rules.json | ✅ | dfb854a |
-| R1.6 벤치마크 현행화 | ✅ | — |
+| Phase | Status |
+|-------|--------|
+| R1 안정화 (7 slices) | ✅ 완료 |
+| R2 Capability (4 slices) | ✅ 완료 |
+| R3 한국어 강화 | 대기 |
+| R4 Multi-adapter | 대기 |
+| R5 검증 측정 | 대기 |
 
 ## Conventions
 
