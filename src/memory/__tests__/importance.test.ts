@@ -253,9 +253,9 @@ describe("scoreImportance — Korean markers (IM-14 — expanded R7)", () => {
 		expect(s.importance).toBeCloseTo(0.45, 5); // 0.3 + 1*0.15
 	});
 
-	it("Korean IMPORTANCE directive 반드시 → 1 hit", () => {
+	it("Korean IMPORTANCE directive 반드시 + 기억 → 2 hits", () => {
 		const s = scoreImportance(input({ content: "반드시 기억해야 해", role: "user" }));
-		expect(s.importance).toBeCloseTo(0.45, 5);
+		expect(s.importance).toBeCloseTo(0.6, 5); // 0.3 + 2*0.15
 	});
 
 	it("Korean IMPORTANCE preference 원해 → 1 hit", () => {

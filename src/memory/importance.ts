@@ -23,6 +23,7 @@ const IMPORTANCE_MARKERS = [
 	"항상",
 	"절대",
 	"반드시",
+	"꼭",
 	// Decisions
 	"decided",
 	"decision",
@@ -52,6 +53,14 @@ const IMPORTANCE_MARKERS = [
 	"credential",
 	"important",
 	"중요",
+	"기억",
+	"잊지",
+	"비밀",
+	"특별",
+	// First/last/unique
+	"처음",
+	"마지막",
+	"유일",
 ];
 
 /** Keywords indicating surprise/novelty */
@@ -73,6 +82,13 @@ const SURPRISE_MARKERS = [
 	"found out",
 	"알고 보니",
 	"발견",
+	"놀람",
+	"갑자기",
+	"어머",
+	"헐",
+	"진짜",
+	"정말",
+	"충격",
 ];
 
 /** Keywords indicating emotional arousal */
@@ -88,6 +104,13 @@ const EMOTION_MARKERS = {
 		"최고",
 		"감사",
 		"대박",
+		"사랑",
+		"행복",
+		"기쁘",
+		"즐겁",
+		"멋지",
+		"훌륭",
+		"기대",
 	],
 	negative: [
 		"frustrated",
@@ -100,6 +123,13 @@ const EMOTION_MARKERS = {
 		"별로",
 		"최악",
 		"답답",
+		"슬프",
+		"분노",
+		"걱정",
+		"두렵",
+		"무섭",
+		"힘들",
+		"괴롭",
 	],
 };
 
