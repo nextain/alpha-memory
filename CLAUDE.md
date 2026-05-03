@@ -114,9 +114,21 @@ PORT=9876 STORE_PATH=/tmp/naia.json pnpm exec tsx src/server/mem0-api.ts
 |-------|--------|
 | R1 안정화 (7 slices) | ✅ 완료 |
 | R2 Capability (4 slices) | ✅ 완료 |
-| R3 한국어 강화 | 대기 |
+| R3 한국어 강화 (3/4 slices) | 🔄 R3.3 측정 대기 |
 | R4 Multi-adapter | 대기 |
 | R5 검증 측정 | 대기 |
+
+## R3.3 Embedding A/B 측정 (API key 필요)
+
+```bash
+# 측정 1: 현재 기본 (keyword-only or gemini-embedding)
+GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=ko
+
+# 측정 2: multilingual-e5-large (offline, CPU)
+NAIA_EMBEDDING=offline-e5 pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=ko
+```
+
+결정 기준: e5 ≥ gemini +3pp → e5 기본값, 미만 → gemini 유지
 
 ## Conventions
 
