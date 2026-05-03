@@ -438,7 +438,7 @@ export interface MemoryProviderConfig {
 - R1.0 (NEW): anti-drift lockdown 먼저 (AGENTS.md outdated 헤더)
 - R1.4 (NEW): AGENTS.md / CLAUDE.md 통합
 - R1.5 (NEW): agents-rules.json (machine-readable)
-- R1.6 (NEW): 벤치마크 시스템 현행화 (12→9 카테고리)
+- R1.6 (NEW): 벤치마크 시스템 현행화 (12 카테고리, v1/v2 모두 검증 완료)
 
 | Slice | 내용 | Success Criteria | 예상 |
 |-------|------|---|---|
@@ -448,7 +448,7 @@ export interface MemoryProviderConfig {
 | R1.3 | NaiaMemoryProvider wrapper (`src/memory/provider.ts`) | MemoryProvider implements + wrapper 단위 테스트 + LocalAdapter contract test | 1.5일 |
 | **R1.4** | AGENTS.md / CLAUDE.md 통합 (R5~R14 archive 처리, 새 anchor 우선) | 옛 컨텍스트 → `docs/archive/` 이동, AGENTS.md 가 plan-v3-anchor 인용 | 0.5일 |
 | **R1.5** | `.agents/context/agents-rules.json` (machine-readable forbidden_actions) | F-MEM-01~06 + decision-matrix §B 항목 JSON 화 | 0.5일 |
-| **R1.6** | 벤치마크 시스템 현행화 — 12 카테고리 vs 9 카테고리 호환 | K-MemBench v2 9 카테고리 측정 환경 valid + run-comparison.ts 호환 | 1일 |
+| **R1.6** | 벤치마크 시스템 현행화 — 12 카테고리 v1/v2 호환 검증 | K-MemBench v2 12 카테고리 측정 환경 valid + run-comparison.ts 호환 | 0.5일 |
 
 ### Phase R2 (1-2주): Capability 구현
 

@@ -114,11 +114,11 @@ PORT=9876 STORE_PATH=/tmp/naia.json pnpm exec tsx src/server/mem0-api.ts
 |-------|--------|--------|
 | R1.0 Anti-drift lockdown | ✅ | 165f62f |
 | R1.1 Server race fix | ✅ | dbde8f5 |
-| R1.2 v3/ cleanup | 🔄 다음 | — |
-| R1.3 NaiaMemoryProvider | 대기 | — |
-| R1.4 AGENTS.md 통합 | ✅ 본 commit | — |
-| R1.5 agents-rules.json | 대기 | — |
-| R1.6 벤치마크 현행화 | 대기 | — |
+| R1.2 v3/ cleanup | ✅ | 651d3c6 |
+| R1.3 NaiaMemoryProvider | ✅ | baa1674 |
+| R1.4 AGENTS.md 통합 | ✅ | db28467 |
+| R1.5 agents-rules.json | ✅ | dfb854a |
+| R1.6 벤치마크 현행화 | ✅ | — |
 
 ## Conventions
 
