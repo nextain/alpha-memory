@@ -9,8 +9,9 @@
 
 import { MemorySystem } from "./index.js";
 import type { MemoryAdapter } from "./types.js";
-import type { EmbeddingProvider } from "./embeddings.js";
 import type { FactExtractor } from "./index.js";
+import { findContradictions as findContradictionsReal } from "./reconsolidation.js";
+import { scoreImportance as scoreImportanceFn } from "./importance.js";
 import {
 	BackupCapableProvider,
 	ImportanceScoringCapable,
@@ -132,7 +133,7 @@ export class NaiaMemoryProvider
 	// ─── Capability: ImportanceScoring ────────────────────────────────────────
 
 	scoreImportance(text: string): { importance: number; surprise: number; emotion: number; utility: number } {
-		return (this.system as any).scoreImportance(text);
+		return scoreImportanceFn({ content: text, role: "user" });
 	}
 
 	// ─── Capability: Reconsolidation ──────────────────────────────────────────
@@ -141,15 +142,12 @@ export class NaiaMemoryProvider
 		newContent: string,
 		_existingIds?: string[],
 	): Promise<{ conflictingId: string; conflictType: "direct" | "indirect"; reason: string }[]> {
-		const facts = await this.system.recall(newContent, { topK: 10 });
-		const contradictions = (this.system as any).findContradictions(
-			{ content: newContent } as any,
-			facts.facts,
-		);
-		return contradictions.map((c: any) => ({
-			conflictingId: c.id ?? c.factId ?? "",
-			conflictType: c.type ?? "direct",
-			reason: c.reason ?? "",
+		const result = await this.system.recall(newContent, { topK: 10 });
+		const contradictions = findContradictionsReal(result.facts, newContent);
+		return contradictions.map(({ fact, result: r }) => ({
+			conflictingId: fact.id,
+			conflictType: r.action === "update" ? "direct" as const : "indirect" as const,
+			reason: r.reason,
 		}));
 	}
 

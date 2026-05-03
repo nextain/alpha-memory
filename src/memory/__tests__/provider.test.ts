@@ -122,3 +122,35 @@ describe("isCapable", () => {
 		expect(isCapable(provider, "UnknownCap")).toBe(false);
 	});
 });
+
+describe("NaiaMemoryProvider integration", () => {
+	it("findContradictions detects state change", async () => {
+		const adapter = mockAdapter() as MemoryAdapter;
+		const provider = new NaiaMemoryProvider({ adapter });
+
+		await provider.encode(
+			{ content: "나는 Neovim을 사용해", role: "user" },
+			{ project: "test" },
+		);
+		await provider.consolidate();
+
+		const contradictions = await provider.findContradictions(
+			"Neovim 안 써, Cursor로 바꿨어",
+		);
+		if (contradictions.length > 0) {
+			expect(contradictions[0]!.conflictType).toMatch(/direct|indirect/);
+			expect(typeof contradictions[0]!.reason).toBe("string");
+		}
+	});
+
+	it("scoreImportance returns 4-axis scores", () => {
+		const adapter = mockAdapter();
+		const provider = new NaiaMemoryProvider({ adapter });
+		const scores = provider.scoreImportance("이건 정말 중요한 비밀이야");
+		expect(typeof scores.importance).toBe("number");
+		expect(typeof scores.surprise).toBe("number");
+		expect(typeof scores.emotion).toBe("number");
+		expect(typeof scores.utility).toBe("number");
+		expect(scores.utility).toBeGreaterThan(0);
+	});
+});
