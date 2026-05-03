@@ -22,19 +22,21 @@ const useGateway = GATEWAY_URL && GATEWAY_KEY;
 const llmBase = useGateway ? `${GATEWAY_URL.replace(/\/+$/, "")}/v1/` : GEMINI_BASE;
 const llmKey = useGateway ? GATEWAY_KEY : apiKey;
 
-const embedBaseUrl = useGateway
-	? GATEWAY_URL.replace(/\/+$/, "")
-	: GEMINI_BASE;
-const embedApiKey = useGateway ? GATEWAY_KEY : apiKey;
-const embedModel = useGateway
-	? "vertexai/gemini-embedding-001"
-	: "gemini-embedding-001";
+const embedBaseUrl = process.env.VLLM_EMBED_BASE
+	|| (useGateway ? GATEWAY_URL.replace(/\/+$/, "") : GEMINI_BASE);
+const embedApiKey = process.env.VLLM_EMBED_BASE
+	? "empty" : (useGateway ? GATEWAY_KEY : apiKey);
+const embedModel = process.env.VLLM_EMBED_MODEL
+	|| (useGateway ? "vertexai/gemini-embedding-001" : "gemini-embedding-001");
+const embedDims = process.env.VLLM_EMBED_DIM
+	? parseInt(process.env.VLLM_EMBED_DIM, 10)
+	: 3072;
 
 const embedder = new OpenAICompatEmbeddingProvider(
 	embedBaseUrl,
 	embedApiKey,
 	embedModel,
-	3072,
+	embedDims,
 );
 
 const adapterType = (process.env.ADAPTER || "local").toLowerCase();
@@ -233,7 +235,7 @@ app.get("/health", (_req, res) => {
 app.listen(port, () => {
 	console.log(`naia-memory Mem0 API server on port ${port}`);
 	console.log(`  store: ${storePath}`);
-	console.log(`  embedder: gemini-embedding-001 (3072d)`);
+	console.log(`  embedder: ${process.env.VLLM_EMBED_BASE ? `${embedModel} (${embedDims}d, vLLM)` : `gemini-embedding-001 (3072d)`}`);
 	console.log(`  fact extraction: ${useGateway ? `gateway (${GATEWAY_URL})` : "gemini direct"}`);
 	console.log(`  lazy consolidation (consolidates on first search)`);
 });

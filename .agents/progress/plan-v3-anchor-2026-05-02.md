@@ -461,24 +461,56 @@ export interface MemoryProviderConfig {
 | R2.3 | `TemporalCapable` — bi-temporal index + recallWithHistory | LoCoMo temporal r@50 10% → 30%+ |
 | R2.4 | `CompactableCapable.compact` | 대화 요약 단위 테스트 |
 
-### Phase R3 (1주): 한국어 강화
+### Phase R3 (1주): 한국어 강화 ✅ 완료
 
 **Goal**: 한국어 처리 정밀도.
 
-| Slice | 내용 | Success Criteria |
-|-------|------|---|
-| R3.1 | KO normalize 강화 (konlpy 또는 lite) | 단위 테스트 (조사 분리, 동의어) |
-| R3.2 | Mem0Adapter 의 KO fact extraction prompt fix (한국어 보존) | KO 입력 → 한국어 fact 저장 검증 |
-| R3.3 | EmbeddingProvider — KO 친화 모델 옵션 (e5-multilingual etc.) | A/B 측정 |
+| Slice | 내용 | 상태 | 결과 |
+|-------|------|------|------|
+| R3.0 | BM25→KO normalize 연결 | ✅ | `local.ts`에서 KO detect 후 ko-normalize 라우팅 |
+| R3.1 | KO normalize 강화 | ✅ | 조사 18→60+, 어미 원형 복원 28패턴, 14 테스트 |
+| R3.2 | KO fact extraction prompt | ✅ | 한국어 규칙+예시 추가 |
+| R3.3 | Embedding A/B 측정 | ✅ | 6개 로컬+API 임베딩 비교 완료 |
+
+**R3.3 Embedding A/B 결과 (V2 KO keyword judge, auto-adaptive mode)**:
+
+| Embedding | Score | Size | Mode | 실행 |
+|-----------|:-----:|------|------|------|
+| **gemini-embedding-001** | **49%** | API | vector-only | API |
+| **qwen3-embedding:8b** | **39%** | 4.7GB | rrf | Ollama 로컬 |
+| qwen3-embedding:0.6b | 31% | 639MB | rrf | Ollama 로컬 |
+| bge-m3 | 29% | 1.2GB | rrf | Ollama 로컬 |
+| snowflake-arctic-embed2 | 27% | 1.2GB | rrf | Ollama 로컬 |
+| nomic-embed-text | 22% | 274MB | rrf | Ollama 로컬 |
+| multilingual-e5-large | 20% | offline | rrf | HF 로컬 |
+
+**결정**: gemini 유지 (기본), qwen3-embedding:8b를 로컬 최적으로 채택 (완전 로컬 모드 시).
+
+**R4.0 vLLM 통합 (2026-05-04)**: Ollama → vLLM 마이그레이션 완료.
+- 서빙 프레임워크 단일화: vllm-omni만 사용 (Ollama 제거)
+- `adapter-naia-local.ts`: Ollama endpoint → `VLLM_EMBED_BASE` env (default `localhost:8001`)
+- `run-comparison.ts`: `callOllama` → `callVllm` (`VLLM_BASE` env, default `localhost:8000`)
+- `mem0-api.ts`: `VLLM_EMBED_BASE`/`VLLM_EMBED_MODEL`/`VLLM_EMBED_DIM` env 지원
+- `scripts/serve-embedding.sh`: vLLM 임베딩 서버 실행 스크립트
+- **다음 단계**: 노트북 RTX 4060 (8GB)에서 vLLM 임베딩 서버 구동 후 벤치마크 실행
+
+**R3 추가 성과 — V2 keyword judge KO 정규화**:
+- `ko-judge-helpers.ts` 공유 모듈 (18개 한국어 어미/동의어 패턴 + `(변경)` 접미어 제거)
+- contradiction_direct: 15% → 80% (keyword judge 버그 수정)
+- 전체: 38.6% → 49% (+10pp)
+
+**R3 추가 성과 — 검색 모드 자동 적응**:
+- `local.ts`: embedding dims >= 2000 → vector-only, < 2000 → rrf (BM25 하이브리드)
+- 환경변수 `NAIA_SEARCH_MODE`로 오버라이드 가능
 
 ### Phase R4 (1주): Multi-adapter validation
 
 **Goal**: 어떤 adapter 든 같은 contract 통과.
 
-| Slice | 내용 | Success Criteria |
-|-------|------|---|
-| R4.1 | `contract-tests.ts` — 모든 adapter 가 통과해야 할 동작 | LocalAdapter + Mem0Adapter 둘 다 PASS |
-| R4.2 | Adapter swap 가이드 문서 | docs/adapter-guide.md |
+| Slice | 내용 | 상태 | 결과 |
+|-------|------|------|------|
+| R4.1 | `contract-tests.ts` | ✅ | 10/10 PASS (naia-local). 팩토리 패턴으로 adapter 확장 가능 |
+| R4.2 | Adapter swap 가이드 문서 | 대기 | docs/adapter-guide.md |
 
 **contract-tests.ts 구체 케이스** (모든 adapter 필수 PASS):
 

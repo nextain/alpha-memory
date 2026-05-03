@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-async function embed(text: string, provider: "google" | "ollama") {
+async function embed(text: string, provider: "google" | "vllm") {
 	const gwUrl =
 		"https://any-llm-gateway-70423245233.asia-northeast3.run.app/v1/embeddings";
 	const gwKey = "1ecc41ed461d4643b72c31b19b82533f.uLSxYdmhZjKEpyYJ";
@@ -21,12 +21,17 @@ async function embed(text: string, provider: "google" | "ollama") {
 		const data = (await res.json()) as any;
 		return data.data[0].embedding;
 	} else {
-		const res = await fetch("http://127.0.0.1:11434/api/embeddings", {
+		const base = process.env.VLLM_EMBED_BASE ?? "http://localhost:8001";
+		const res = await fetch(`${base}/v1/embeddings`, {
 			method: "POST",
-			body: JSON.stringify({ model: "mxbai-embed-large", prompt: text }),
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				model: "Qwen/Qwen3-Embedding-0.6B",
+				input: [text],
+			}),
 		});
 		const data = (await res.json()) as any;
-		return data.embedding;
+		return data.data[0].embedding;
 	}
 }
 
@@ -51,7 +56,7 @@ async function runTest() {
 
 	const queries = ["내 이름이 뭐야?", "나 뭐하는 사람이야?", "내 에디터 뭐야?"];
 
-	console.log("🚀 Comparing Embedders: Google vs Ollama(mxbai)");
+	console.log("🚀 Comparing Embedders: Google vs vLLM(qwen3-embedding)");
 
 	for (let i = 0; i < queries.length; i++) {
 		const q = queries[i];
@@ -61,9 +66,9 @@ async function runTest() {
 			await embed(q, "google"),
 			await embed(f, "google"),
 		);
-		const simOllama = cosineSimilarity(
-			await embed(q, "ollama"),
-			await embed(f, "ollama"),
+		const simVllm = cosineSimilarity(
+			await embed(q, "vllm"),
+			await embed(f, "vllm"),
 		);
 
 		console.log(`\nQuery: "${q}"`);
@@ -72,7 +77,7 @@ async function runTest() {
 			` - Google Similarity: ${simGoogle.toFixed(4)} ${simGoogle >= 0.7 ? "✅" : "❌ (Blocked at 0.7)"}`,
 		);
 		console.log(
-			` - Ollama Similarity: ${simOllama.toFixed(4)} ${simOllama >= 0.7 ? "✅" : "❌ (Blocked at 0.7)"}`,
+			` - vLLM Similarity: ${simVllm.toFixed(4)} ${simVllm >= 0.7 ? "✅" : "❌ (Blocked at 0.7)"}`,
 		);
 	}
 }

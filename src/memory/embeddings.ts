@@ -92,7 +92,7 @@ export class OfflineEmbeddingProvider implements EmbeddingProvider {
 }
 
 /**
- * OpenAICompatEmbeddingProvider — supports local LLMs (Ollama, vLLM) and hosted APIs.
+ * OpenAICompatEmbeddingProvider — supports local LLMs (vLLM) and hosted APIs.
  */
 export class OpenAICompatEmbeddingProvider implements EmbeddingProvider {
 	readonly name: string = "openai-compat";

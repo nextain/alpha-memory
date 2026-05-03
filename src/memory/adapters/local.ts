@@ -473,7 +473,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  		): Promise<Fact[]> => {
 			const now = Date.now();
 			const BROAD_FACTOR = 3;
-			const searchMode = process.env.NAIA_SEARCH_MODE ?? "vector-only";
+			const searchMode = process.env.NAIA_SEARCH_MODE ?? (this.embedder && this.embedder.dims >= 2000 ? "vector-only" : "rrf");
 
 			const queryVec = await this.embedWithCache(query);
 

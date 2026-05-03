@@ -42,6 +42,7 @@ import type {
 	TestDetail,
 } from "./types.js";
 import { convertV2ToV1 } from "./convert-v2-to-v1.js";
+import { koIncludes } from "./ko-judge-helpers.js";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
 // THROTTLE_MS removed — Vertex AI gateway has no rate limit
@@ -138,9 +139,9 @@ function createAdapter(
 
 // ─── LLM Response Generation ────────────────────────────────────────────────
 
-const OLLAMA_BASE = "http://localhost:11434/v1/";
+const VLLM_BASE = process.env.VLLM_BASE ?? "http://localhost:8000/v1/";
 
-async function callOllama(
+async function callVllm(
 	model: string,
 	messages: Array<{ role: string; content: string }>,
 	maxTokens: number,
@@ -151,7 +152,7 @@ async function callOllama(
 }> {
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
-			const res = await fetch(`${OLLAMA_BASE}chat/completions`, {
+			const res = await fetch(`${VLLM_BASE}chat/completions`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -492,7 +493,7 @@ ${memories.map((m) => `- ${m}`).join("\n")}
 	if (llm === "gemini-cli") {
 		result = await callGeminiCLI(messages, "gemini-2.5-flash");
 	} else if (llm === "qwen3") {
-		result = await callOllama("qwen3:8b", messages, 500);
+		result = await callVllm("openbmb/MiniCPM-o-4_5", messages, 500);
 	} else {
 		result = await callGemini(apiKey, messages, 500);
 	}
@@ -642,7 +643,7 @@ function keywordJudge(response: string, q: any, capName: string, isV2 = false): 
 
 	if (capName === "irrelevant_isolation") {
 		const found = (q.expected_not_contains ?? []).filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		const ok = found.length === 0;
 		return isV2
@@ -655,12 +656,12 @@ function keywordJudge(response: string, q: any, capName: string, isV2 = false): 
 	if (q.expected_any) {
 		const min = q.min_expected ?? 1;
 		const found = q.expected_any.filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		if (isV2) {
 			const s3 = q.scoring?.score_3 ?? [];
 			const s2 = q.scoring?.score_2 ?? [];
-			if (found.length >= min && s3.length > 0 && s3.some((k: string) => lower.includes(k.toLowerCase()))) {
+			if (found.length >= min && s3.length > 0 && s3.some((k: string) => koIncludes(lower, k))) {
 				return { pass: true, reason: `PASS(kw-v2): [${found}]`, score: 3 };
 			}
 			if (found.length >= min) return { pass: true, reason: `PASS(kw-v2): [${found}]`, score: 2 };
@@ -674,11 +675,11 @@ function keywordJudge(response: string, q: any, capName: string, isV2 = false): 
 
 	if (q.expected_contains) {
 		const found = q.expected_contains.filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		if (isV2) {
 			const s3 = q.scoring?.score_3 ?? [];
-			if (found.length > 0 && s3.length > 0 && s3.some((k: string) => lower.includes(k.toLowerCase()))) {
+			if (found.length > 0 && s3.length > 0 && s3.some((k: string) => koIncludes(lower, k))) {
 				return { pass: true, reason: `PASS(kw-v2): perfect [${found}]`, score: 3 };
 			}
 			if (found.length > 0) return { pass: true, reason: `PASS(kw-v2): partial [${found}]`, score: 2 };

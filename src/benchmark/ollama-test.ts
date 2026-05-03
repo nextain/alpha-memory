@@ -1,14 +1,19 @@
-async function embedOllama(text: string) {
+async function embedVllm(text: string) {
 	try {
-		const res = await fetch("http://127.0.0.1:11434/api/embeddings", {
+		const base = process.env.VLLM_EMBED_BASE ?? "http://localhost:8001";
+		const res = await fetch(`${base}/v1/embeddings`, {
 			method: "POST",
-			body: JSON.stringify({ model: "mxbai-embed-large", prompt: text }),
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				model: "Qwen/Qwen3-Embedding-0.6B",
+				input: [text],
+			}),
 		});
-		if (!res.ok) throw new Error(`Ollama failed: ${res.status}`);
+		if (!res.ok) throw new Error(`vLLM failed: ${res.status}`);
 		const data = (await res.json()) as any;
-		return data.embedding;
+		return data.data[0].embedding;
 	} catch (e: any) {
-		console.error(`Ollama connection error: ${e.message}`);
+		console.error(`vLLM connection error: ${e.message}`);
 		return null;
 	}
 }
@@ -44,14 +49,14 @@ async function runTest() {
 		},
 	];
 
-	console.log("📊 Testing Local High-Performance Embedder (mxbai-embed-large)");
+	console.log("📊 Testing Local High-Performance Embedder (qwen3-embedding via vLLM)");
 	console.log(
 		"Target: Can we consistently stay ABOVE 0.7 similarity for correct pairs?\n",
 	);
 
 	for (const { q, f } of testCases) {
-		const vecQ = await embedOllama(q);
-		const vecF = await embedOllama(f);
+		const vecQ = await embedVllm(q);
+		const vecF = await embedVllm(f);
 		const sim = cosineSimilarity(vecQ, vecF);
 
 		console.log(`Query: "${q}"`);

@@ -1,6 +1,6 @@
 /**
  * Naia MemorySystem(LocalAdapter) benchmark adapter — R7 target.
- * Supports multiple embedding backends including Google and Microsoft E5.
+ * Supports multiple embedding backends via vLLM or hosted APIs.
  */
 import { LocalAdapter } from "../../memory/adapters/local.js";
 import {
@@ -15,6 +15,7 @@ import type { BenchmarkAdapter } from "./types.js";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const GATEWAY_BASE = process.env.GATEWAY_URL ?? "";
 const GATEWAY_KEY = process.env.GATEWAY_MASTER_KEY ?? "";
+const VLLM_EMBED_BASE = process.env.VLLM_EMBED_BASE ?? "http://localhost:8001";
 
 export class NaiaLocalAdapter implements BenchmarkAdapter {
 	readonly name = "naia-local";
@@ -38,16 +39,25 @@ export class NaiaLocalAdapter implements BenchmarkAdapter {
 			return new OfflineEmbeddingProvider("multilingual-e5-large");
 		}
 
-		if (this.embedderName === "ollama") {
+		const vllmEmbedders: Record<string, { model: string; dims: number }> = {
+			"ollama": { model: "mxbai-embed-large", dims: 1024 },
+			"bge-m3": { model: "bge-m3", dims: 1024 },
+			"nomic": { model: "nomic-embed-text", dims: 768 },
+			"qwen3-emb": { model: "Qwen/Qwen3-Embedding-0.6B", dims: 1024 },
+			"qwen3-emb-8b": { model: "Qwen/Qwen3-Embedding-8B", dims: 4096 },
+			"snowflake": { model: "Snowflake/snowflake-arctic-embed2-l", dims: 1024 },
+		};
+
+		const vllmConf = vllmEmbedders[this.embedderName];
+		if (vllmConf) {
 			return new OpenAICompatEmbeddingProvider(
-				"http://127.0.0.1:11434",
-				"ollama",
-				"mxbai-embed-large",
-				1024,
+				VLLM_EMBED_BASE,
+				"empty",
+				vllmConf.model,
+				vllmConf.dims,
 			);
 		}
 
-		// Default: Gemini (Direct or Gateway)
 		if (GATEWAY_KEY) {
 			return new OpenAICompatEmbeddingProvider(
 				GATEWAY_BASE,

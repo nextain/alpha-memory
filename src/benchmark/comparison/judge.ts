@@ -18,6 +18,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { convertV2ToV1 } from "./convert-v2-to-v1.js";
+import { koIncludes } from "./ko-judge-helpers.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	}
 	if (capName === "irrelevant_isolation") {
 		const found = (q.expected_not_contains ?? []).filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		return found.length > 0
 			? { pass: false, reason: `FAIL(kw): forbidden [${found}]` }
@@ -233,7 +234,7 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	if (q.expected_any) {
 		const min = q.min_expected ?? 1;
 		const found = q.expected_any.filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		return found.length >= min
 			? { pass: true, reason: `PASS(kw): [${found}]` }
@@ -244,7 +245,7 @@ function keywordJudge(response: string, q: any, capName: string): JudgeResult {
 	}
 	if (q.expected_contains) {
 		const found = q.expected_contains.filter((k: string) =>
-			lower.includes(k.toLowerCase()),
+			koIncludes(lower, k),
 		);
 		return found.length > 0
 			? { pass: true, reason: `PASS(kw): [${found}]` }
