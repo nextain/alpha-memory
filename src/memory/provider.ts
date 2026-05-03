@@ -17,6 +17,7 @@ import {
 	ImportanceScoringCapable,
 	ReconsolidationCapableProvider,
 	TemporalCapableProvider,
+	CompactableCapableProvider,
 } from "./provider-types.js";
 import type {
 	MemoryProvider,
@@ -37,7 +38,8 @@ export class NaiaMemoryProvider
 		BackupCapableProvider,
 		ImportanceScoringCapable,
 		ReconsolidationCapableProvider,
-		TemporalCapableProvider
+		TemporalCapableProvider,
+		CompactableCapableProvider
 {
 	private system: MemorySystem;
 
@@ -183,6 +185,21 @@ export class NaiaMemoryProvider
 			}));
 
 		return hits;
+	}
+
+	// ─── Capability: Compactable ─────────────────────────────────────────────
+
+	async compact(input: {
+		messages: readonly { role: string; content: string; timestamp?: number }[];
+		keepTail: number;
+		targetTokens: number;
+		sessionId?: string;
+	}): Promise<{
+		summary: { role: "assistant"; content: string; timestamp?: number };
+		droppedCount: number;
+		realtime?: boolean;
+	}> {
+		return this.system.compact(input);
 	}
 }
 

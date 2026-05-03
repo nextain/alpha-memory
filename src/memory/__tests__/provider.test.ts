@@ -172,4 +172,27 @@ describe("NaiaMemoryProvider integration", () => {
 		const hits = await provider.recallWithHistory("테스트", now + 100000, { project: "test" });
 		expect(Array.isArray(hits)).toBe(true);
 	});
+
+	it("compact returns summary from MemorySystem", async () => {
+		const adapter = mockAdapter() as MemoryAdapter;
+		const provider = new NaiaMemoryProvider({ adapter });
+		const result = await provider.compact({
+			messages: [
+				{ role: "user", content: "안녕하세요" },
+				{ role: "assistant", content: "안녕!" },
+				{ role: "user", content: "오늘 날씨 어때?" },
+			],
+			keepTail: 1,
+			targetTokens: 200,
+		});
+		expect(result).toHaveProperty("summary");
+		expect(result).toHaveProperty("droppedCount");
+		expect(result.summary.role).toBe("assistant");
+	});
+
+	it("detects CompactableCapableProvider", () => {
+		const adapter = mockAdapter();
+		const provider = new NaiaMemoryProvider({ adapter });
+		expect(isCapable(provider, "CompactableCapableProvider")).toBe(true);
+	});
 });

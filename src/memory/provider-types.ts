@@ -66,17 +66,32 @@ export interface TemporalCapableProvider {
 	recallWithHistory(query: string, atTimestamp: number, opts?: RecallOptions): Promise<MemoryHit[]>;
 }
 
+export interface CompactableCapableProvider {
+	compact(input: {
+		messages: readonly { role: string; content: string; timestamp?: number }[];
+		keepTail: number;
+		targetTokens: number;
+		sessionId?: string;
+	}): Promise<{
+		summary: { role: "assistant"; content: string; timestamp?: number };
+		droppedCount: number;
+		realtime?: boolean;
+	}>;
+}
+
 export type AnyCapability =
 	| BackupCapableProvider
 	| ImportanceScoringCapable
 	| ReconsolidationCapableProvider
-	| TemporalCapableProvider;
+	| TemporalCapableProvider
+	| CompactableCapableProvider;
 
 const CAPABILITY_METHODS: Record<string, string[]> = {
 	BackupCapableProvider: ["exportBackup", "importBackup"],
 	ImportanceScoringCapable: ["scoreImportance"],
 	ReconsolidationCapableProvider: ["findContradictions"],
 	TemporalCapableProvider: ["applyDecay", "recallWithHistory"],
+	CompactableCapableProvider: ["compact"],
 };
 
 export function isCapable(
