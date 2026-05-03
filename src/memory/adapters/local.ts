@@ -28,6 +28,7 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { calculateStrength, shouldPrune } from "../decay.js";
 import type { EmbeddingProvider } from "../embeddings.js";
+import { tokenize as koTokenize } from "../ko-normalize.js";
 import {
 	type KGState,
 	KnowledgeGraph,
@@ -113,8 +114,10 @@ function assocKey(a: string, b: string): string {
 	return `${sorted[0]}::${sorted[1]}`;
 }
 
-/** Simple keyword tokenizer for search */
+/** KO-aware tokenizer — uses ko-normalize for Korean text, simple split for non-Korean */
 function tokenize(text: string): string[] {
+	const hasKorean = /[가-힣]/.test(text);
+	if (hasKorean) return koTokenize(text);
 	return text
 		.toLowerCase()
 		.replace(/[^\p{L}\p{N}\s]/gu, " ")
