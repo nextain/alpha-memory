@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "naia-memory",
-  "updated": "2026-05-03",
+  "updated": "2026-05-04",
   "sot": ".agents/progress/plan-v3-anchor-2026-05-02.md",
 
   "forbidden_actions": [
@@ -85,15 +85,15 @@
   ],
 
   "phase": {
-    "current": "R1",
+    "current": "R2",
     "slices": {
       "R1.0": "done",
       "R1.1": "done",
-      "R1.2": "next",
-      "R1.3": "pending",
+      "R1.2": "done",
+      "R1.3": "done",
       "R1.4": "done",
-      "R1.5": "in_progress",
-      "R1.6": "pending"
+      "R1.5": "done",
+      "R1.6": "done"
     }
   }
 }

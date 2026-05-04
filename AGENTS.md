@@ -1,16 +1,10 @@
-# Naia Memory (formerly Alpha Memory)
+# Naia Memory
 
-> # ⚠️ STATUS: PARTIAL OUTDATED (2026-05-03)
-> **본 문서의 본문은 R5~R14 시기 컨텍스트** (4-store, 12 카테고리 벤치 등). 현재 SoT 와 일부 모순.
-> 통합 작업은 R1.4 슬라이스 예정.
->
 > **AI Session 시작 시 읽기 순서 (강제, plan-v3-anchor §0 기준)**:
 > 1. `.agents/progress/plan-v3-anchor-2026-05-02.md` ← **현 SoT** (모든 작업의 anchor)
 > 2. `.agents/progress/decision-matrix.md` ← §A 채택 / §B 거부 / §C pending / §D 신규
 > 3. `.agents/progress/gap-analysis-r0-2026-05-02.md` ← 코드 vs plan, 모순 5건
 > 4. `.agents/progress/README.md` ← 인덱스 + AI 흔들림 first 참조점
->
-> **본 AGENTS.md (이하 본문)** = 참고용 (R5~R14 진행상황). R1.4 통합 후 v3 정식 docs 로 대체.
 >
 > ## ⚓ AI 흔들림 시 자가 수정 — Quick Reference
 >
@@ -72,7 +66,6 @@ src/
 │   ├── query-templates.en.json # English test queries
 │   ├── criteria.ts            # Scoring criteria
 │   └── comparison/            # Benchmark adapters + runner + judge
-└── v3/                        # ⚠️ R1.2 정리 대상 — plan §3.7 매핑 참조
 ```
 
 ## Key Commands
@@ -91,44 +84,33 @@ pnpm exec vitest run
 PORT=9876 STORE_PATH=/tmp/naia.json pnpm exec tsx src/server/mem0-api.ts
 ```
 
-## Latest Benchmark (R14, 2026-04-25)
+## Latest Benchmark (KO V2, 2026-05-04)
 
-| Adapter | KO kw | KO gem | EN kw | EN gem | Note |
-|---------|:-----:|:------:|:-----:|:------:|------|
-| naia-local | 38% (92/241) | 49% (117/241) | — | — | P0+P1+P2 적용 |
-| mem0 | — | — | — | — | R14 미실행 |
+| Adapter | Embedder | Judge | Score | Note |
+|---------|----------|-------|:-----:|------|
+| naia-local | Qwen3-Embedding-8B (vLLM local) | keyword | **52%** (117/241) | +13pp vs Ollama |
 
-**R14 vs R10**: kw +2pp, gem +3pp. contradiction_indirect 100%, direct_recall +9.
+**상세 카테고리**:
+- contradiction_direct 85%, abstention 85%, irrelevant_isolation 100%
+- unchanged_persistence 9%, multi_fact_synthesis 0%, temporal 25%
 
-**상세 결과**: `docs/archive/benchmark-history-r5-r14.md`
+**이전 결과**: `docs/archive/benchmark-history-r5-r14.md`
 
 ## Known Issues (Top 3)
 
-1. **unchanged_persistence 1-2/11** — P0 status field로 약간 개선, 근본적 한계
-2. **multi_fact_synthesis 0-2/15** — query decomposition 필요 (P4)
-3. **temporal 3/20** — TemporalCapable 구현 필요 (R2.3)
+1. **unchanged_persistence 1/11 (9%)** — status field로 약간 개선, 근본적 한계
+2. **multi_fact_synthesis 0/15 (0%)** — query decomposition 필요 (R2)
+3. **temporal 5/20 (25%)** — TemporalCapable 구현 필요 (R2.3)
 
 ## Phase Progress
 
 | Phase | Status |
 |-------|--------|
-| R1 안정화 (7 slices) | ✅ 완료 |
-| R2 Capability (4 slices) | ✅ 완료 |
-| R3 한국어 강화 (3/4 slices) | 🔄 R3.3 측정 대기 |
-| R4 Multi-adapter | 대기 |
+| R1 안정화 (6 slices) | ✅ 완료 |
+| R2 Capability (4 slices) | 대기 |
+| R3 한국어 강화 | ✅ 완료 |
+| R4 Multi-adapter | R4.0 vLLM ✅, R4.1 contract-tests ✅ |
 | R5 검증 측정 | 대기 |
-
-## R3.3 Embedding A/B 측정 (API key 필요)
-
-```bash
-# 측정 1: 현재 기본 (keyword-only or gemini-embedding)
-GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=ko
-
-# 측정 2: multilingual-e5-large (offline, CPU)
-NAIA_EMBEDDING=offline-e5 pnpm exec tsx src/benchmark/comparison/run-comparison.ts --adapters=naia-local --judge=keyword --lang=ko
-```
-
-결정 기준: e5 ≥ gemini +3pp → e5 기본값, 미만 → gemini 유지
 
 ## Conventions
 

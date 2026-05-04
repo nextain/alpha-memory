@@ -1781,3 +1781,59 @@
 - Language: ko
 - LLM: gemini-flash-lite
 - Judge: claude-cli
+
+### 🚀 Run Started: 2026. 5. 4. AM 4:16:25
+- Run ID: `run-2026-05-03T19-16-25-000Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. AM 10:56:16
+- Run ID: `run-2026-05-04T01-56-16-852Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. AM 11:06:35
+- Run ID: `run-2026-05-04T02-06-35-744Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. AM 11:21:58
+- Run ID: `run-2026-05-04T02-21-58-956Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. AM 11:37:27
+- Run ID: `run-2026-05-04T02-37-27-404Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. PM 6:42:34
+- Run ID: `run-2026-05-04T09-42-34-997Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 4. PM 6:47:06
+- Run ID: `run-2026-05-04T09-47-06-743Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
