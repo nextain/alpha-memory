@@ -184,12 +184,69 @@ describe("GeminiFlashLiteContradictionFilter", () => {
 	});
 });
 
-describe("VllmReasoningContradictionFilter (placeholder)", () => {
-	it("throws explicit unimplemented error", async () => {
-		const filter = new VllmReasoningContradictionFilter();
-		await expect(
-			filter.filter([{ existing: makeFact(), newInfo: "x" }]),
-		).rejects.toThrow(/not yet implemented/i);
+describe("VllmReasoningContradictionFilter", () => {
+	const originalFetch = globalThis.fetch;
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+	});
+
+	it("returns no verdicts on empty input", async () => {
+		const filter = new VllmReasoningContradictionFilter({
+			baseURL: "http://localhost:9999/v1",
+		});
+		const verdicts = await filter.filter([]);
+		expect(verdicts).toEqual([]);
+	});
+
+	it("falls back to heuristic on transport failure", async () => {
+		globalThis.fetch = vi.fn(async () => {
+			throw new Error("ECONNREFUSED");
+		}) as unknown as typeof fetch;
+
+		const filter = new VllmReasoningContradictionFilter({
+			baseURL: "http://localhost:9999/v1",
+		});
+		const verdicts = await filter.filter([
+			{
+				existing: makeFact({
+					content: "에디터로 Neovim 쓰고 있어",
+					entities: ["Neovim", "에디터"],
+				}),
+				newInfo: "에디터 Cursor로 바꿨어",
+			},
+		]);
+		expect(verdicts).toHaveLength(1);
+		expect(verdicts[0]!.result.action).toBe("update");
+	});
+
+	it("strips code-fenced JSON output from small models", async () => {
+		globalThis.fetch = vi.fn(async () =>
+			new Response(
+				JSON.stringify({
+					choices: [
+						{
+							message: {
+								content:
+									"```json\n{\"1\": {\"contradiction\": true, \"reason\": \"location change\"}}\n```",
+							},
+						},
+					],
+				}),
+				{ status: 200 },
+			),
+		) as unknown as typeof fetch;
+
+		const filter = new VllmReasoningContradictionFilter({
+			baseURL: "http://localhost:9999/v1",
+		});
+		const verdicts = await filter.filter([
+			{
+				existing: makeFact({ content: "성수동에 살아", entities: ["성수동"] }),
+				newInfo: "이번 달에 판교로 이사해",
+			},
+		]);
+		expect(verdicts).toHaveLength(1);
+		expect(verdicts[0]!.result.reason).toContain("location");
 	});
 });
 

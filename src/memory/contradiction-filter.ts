@@ -199,24 +199,137 @@ Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
 	}
 }
 
-// ─── Vllm reasoning (future) ───────────────────────────────────────────────
+// ─── Vllm reasoning (local Gemma) ──────────────────────────────────────────
 
-/** Placeholder for local Gemma reasoning via vLLM. Not implemented in this
- *  PR — the host PC's GPUs are currently dedicated to training. The interface
- *  reservation lets `selectFilter` recognize the `VLLM_REASONING_BASE` env
- *  without users hitting an unknown-provider error before the implementation
- *  lands. */
+export interface VllmReasoningFilterOptions {
+	/** Base URL of the vLLM OpenAI-compatible server. Defaults to
+	 *  `VLLM_REASONING_BASE` env. Example: `http://localhost:8002/v1`. */
+	baseURL?: string;
+	/** Model name as served by vLLM (e.g. `google/gemma-3-4b-it`). Defaults to
+	 *  `VLLM_REASONING_MODEL` env. */
+	model?: string;
+	/** Per-call candidate cap. Default: 10 */
+	batchSize?: number;
+}
+
+const VLLM_DEFAULT_MODEL = "google/gemma-3-4b-it";
+const VLLM_DEFAULT_BATCH_SIZE = 10;
+
+/** Local Gemma (or any vLLM-served instruct model) contradiction filter.
+ *  Same prompt structure as `GeminiFlashLiteContradictionFilter`; the only
+ *  difference is the endpoint and model. Privacy-preserving and free at the
+ *  margin — limited only by GPU throughput. */
 export class VllmReasoningContradictionFilter
 	implements ContradictionFilterProvider
 {
 	readonly name = "vllm-reasoning";
+	private readonly baseURL: string;
+	private readonly model: string;
+	private readonly batchSize: number;
+
+	constructor(options: VllmReasoningFilterOptions = {}) {
+		this.baseURL =
+			options.baseURL ??
+			process.env.VLLM_REASONING_BASE ??
+			"http://localhost:8002/v1";
+		this.model =
+			options.model ?? process.env.VLLM_REASONING_MODEL ?? VLLM_DEFAULT_MODEL;
+		this.batchSize = options.batchSize ?? VLLM_DEFAULT_BATCH_SIZE;
+	}
 
 	async filter(
-		_candidates: readonly ContradictionCandidate[],
+		candidates: readonly ContradictionCandidate[],
 	): Promise<ContradictionVerdict[]> {
-		throw new Error(
-			"VllmReasoningContradictionFilter not yet implemented — set CONTRADICTION_FILTER=heuristic or provide GEMINI_API_KEY in the meantime",
-		);
+		if (candidates.length === 0) return [];
+		const verdicts: ContradictionVerdict[] = [];
+		for (let i = 0; i < candidates.length; i += this.batchSize) {
+			const batch = candidates.slice(i, i + this.batchSize);
+			try {
+				const batchResults = await this.callVllm(batch, i);
+				verdicts.push(...batchResults);
+			} catch (err) {
+				console.warn(
+					`[VllmReasoningContradictionFilter] vLLM call failed at offset ${i}, falling back to heuristic for this batch: ${(err as Error).message}`,
+				);
+				const fallback = new HeuristicContradictionFilter();
+				const local = await fallback.filter(batch);
+				verdicts.push(...local.map((v) => ({ ...v, index: v.index + i })));
+			}
+		}
+		return verdicts;
+	}
+
+	private async callVllm(
+		batch: readonly ContradictionCandidate[],
+		offset: number,
+	): Promise<ContradictionVerdict[]> {
+		const pairsText = batch
+			.map(
+				(c, i) =>
+					`[${i + 1}]\n  existing: ${JSON.stringify(c.existing.content)}\n  new:      ${JSON.stringify(c.newInfo)}\n  entities: ${JSON.stringify(c.existing.entities)}`,
+			)
+			.join("\n");
+
+		const prompt = `You are a contradiction detector for a memory system. For each pair below, decide whether the "new" information contradicts the "existing" fact about the *same entity and the same attribute* (e.g. same person's location, same tool used, same preference).
+
+Output JSON only. For each pair index N from 1..${batch.length}, emit:
+  {"N": {"contradiction": true|false, "reason": "<short>"}}
+
+Treat as contradiction:
+- Same entity, same attribute, different value (e.g. "lives in Seoul" → "moved to Tokyo")
+- Same tool/preference replaced (e.g. "uses Neovim" → "switched to Cursor", "Git CLI 만 써" → "Git은 이제 GitKraken 쓰기로 했어")
+- Reaffirmation or addition is NOT contradiction
+- Different entity / attribute is NOT contradiction
+
+Pairs:
+${pairsText}
+
+Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
+
+		const url = `${this.baseURL.replace(/\/$/, "")}/chat/completions`;
+		const response = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				model: this.model,
+				messages: [{ role: "user", content: prompt }],
+				temperature: 0,
+				max_tokens: 512,
+			}),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+		}
+
+		const data = (await response.json()) as {
+			choices?: Array<{ message?: { content?: string } }>;
+		};
+		let content = data.choices?.[0]?.message?.content ?? "";
+		// Small models often wrap JSON in code fences; strip them.
+		content = content
+			.replace(/^```(?:json)?\s*/i, "")
+			.replace(/\s*```\s*$/i, "")
+			.trim();
+		const parsed = JSON.parse(content) as Record<
+			string,
+			{ contradiction?: boolean; reason?: string }
+		>;
+
+		const verdicts: ContradictionVerdict[] = [];
+		for (let i = 0; i < batch.length; i++) {
+			const entry = parsed[String(i + 1)];
+			if (!entry || !entry.contradiction) continue;
+			verdicts.push({
+				index: offset + i,
+				result: {
+					action: "update",
+					updatedContent: batch[i]!.newInfo,
+					reason: `LLM (vllm:${this.model}): ${entry.reason ?? "contradiction"}`,
+				},
+			});
+		}
+		return verdicts;
 	}
 }
 
