@@ -165,26 +165,25 @@ export class NaiaMemoryProvider
 		atTimestamp: number,
 		opts?: RecallOptions,
 	): Promise<MemoryHit[]> {
-		const result = await this.system.recall(query, {
-			project: opts?.project,
-			topK: opts?.topK ?? 50,
-		});
+		const adapter = this.system["adapter"] as MemoryAdapter;
+		const facts = await adapter.semantic.search(
+			query,
+			opts?.topK ?? 50,
+			true,
+			{ project: opts?.project, atTimestamp },
+		);
 
-		const hits: MemoryHit[] = result.facts
-			.filter((f) => f.createdAt <= atTimestamp)
-			.map((f) => ({
-				id: f.id,
-				content: f.content,
-				score: f.relevanceScore ?? 0,
-				createdAt: f.createdAt,
-				updatedAt: f.updatedAt,
-				metadata: {
-					type: "fact" as const,
-					status: f.status,
-				},
-			}));
-
-		return hits;
+		return facts.map((f) => ({
+			id: f.id,
+			content: f.content,
+			score: f.relevanceScore ?? 0,
+			createdAt: f.createdAt,
+			updatedAt: f.updatedAt,
+			metadata: {
+				type: "fact" as const,
+				status: f.status,
+			},
+		}));
 	}
 
 	// ─── Capability: Compactable ─────────────────────────────────────────────

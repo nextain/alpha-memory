@@ -1,7 +1,12 @@
 /**
  * Tests for NaiaMemoryProvider (R1.3) — MemoryProvider wrapper.
  */
-import { describe, expect, it, vi } from "vitest";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocalAdapter } from "../adapters/local.js";
 import { NaiaMemoryProvider } from "../provider.js";
 import type { MemoryAdapter, Episode, Fact, ConsolidationResult } from "../types.js";
 import { isCapable } from "../provider-types.js";
@@ -194,5 +199,136 @@ describe("NaiaMemoryProvider integration", () => {
 		const adapter = mockAdapter();
 		const provider = new NaiaMemoryProvider({ adapter });
 		expect(isCapable(provider, "CompactableCapableProvider")).toBe(true);
+	});
+});
+
+/**
+ * R2.3 — bi-temporal recall via existing `-v{ts}` / `status: "superseded"` scheme.
+ * Verifies that `recallWithHistory(query, T)` returns the fact version that was
+ * active at time T, leveraging history rows produced by `index.ts:715-737`.
+ */
+describe("NaiaMemoryProvider — recallWithHistory bi-temporal (R2.3)", () => {
+	let dir: string;
+	let storePath: string;
+
+	beforeEach(async () => {
+		dir = await mkdtemp(join(tmpdir(), "r23-bitemp-"));
+		storePath = join(dir, `store-${randomUUID()}.json`);
+	});
+
+	afterEach(async () => {
+		await rm(dir, { recursive: true, force: true }).catch(() => {});
+	});
+
+	it("returns the version active at the queried timestamp (Neovim → Cursor)", async () => {
+		const adapter = new LocalAdapter(storePath);
+		const provider = new NaiaMemoryProvider({ adapter });
+
+		const T0 = Date.now();
+		const T1 = T0 + 60_000;
+
+		const baseId = "fact-editor";
+		const oldFact: Fact = {
+			id: baseId,
+			content: "user uses Neovim editor",
+			entities: ["Neovim", "user"],
+			topics: ["editor"],
+			createdAt: T0,
+			updatedAt: T0,
+			importance: 0.8,
+			recallCount: 0,
+			lastAccessed: T0,
+			strength: 0.8,
+			status: "active",
+			sourceEpisodes: [],
+		};
+		await adapter.semantic.upsert(oldFact);
+
+		// Simulate the reconsolidation update path (index.ts:715-737):
+		// 1) mark the old fact superseded with updatedAt = T1
+		await adapter.semantic.upsert({ ...oldFact, status: "superseded", updatedAt: T1 });
+		// 2) create a new versioned fact with the new content
+		const newFact: Fact = {
+			...oldFact,
+			id: `${baseId}-v${T1}`,
+			content: "user uses Cursor editor",
+			entities: ["Cursor", "user"],
+			createdAt: T1,
+			updatedAt: T1,
+			lastAccessed: T1,
+			status: "active",
+		};
+		await adapter.semantic.upsert(newFact);
+
+		// Recall as of just after T0 (before the switch) → should return Neovim
+		const hitsBefore = await provider.recallWithHistory("editor", T0 + 1000, { topK: 5 });
+		expect(hitsBefore.length).toBeGreaterThan(0);
+		expect(hitsBefore.some((h) => h.content.includes("Neovim"))).toBe(true);
+		expect(hitsBefore.every((h) => !h.content.includes("Cursor"))).toBe(true);
+
+		// Recall as of just after T1 (after the switch) → should return Cursor
+		const hitsAfter = await provider.recallWithHistory("editor", T1 + 1000, { topK: 5 });
+		expect(hitsAfter.length).toBeGreaterThan(0);
+		expect(hitsAfter.some((h) => h.content.includes("Cursor"))).toBe(true);
+		expect(hitsAfter.every((h) => !h.content.includes("Neovim"))).toBe(true);
+
+		await adapter.close();
+	});
+
+	it("hits include createdAt/updatedAt timestamps (issue #8 acceptance)", async () => {
+		const adapter = new LocalAdapter(storePath);
+		const provider = new NaiaMemoryProvider({ adapter });
+
+		const T0 = Date.now();
+		await adapter.semantic.upsert({
+			id: "fact-loc",
+			content: "user lives in Seoul",
+			entities: ["Seoul", "user"],
+			topics: ["location"],
+			createdAt: T0,
+			updatedAt: T0,
+			importance: 0.7,
+			recallCount: 0,
+			lastAccessed: T0,
+			strength: 0.7,
+			status: "active",
+			sourceEpisodes: [],
+		});
+
+		const hits = await provider.recallWithHistory("location", T0 + 1000, { topK: 5 });
+		expect(hits.length).toBeGreaterThan(0);
+		expect(typeof hits[0]!.createdAt).toBe("number");
+		expect(typeof hits[0]!.updatedAt).toBe("number");
+		expect(hits[0]!.createdAt).toBe(T0);
+
+		await adapter.close();
+	});
+
+	it("excludes facts created after the queried timestamp", async () => {
+		const adapter = new LocalAdapter(storePath);
+		const provider = new NaiaMemoryProvider({ adapter });
+
+		const T0 = Date.now();
+		const T_LATER = T0 + 120_000;
+
+		await adapter.semantic.upsert({
+			id: "fact-future",
+			content: "future hobby is climbing",
+			entities: ["climbing"],
+			topics: ["hobby"],
+			createdAt: T_LATER,
+			updatedAt: T_LATER,
+			importance: 0.7,
+			recallCount: 0,
+			lastAccessed: T_LATER,
+			strength: 0.7,
+			status: "active",
+			sourceEpisodes: [],
+		});
+
+		const hits = await provider.recallWithHistory("hobby", T0 + 1000, { topK: 5 });
+		expect(hits.every((h) => !h.content.includes("climbing"))).toBe(true);
+
+		await adapter.close();
 	});
 });

@@ -242,6 +242,49 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		this.kg = new KnowledgeGraph(this.store.knowledgeGraph);
 	}
 
+	// ─── Bi-temporal helpers (R2.3) ───────────────────────────────────────
+
+	/** Strip `-v{ts}` (possibly chained) suffix to recover the base fact id.
+	 *  Used to group fact versions created by reconsolidation (`index.ts:715-737`).
+	 */
+	private static baseIdOf(id: string): string {
+		return id.replace(/(-v\d+)+$/, "");
+	}
+
+	/** Return the fact versions valid at `atTimestamp` (ms).
+	 *  For each baseId group, picks the latest version whose `createdAt <= atTimestamp`
+	 *  and whose successor (if any) was created strictly after `atTimestamp` —
+	 *  i.e. the version that was the "current" active fact at that point in time.
+	 *  Bi-temporal recall: leverages the existing `-v{ts}` / `status: "superseded"`
+	 *  scheme produced by `index.ts:715-737` instead of duplicating history.
+	 */
+	private factsValidAtTime(atTimestamp: number): Fact[] {
+		const groups = new Map<string, Fact[]>();
+		for (const f of this.store.facts) {
+			const base = LocalAdapter.baseIdOf(f.id);
+			const group = groups.get(base);
+			if (group) group.push(f);
+			else groups.set(base, [f]);
+		}
+
+		const valid: Fact[] = [];
+		for (const group of groups.values()) {
+			const sorted = [...group].sort((a, b) => a.createdAt - b.createdAt);
+			let pick: Fact | null = null;
+			for (let i = 0; i < sorted.length; i++) {
+				const f = sorted[i]!;
+				if (f.createdAt > atTimestamp) break;
+				const next = sorted[i + 1];
+				if (!next || next.createdAt > atTimestamp) {
+					pick = f;
+					break;
+				}
+			}
+			if (pick) valid.push(pick);
+		}
+		return valid;
+	}
+
 	// ─── Persistence ──────────────────────────────────────────────────────
 
 	private load(): MemoryStore {
@@ -469,7 +512,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  			query: string,
  			topK: number,
  			deepRecall = false,
- 			context?: { project?: string },
+ 			context?: { project?: string; atTimestamp?: number },
  		): Promise<Fact[]> => {
 			const now = Date.now();
 			const BROAD_FACTOR = 3;
@@ -493,13 +536,15 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const useBM25 = searchMode !== "vector-only";
 
 			const proj = context?.project;
+			const atT = context?.atTimestamp;
+			const baseFacts = atT !== undefined ? this.factsValidAtTime(atT) : this.store.facts;
 			const allFacts = proj
-				? this.store.facts.filter(
+				? baseFacts.filter(
 						(f) =>
 							f.encodingContext?.project === proj ||
 							(f.topics?.includes(proj) ?? false),
 					)
-				: this.store.facts;
+				: baseFacts;
 			const vectorScores: Map<string, number> = new Map();
 			const bm25Scores: Map<string, number> = new Map();
 			const entityBonuses: Map<string, number> = new Map();
@@ -508,7 +553,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			if (useBM25) {
 				bm25Instance = new BM25();
 				const docMap = new Map<string, string>();
-				for (const f of this.store.facts) {
+				for (const f of allFacts) {
 					docMap.set(f.id, [f.content, ...f.entities, ...f.topics].join(" "));
 				}
 				bm25Instance.index(docMap);
@@ -588,7 +633,7 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				.filter((x) => x.score > 0)
 				.sort((a, b) => b.score - a.score);
 
-			if (!deepRecall) {
+			if (!deepRecall && atT === undefined) {
 				scored = scored.filter(f => f.fact.status !== "superseded");
 			}
 

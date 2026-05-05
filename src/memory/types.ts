@@ -199,8 +199,11 @@ export interface MemoryAdapter {
 	semantic: {
 		/** Insert or update a fact (includes reconsolidation logic) */
 		upsert(fact: Fact): Promise<void>;
-		/** Search facts by query string. deepRecall ignores decay for long-term retrieval. */
-		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string }): Promise<Fact[]>;
+		/** Search facts by query string. deepRecall ignores decay for long-term retrieval.
+		 *  context.atTimestamp (optional, ms): bi-temporal recall — only fact versions valid
+		 *  at the given timestamp are considered. Adapters without bi-temporal support may
+		 *  ignore this option (degrades to standard search). */
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */
