@@ -212,7 +212,7 @@ export interface VllmReasoningFilterOptions {
 	batchSize?: number;
 }
 
-const VLLM_DEFAULT_MODEL = "google/gemma-3-4b-it";
+const VLLM_DEFAULT_MODEL = "google/gemma-4-E4B";
 const VLLM_DEFAULT_BATCH_SIZE = 10;
 
 /** Local Gemma (or any vLLM-served instruct model) contradiction filter.
