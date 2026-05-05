@@ -19,7 +19,12 @@ import { QdrantAdapter } from "./adapters/qdrant.js";
 import type { EmbeddingProvider } from "./embeddings.js";
 import { scoreImportance } from "./importance.js";
 import { allocateBudget } from "./context-budget.js";
-import { findContradictions } from "./reconsolidation.js";
+import {
+	type ContradictionFilterProvider,
+	HeuristicContradictionFilter,
+	selectFilter,
+} from "./contradiction-filter.js";
+import { findContradictions, findContradictionsWith } from "./reconsolidation.js";
 import type {
 	BackupCapable,
 	ConsolidationResult,
@@ -110,6 +115,11 @@ export interface MemorySystemOptions {
 		apiKey?: string;
 		collectionPrefix?: string;
 	};
+	/** Pluggable contradiction filter (R2.5 — dual-process retrieval-rerank).
+	 *  When omitted, defaults to `selectFilter(process.env)` which picks
+	 *  Vllm > Gemini > Heuristic based on env. Pass an explicit provider
+	 *  (e.g. `new HeuristicContradictionFilter()`) for deterministic tests. */
+	contradictionFilter?: ContradictionFilterProvider;
 }
 
 // Placeholder for heuristicFactExtractor and related functions
@@ -319,6 +329,7 @@ export class MemorySystem {
 	private consolidationTimer: ReturnType<typeof setInterval> | null = null;
 	private readonly consolidationIntervalMs: number;
 	private readonly factExtractor: FactExtractor;
+	private readonly contradictionFilter: ContradictionFilterProvider;
 	private _isConsolidating = false;
 
 	/**
@@ -342,6 +353,14 @@ export class MemorySystem {
 		this.consolidationIntervalMs =
 			options.consolidationIntervalMs ?? 30 * 60 * 1000;
 		this.factExtractor = options.factExtractor ?? heuristicFactExtractor;
+		// R2.5 — pluggable filter; falls back to env-based selection when caller
+		// doesn't pin one. Tests pass HeuristicContradictionFilter explicitly to
+		// avoid env coupling.
+		this.contradictionFilter =
+			options.contradictionFilter ??
+			(typeof process !== "undefined" && process.env
+				? selectFilter(process.env)
+				: new HeuristicContradictionFilter());
 		if (options.summarizer) this.summarizer = options.summarizer;
 		this.rollingHeadroom = options.rollingSummaryOptions?.headroom ?? 24;
 		this.rollingCompressedMax = options.rollingSummaryOptions?.compressedMax ?? 4000;
@@ -700,7 +719,11 @@ export class MemorySystem {
 						continue;
 					}
 
-					const contradictions = findContradictions(existingFacts, ef.content);
+					const contradictions = await findContradictionsWith(
+						existingFacts,
+						ef.content,
+						this.contradictionFilter,
+					);
 
 					if (contradictions.length > 0) {
 						// Update ALL contradicted facts to prevent stale contradictory data

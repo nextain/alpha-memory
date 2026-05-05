@@ -16,6 +16,7 @@
  * - mem0 ADD/UPDATE/DELETE/NOOP pipeline
  */
 
+import type { ContradictionFilterProvider } from "./contradiction-filter.js";
 import { stripKoreanParticle } from "./index.js";
 import type { Fact } from "./types.js";
 
@@ -220,6 +221,75 @@ export function findContradictions(
 			result: checkContradiction(fact, newInfo),
 		}))
 		.filter(({ result }) => result.action !== "keep");
+}
+
+/**
+ * 1차 candidate gate for contradiction detection (R2.5).
+ *
+ * Cheap, broad-recall filter that decides which facts are *worth showing* to
+ * the 2차 reasoning provider. We accept some false positives here — the LLM
+ * filter will discard them. We tolerate some false negatives too: completely
+ * unrelated facts must NOT pollute the candidate set or the API cost
+ * explodes.
+ *
+ * Heuristic: shared entity OR ≥2 substantial token overlap. Mirrors the
+ * `sharedEntities || hasContentOverlap` first-stage logic of
+ * `checkContradiction`, but with no negation/state-verb requirement so
+ * `이사` / `이제 X 쓰기로` style updates also pass to the LLM stage.
+ */
+export function isContradictionCandidate(
+	existing: Fact,
+	newInfo: string,
+): boolean {
+	const newLower = newInfo.toLowerCase();
+	const existingLower = existing.content.toLowerCase();
+
+	if (existing.entities.some((e) => newLower.includes(e.toLowerCase()))) {
+		return true;
+	}
+
+	const existingTokens = tokenizeSimple(existingLower).filter((t) => t.length >= 3);
+	const newTokens = tokenizeSimple(newLower).filter((t) => t.length >= 3);
+	let overlap = 0;
+	for (const nt of newTokens) {
+		if (existingTokens.some((et) => et === nt || et.includes(nt) || nt.includes(et))) {
+			overlap++;
+			if (overlap >= 2) return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Async contradiction discovery using a pluggable filter provider (R2.5).
+ *
+ * Two stages:
+ *   1차: `isContradictionCandidate` keeps only facts plausibly about the
+ *        same entity/topic (cheap, in-process).
+ *   2차: `filter.filter()` decides actual contradiction (small LLM by default,
+ *        heuristic when CONTRADICTION_FILTER=heuristic).
+ *
+ * Returns the same shape as `findContradictions` so existing callers can
+ * be migrated incrementally.
+ */
+export async function findContradictionsWith(
+	facts: Fact[],
+	newInfo: string,
+	filter: ContradictionFilterProvider,
+): Promise<Array<{ fact: Fact; result: ReconsolidationResult }>> {
+	const candidates: Array<{ existing: Fact; newInfo: string }> = [];
+	for (const f of facts) {
+		if (isContradictionCandidate(f, newInfo)) {
+			candidates.push({ existing: f, newInfo });
+		}
+	}
+	if (candidates.length === 0) return [];
+
+	const verdicts = await filter.filter(candidates);
+	return verdicts.map((v) => ({
+		fact: candidates[v.index]!.existing,
+		result: v.result,
+	}));
 }
 
 /** Simple tokenizer for contradiction checking.

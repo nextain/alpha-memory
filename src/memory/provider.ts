@@ -7,10 +7,15 @@
  * This is the public API surface for naia-memory consumers (naia-agent, naia-os).
  */
 
+import {
+	type ContradictionFilterProvider,
+	HeuristicContradictionFilter,
+	selectFilter,
+} from "./contradiction-filter.js";
 import { MemorySystem } from "./index.js";
 import type { MemoryAdapter } from "./types.js";
 import type { FactExtractor } from "./index.js";
-import { findContradictions as findContradictionsReal } from "./reconsolidation.js";
+import { findContradictionsWith } from "./reconsolidation.js";
 import { scoreImportance as scoreImportanceFn } from "./importance.js";
 import {
 	BackupCapableProvider,
@@ -30,6 +35,9 @@ import type {
 export interface NaiaMemoryProviderOptions {
 	adapter: MemoryAdapter;
 	factExtractor?: FactExtractor;
+	/** R2.5 — pluggable contradiction filter. Defaults to env-based selection
+	 *  (Vllm > Gemini > Heuristic). */
+	contradictionFilter?: ContradictionFilterProvider;
 }
 
 export class NaiaMemoryProvider
@@ -42,11 +50,18 @@ export class NaiaMemoryProvider
 		CompactableCapableProvider
 {
 	private system: MemorySystem;
+	private contradictionFilter: ContradictionFilterProvider;
 
 	constructor(opts: NaiaMemoryProviderOptions) {
+		this.contradictionFilter =
+			opts.contradictionFilter ??
+			(typeof process !== "undefined" && process.env
+				? selectFilter(process.env)
+				: new HeuristicContradictionFilter());
 		this.system = new MemorySystem({
 			adapter: opts.adapter,
 			factExtractor: opts.factExtractor,
+			contradictionFilter: this.contradictionFilter,
 		});
 	}
 
@@ -145,7 +160,11 @@ export class NaiaMemoryProvider
 		_existingIds?: string[],
 	): Promise<{ conflictingId: string; conflictType: "direct" | "indirect"; reason: string }[]> {
 		const result = await this.system.recall(newContent, { topK: 10 });
-		const contradictions = findContradictionsReal(result.facts, newContent);
+		const contradictions = await findContradictionsWith(
+			result.facts,
+			newContent,
+			this.contradictionFilter,
+		);
 		return contradictions.map(({ fact, result: r }) => ({
 			conflictingId: fact.id,
 			conflictType: r.action === "update" ? "direct" as const : "indirect" as const,
