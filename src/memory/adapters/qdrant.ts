@@ -167,7 +167,15 @@ export class QdrantAdapter implements MemoryAdapter {
 			query: string,
 			topK: number,
 			deepRecall = false,
+			context?: { project?: string; atTimestamp?: number },
 		): Promise<Fact[]> => {
+			// R2.3 — bi-temporal recall is not implemented in this adapter.
+			// Refuse explicitly instead of silently returning current-time results.
+			if (context?.atTimestamp !== undefined) {
+				throw new Error(
+					"QdrantAdapter does not support bi-temporal search (atTimestamp). Use LocalAdapter for recallWithHistory.",
+				);
+			}
 			const queryEmbedding = await this.options.embeddingProvider.embed(query);
 			const searchResult = await this.client.search(this.factCollection, {
 				vector: queryEmbedding,

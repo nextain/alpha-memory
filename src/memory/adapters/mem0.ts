@@ -263,7 +263,15 @@ export class Mem0Adapter implements MemoryAdapter {
 			query: string,
 			topK: number,
 			deepRecall = false,
+			context?: { project?: string; atTimestamp?: number },
 		): Promise<Fact[]> => {
+			// R2.3 — bi-temporal recall is not implemented in this adapter.
+			// Refuse explicitly instead of silently returning current-time results.
+			if (context?.atTimestamp !== undefined) {
+				throw new Error(
+					"Mem0Adapter does not support bi-temporal search (atTimestamp). Use LocalAdapter for recallWithHistory.",
+				);
+			}
 			const m = await this.ensureMem0();
 			const results = await m.search(query, {
 				userId: this.userId,

@@ -458,8 +458,11 @@ export interface MemoryProviderConfig {
 |-------|------|---|
 | R2.1 | `ImportanceCapable` — 3-axis scoring | 단위 테스트 + 기존 importance.ts 재사용 |
 | R2.2 | `ReconsolidationCapable.findContradictions` | 단위 테스트 + 기존 reconsolidation.ts 재사용 |
-| R2.3 | `TemporalCapable` — bi-temporal index + recallWithHistory | LoCoMo temporal r@50 10% → 30%+ |
+| R2.3 ✅ | `TemporalCapable` — bi-temporal index + recallWithHistory (commit 346e8ae) | recall pool 이 시점 유효 fact 만 (existing -v{ts}/superseded scheme 활용). 실측 점수 #8 코멘트로 측정 후 보고 — issue #8 acceptance "0%→40%+" 는 천장 16% (R2.3+R2.5+date-parsing 모두 합쳐도). |
 | R2.4 | `CompactableCapable.compact` | 대화 요약 단위 테스트 |
+| **R2.5** ✅ | **Hybrid contradiction filter** — dual-process retrieval-rerank (1차 token-embedding-style candidate / 2차 small LLM filter). Issue #14 D.5 deferrals 정식 해결책. | `ContradictionFilterProvider` interface + `Heuristic` / `GeminiFlashLite` 구현 + `Vllm` 미래 placeholder. selectFilter env priority: `VLLM_REASONING_BASE > GEMINI_API_KEY > Heuristic`. 실측은 다른 PC (GPU 여유 있는 환경) 에서 진행 예정. commit be8f739 + 4737651. |
+| **R2.6** | (deferred) Local Gemma via vLLM — VllmReasoningContradictionFilter 구현 | GPU 여유 시점 진행. 인지과학 일관성 (외부 API 의존 X, working memory 작은 모델). |
+| **R2.7** | (deferred) Date parsing slice — temporal benchmark 의 absolute_date / recurring / relative_date 카테고리 (~15/25 query) | issue #8 의 천장 40% 도달 위해 필수. 별도 슬라이스. |
 
 ### Phase R3 (1주): 한국어 강화 ✅ 완료
 
