@@ -109,11 +109,11 @@ describe("GeminiFlashLiteContradictionFilter", () => {
 		) as unknown as typeof fetch;
 	}
 
-	it("parses LLM JSON and emits 'update' verdicts only for true contradictions", async () => {
+	it("parses LLM JSON and emits 'update' verdicts only for high-confidence contradictions", async () => {
 		mockFetch(
 			JSON.stringify({
-				"1": { contradiction: true, reason: "moved residence" },
-				"2": { contradiction: false, reason: "different topic" },
+				"1": { contradiction: true, confidence: 0.9, reason: "moved residence" },
+				"2": { contradiction: false, confidence: 0.95, reason: "different topic" },
 			}),
 		);
 
@@ -127,6 +127,55 @@ describe("GeminiFlashLiteContradictionFilter", () => {
 		expect(verdicts[0]!.index).toBe(0);
 		expect(verdicts[0]!.result.action).toBe("update");
 		expect(verdicts[0]!.result.reason).toContain("moved");
+		expect(verdicts[0]!.result.reason).toContain("conf=0.90");
+	});
+
+	it("drops low-confidence contradiction verdicts (below threshold)", async () => {
+		// LLM says contradiction=true but confidence below 0.7 default → dropped
+		mockFetch(
+			JSON.stringify({
+				"1": { contradiction: true, confidence: 0.55, reason: "ambiguous" },
+				"2": { contradiction: true, confidence: 0.85, reason: "clear replacement" },
+			}),
+		);
+
+		const filter = new GeminiFlashLiteContradictionFilter({ apiKey: "fake" });
+		const verdicts = await filter.filter([
+			{ existing: makeFact({ content: "키보드 리얼포스" }), newInfo: "기계식도 써봐" },
+			{ existing: makeFact({ content: "Git CLI 써" }), newInfo: "Git GitKraken 으로 바꿨어" },
+		]);
+
+		expect(verdicts).toHaveLength(1);
+		expect(verdicts[0]!.index).toBe(1);
+	});
+
+	it("respects custom confidenceThreshold", async () => {
+		mockFetch(
+			JSON.stringify({
+				"1": { contradiction: true, confidence: 0.6, reason: "borderline" },
+			}),
+		);
+		const lenientFilter = new GeminiFlashLiteContradictionFilter({
+			apiKey: "fake",
+			confidenceThreshold: 0.5,
+		});
+		const verdicts = await lenientFilter.filter([
+			{ existing: makeFact(), newInfo: "x" },
+		]);
+		expect(verdicts).toHaveLength(1);
+	});
+
+	it("treats missing confidence as 0 (drops)", async () => {
+		mockFetch(
+			JSON.stringify({
+				"1": { contradiction: true, reason: "no confidence given" },
+			}),
+		);
+		const filter = new GeminiFlashLiteContradictionFilter({ apiKey: "fake" });
+		const verdicts = await filter.filter([
+			{ existing: makeFact(), newInfo: "x" },
+		]);
+		expect(verdicts).toHaveLength(0);
 	});
 
 	it("falls back to heuristic on API failure (graceful degradation)", async () => {
@@ -151,7 +200,7 @@ describe("GeminiFlashLiteContradictionFilter", () => {
 	});
 
 	it("respects batch size and offsets indices across batches", async () => {
-		// Mock returns "all true" for both batches
+		// Mock returns "all true with high confidence" for both batches
 		globalThis.fetch = vi.fn(async () =>
 			new Response(
 				JSON.stringify({
@@ -159,8 +208,8 @@ describe("GeminiFlashLiteContradictionFilter", () => {
 						{
 							message: {
 								content: JSON.stringify({
-									"1": { contradiction: true, reason: "test" },
-									"2": { contradiction: true, reason: "test" },
+									"1": { contradiction: true, confidence: 0.9, reason: "test" },
+									"2": { contradiction: true, confidence: 0.9, reason: "test" },
 								}),
 							},
 						},
@@ -227,7 +276,7 @@ describe("VllmReasoningContradictionFilter", () => {
 						{
 							message: {
 								content:
-									"```json\n{\"1\": {\"contradiction\": true, \"reason\": \"location change\"}}\n```",
+									"```json\n{\"1\": {\"contradiction\": true, \"confidence\": 0.9, \"reason\": \"location change\"}}\n```",
 							},
 						},
 					],

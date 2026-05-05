@@ -42,6 +42,95 @@ export interface ContradictionFilterProvider {
 	filter(candidates: readonly ContradictionCandidate[]): Promise<ContradictionVerdict[]>;
 }
 
+// ─── Shared LLM prompt + parsing (used by Gemini and Vllm filters) ─────────
+
+/** Build the contradiction-detection prompt for a batch of candidate pairs.
+ *  Strengthened version (R2.5 follow-up): emphasises "same entity AND same
+ *  attribute", requests an explicit `confidence` 0-1 per pair, and includes
+ *  worked examples to reduce false positives that supersede unrelated facts.
+ */
+export function buildContradictionPrompt(
+	batch: readonly ContradictionCandidate[],
+): string {
+	const pairsText = batch
+		.map(
+			(c, i) =>
+				`[${i + 1}]\n  existing: ${JSON.stringify(c.existing.content)}\n  new:      ${JSON.stringify(c.newInfo)}\n  entities: ${JSON.stringify(c.existing.entities)}`,
+		)
+		.join("\n");
+
+	return `You are a contradiction detector for a memory system. For each pair below, decide whether the "new" information SUPERSEDES the "existing" fact — i.e. the same entity, the same attribute, and a *different* value.
+
+Output JSON only. For each pair index N from 1..${batch.length}, emit:
+  {"N": {"contradiction": true|false, "confidence": <0.0-1.0>, "reason": "<short>"}}
+
+contradiction = true ONLY when ALL of the following hold:
+- existing and new are about the SAME entity (same person, same tool, same project, etc.)
+- they describe the SAME attribute (location, tool used, preference, schedule, etc.)
+- the new value REPLACES the old value — not adds, not refines, not reaffirms
+
+contradiction = false (do NOT supersede) for:
+- different attribute of the same entity (e.g. existing="uses Cursor", new="bought a MacBook" — same person, different attribute)
+- additional/qualifying detail (e.g. existing="lives in Seoul", new="lives in Seoul, Gangnam-gu" — refinement, not replacement)
+- reaffirmation (e.g. existing="prefers tabs", new="still prefers tabs over spaces")
+- temporal continuation (e.g. existing="went to Kyoto last summer", new="going to Kyoto this winter" — separate events)
+- unrelated facts that share an entity by coincidence
+
+confidence guidance:
+- 0.9+ : explicit replacement language ("switched", "바꿨", "이제 X 쓰기로", "moved to")
+- 0.7-0.9 : same entity+attribute, different value, no explicit cue
+- 0.5-0.7 : same entity, attribute may overlap but not certain
+- below 0.5 : ambiguous, prefer false
+
+Worked examples:
+- existing="에디터로 Neovim 쓰고 있어"   new="에디터 Cursor로 바꿨어"           → {"contradiction": true,  "confidence": 0.95, "reason": "tool replaced explicitly"}
+- existing="Git은 CLI만 써"             new="Git은 이제 GitKraken 쓰기로 했어" → {"contradiction": true,  "confidence": 0.9,  "reason": "tool switched"}
+- existing="성수동에 살아"               new="이번 달에 판교로 이사해"           → {"contradiction": true,  "confidence": 0.9,  "reason": "residence relocation"}
+- existing="키보드는 리얼포스 써"         new="요즘 기계식도 써보고 있어"          → {"contradiction": false, "confidence": 0.8,  "reason": "addition, not replacement"}
+- existing="여름 휴가는 8월에"            new="교토 여행은 가을에"                → {"contradiction": false, "confidence": 0.95, "reason": "different events"}
+
+Pairs:
+${pairsText}
+
+Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
+}
+
+/** Parse the LLM's JSON response and emit verdicts that pass the
+ *  confidence threshold. Strips code fences (small models often wrap JSON). */
+export function parseContradictionVerdicts(
+	rawContent: string,
+	batch: readonly ContradictionCandidate[],
+	offset: number,
+	confidenceThreshold: number,
+	modelLabel: string,
+): ContradictionVerdict[] {
+	const cleaned = rawContent
+		.replace(/^```(?:json)?\s*/i, "")
+		.replace(/\s*```\s*$/i, "")
+		.trim();
+	const parsed = JSON.parse(cleaned) as Record<
+		string,
+		{ contradiction?: boolean; confidence?: number; reason?: string }
+	>;
+
+	const verdicts: ContradictionVerdict[] = [];
+	for (let i = 0; i < batch.length; i++) {
+		const entry = parsed[String(i + 1)];
+		if (!entry || !entry.contradiction) continue;
+		const conf = typeof entry.confidence === "number" ? entry.confidence : 0;
+		if (conf < confidenceThreshold) continue;
+		verdicts.push({
+			index: offset + i,
+			result: {
+				action: "update",
+				updatedContent: batch[i]!.newInfo,
+				reason: `LLM (${modelLabel}, conf=${conf.toFixed(2)}): ${entry.reason ?? "contradiction"}`,
+			},
+		});
+	}
+	return verdicts;
+}
+
 // ─── Heuristic ─────────────────────────────────────────────────────────────
 
 /** Wraps the existing keyword-pattern `checkContradiction` for contract parity.
@@ -70,12 +159,19 @@ export interface GeminiFlashLiteFilterOptions {
 	model?: string;
 	/** Per-call candidate cap (large batches degrade JSON adherence). Default: 10 */
 	batchSize?: number;
+	/** Minimum confidence (0-1) required to accept the LLM's contradiction verdict.
+	 *  Below this threshold, the verdict is dropped (caller treats as "keep").
+	 *  Default 0.7 — empirically reduces false-positive supersede that damages
+	 *  current-state recall (issue #14 measurement showed -3pp on contradiction_direct
+	 *  when threshold was effectively 0). */
+	confidenceThreshold?: number;
 }
 
 const GEMINI_DEFAULT_BASE_URL =
 	"https://generativelanguage.googleapis.com/v1beta/openai/";
 const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_DEFAULT_BATCH_SIZE = 10;
+const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
 
 /** LLM-based contradiction filter using Gemini Flash Lite (cloud).
  *  Sends candidate pairs in a structured prompt and asks the model to
@@ -90,12 +186,15 @@ export class GeminiFlashLiteContradictionFilter
 	private readonly baseURL: string;
 	private readonly model: string;
 	private readonly batchSize: number;
+	private readonly confidenceThreshold: number;
 
 	constructor(options: GeminiFlashLiteFilterOptions) {
 		this.apiKey = options.apiKey;
 		this.baseURL = options.baseURL ?? GEMINI_DEFAULT_BASE_URL;
 		this.model = options.model ?? GEMINI_DEFAULT_MODEL;
 		this.batchSize = options.batchSize ?? GEMINI_DEFAULT_BATCH_SIZE;
+		this.confidenceThreshold =
+			options.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD;
 	}
 
 	async filter(
@@ -131,29 +230,7 @@ export class GeminiFlashLiteContradictionFilter
 		batch: readonly ContradictionCandidate[],
 		offset: number,
 	): Promise<ContradictionVerdict[]> {
-		const pairsText = batch
-			.map(
-				(c, i) =>
-					`[${i + 1}]\n  existing: ${JSON.stringify(c.existing.content)}\n  new:      ${JSON.stringify(c.newInfo)}\n  entities: ${JSON.stringify(c.existing.entities)}`,
-			)
-			.join("\n");
-
-		const prompt = `You are a contradiction detector for a memory system. For each pair below, decide whether the "new" information contradicts the "existing" fact about the *same entity and the same attribute* (e.g. same person's location, same tool used, same preference).
-
-Output JSON only. For each pair index N from 1..${batch.length}, emit:
-  {"N": {"contradiction": true|false, "reason": "<short>"}}
-
-Treat as contradiction:
-- Same entity, same attribute, different value (e.g. "lives in Seoul" → "moved to Tokyo")
-- Same tool/preference replaced (e.g. "uses Neovim" → "switched to Cursor", "Git CLI 만 써" → "Git은 이제 GitKraken 쓰기로 했어")
-- Reaffirmation or addition is NOT contradiction
-- Different entity / attribute is NOT contradiction
-
-Pairs:
-${pairsText}
-
-Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
-
+		const prompt = buildContradictionPrompt(batch);
 		const url = `${this.baseURL.replace(/\/$/, "")}/chat/completions`;
 		const response = await fetch(url, {
 			method: "POST",
@@ -177,25 +254,13 @@ Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
 			choices?: Array<{ message?: { content?: string } }>;
 		};
 		const content = data.choices?.[0]?.message?.content ?? "";
-		const parsed = JSON.parse(content) as Record<
-			string,
-			{ contradiction?: boolean; reason?: string }
-		>;
-
-		const verdicts: ContradictionVerdict[] = [];
-		for (let i = 0; i < batch.length; i++) {
-			const entry = parsed[String(i + 1)];
-			if (!entry || !entry.contradiction) continue;
-			verdicts.push({
-				index: offset + i,
-				result: {
-					action: "update",
-					updatedContent: batch[i]!.newInfo,
-					reason: `LLM (${this.model}): ${entry.reason ?? "contradiction"}`,
-				},
-			});
-		}
-		return verdicts;
+		return parseContradictionVerdicts(
+			content,
+			batch,
+			offset,
+			this.confidenceThreshold,
+			this.model,
+		);
 	}
 }
 
@@ -210,6 +275,9 @@ export interface VllmReasoningFilterOptions {
 	model?: string;
 	/** Per-call candidate cap. Default: 10 */
 	batchSize?: number;
+	/** Minimum confidence (0-1) required to accept a contradiction verdict.
+	 *  Default 0.7 — same threshold as Gemini filter. */
+	confidenceThreshold?: number;
 }
 
 const VLLM_DEFAULT_MODEL = "google/gemma-4-E4B";
@@ -226,6 +294,7 @@ export class VllmReasoningContradictionFilter
 	private readonly baseURL: string;
 	private readonly model: string;
 	private readonly batchSize: number;
+	private readonly confidenceThreshold: number;
 
 	constructor(options: VllmReasoningFilterOptions = {}) {
 		this.baseURL =
@@ -235,6 +304,8 @@ export class VllmReasoningContradictionFilter
 		this.model =
 			options.model ?? process.env.VLLM_REASONING_MODEL ?? VLLM_DEFAULT_MODEL;
 		this.batchSize = options.batchSize ?? VLLM_DEFAULT_BATCH_SIZE;
+		this.confidenceThreshold =
+			options.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD;
 	}
 
 	async filter(
@@ -263,29 +334,7 @@ export class VllmReasoningContradictionFilter
 		batch: readonly ContradictionCandidate[],
 		offset: number,
 	): Promise<ContradictionVerdict[]> {
-		const pairsText = batch
-			.map(
-				(c, i) =>
-					`[${i + 1}]\n  existing: ${JSON.stringify(c.existing.content)}\n  new:      ${JSON.stringify(c.newInfo)}\n  entities: ${JSON.stringify(c.existing.entities)}`,
-			)
-			.join("\n");
-
-		const prompt = `You are a contradiction detector for a memory system. For each pair below, decide whether the "new" information contradicts the "existing" fact about the *same entity and the same attribute* (e.g. same person's location, same tool used, same preference).
-
-Output JSON only. For each pair index N from 1..${batch.length}, emit:
-  {"N": {"contradiction": true|false, "reason": "<short>"}}
-
-Treat as contradiction:
-- Same entity, same attribute, different value (e.g. "lives in Seoul" → "moved to Tokyo")
-- Same tool/preference replaced (e.g. "uses Neovim" → "switched to Cursor", "Git CLI 만 써" → "Git은 이제 GitKraken 쓰기로 했어")
-- Reaffirmation or addition is NOT contradiction
-- Different entity / attribute is NOT contradiction
-
-Pairs:
-${pairsText}
-
-Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
-
+		const prompt = buildContradictionPrompt(batch);
 		const url = `${this.baseURL.replace(/\/$/, "")}/chat/completions`;
 		const response = await fetch(url, {
 			method: "POST",
@@ -294,7 +343,7 @@ Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
 				model: this.model,
 				messages: [{ role: "user", content: prompt }],
 				temperature: 0,
-				max_tokens: 512,
+				max_tokens: 1024,
 			}),
 		});
 
@@ -305,31 +354,14 @@ Return ONLY a JSON object with keys "1".."${batch.length}". No prose.`;
 		const data = (await response.json()) as {
 			choices?: Array<{ message?: { content?: string } }>;
 		};
-		let content = data.choices?.[0]?.message?.content ?? "";
-		// Small models often wrap JSON in code fences; strip them.
-		content = content
-			.replace(/^```(?:json)?\s*/i, "")
-			.replace(/\s*```\s*$/i, "")
-			.trim();
-		const parsed = JSON.parse(content) as Record<
-			string,
-			{ contradiction?: boolean; reason?: string }
-		>;
-
-		const verdicts: ContradictionVerdict[] = [];
-		for (let i = 0; i < batch.length; i++) {
-			const entry = parsed[String(i + 1)];
-			if (!entry || !entry.contradiction) continue;
-			verdicts.push({
-				index: offset + i,
-				result: {
-					action: "update",
-					updatedContent: batch[i]!.newInfo,
-					reason: `LLM (vllm:${this.model}): ${entry.reason ?? "contradiction"}`,
-				},
-			});
-		}
-		return verdicts;
+		const content = data.choices?.[0]?.message?.content ?? "";
+		return parseContradictionVerdicts(
+			content,
+			batch,
+			offset,
+			this.confidenceThreshold,
+			`vllm:${this.model}`,
+		);
 	}
 }
 
