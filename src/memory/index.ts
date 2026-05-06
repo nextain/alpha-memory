@@ -678,13 +678,23 @@ export class MemorySystem {
 						ef.sourceEpisodeIds.includes(e.id),
 					);
 					const efProject = srcEp?.encodingContext?.project;
-					// Search for semantically similar facts instead of getAll() — O(topK) not O(N)
+					// Search for semantically similar facts instead of getAll() — O(topK) not O(N).
+					// R2.5 (#20): deepRecall=true so the isRelevant threshold
+					// (`vs>=0.12 || bs>0 || eb>=0.2`) does NOT prune candidates here. For
+					// contradiction detection we want broad recall — even loosely related
+					// facts must reach the LLM filter so it can decide.
 					const existingFacts = await this.adapter.semantic.search(
 						ef.content,
 						10,
-						false,
+						true,
 						efProject ? { project: efProject } : undefined,
 					);
+					if (process.env.NAIA_FILTER_DEBUG === "1") {
+						const totalFacts = (this.adapter as any).getStore?.()?.facts?.length ?? "?";
+						console.error(
+							`[FILTER_DEBUG] search("${ef.content.slice(0, 40)}", topK=10, deepRecall=true, proj=${efProject ?? "—"}) → ${existingFacts.length} hits | store total facts: ${totalFacts}`,
+						);
+					}
 
 					// Check for exact/near identity to prevent semantic redundancy (#4)
 					const duplicate = existingFacts.find((f) => {

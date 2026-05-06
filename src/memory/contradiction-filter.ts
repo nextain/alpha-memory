@@ -114,10 +114,20 @@ export function parseContradictionVerdicts(
 	>;
 
 	const verdicts: ContradictionVerdict[] = [];
+	const debug = process.env.NAIA_FILTER_DEBUG === "1";
 	for (let i = 0; i < batch.length; i++) {
 		const entry = parsed[String(i + 1)];
-		if (!entry || !entry.contradiction) continue;
+		if (!entry) {
+			if (debug) console.error(`[FILTER_DEBUG]   LLM no entry for idx=${offset + i}`);
+			continue;
+		}
 		const conf = typeof entry.confidence === "number" ? entry.confidence : 0;
+		if (debug) {
+			console.error(
+				`[FILTER_DEBUG]   LLM idx=${offset + i} contradiction=${entry.contradiction} conf=${conf.toFixed(2)} reason="${(entry.reason ?? "").slice(0, 50)}"`,
+			);
+		}
+		if (!entry.contradiction) continue;
 		if (conf < confidenceThreshold) continue;
 		verdicts.push({
 			index: offset + i,

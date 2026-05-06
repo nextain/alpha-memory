@@ -106,7 +106,24 @@ export class OpenAICompatEmbeddingProvider implements EmbeddingProvider {
 
 	async embedBatch(texts: string[]): Promise<number[][]> {
 		if (texts.length === 0) return [];
-		const res = await fetch(`${this.baseUrl}/v1/embeddings`, {
+		// URL bug fix (#20): the previous `${baseUrl}/v1/embeddings` produced
+		// `https://...v1beta/openai//v1/embeddings` for Gemini's OpenAI-compat
+		// path (baseUrl already ends with "openai/"), which 404'd silently.
+		// LocalAdapter.embedWithCache catches the throw and returns null, so
+		// factEmbeddings stayed empty for the whole benchmark — masking the
+		// R2.3/R2.5 mechanisms entirely.
+		//
+		// Distinguish two layouts:
+		//   - Gemini OpenAI-compat:  baseUrl ends with `openai` or `openai/`
+		//                            and the embeddings endpoint is `${base}/embeddings`.
+		//   - OpenAI / vLLM standard: baseUrl typically does NOT include `/v1/`,
+		//                             and the endpoint is `${base}/v1/embeddings`.
+		const trimmedBase = this.baseUrl.replace(/\/+$/, "");
+		const isGeminiCompat = /\/openai$/.test(trimmedBase);
+		const url = isGeminiCompat
+			? `${trimmedBase}/embeddings`
+			: `${trimmedBase}/v1/embeddings`;
+		const res = await fetch(url, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -114,7 +131,7 @@ export class OpenAICompatEmbeddingProvider implements EmbeddingProvider {
 			},
 			body: JSON.stringify({ model: this.model, input: texts }),
 		});
-		if (!res.ok) throw new Error(`Embedding API error: ${res.status}`);
+		if (!res.ok) throw new Error(`Embedding API error: ${res.status} ${await res.text().catch(() => "")}`);
 		const data = (await res.json()) as { data: Array<{ embedding: number[] }> };
 		return data.data.map((d) => d.embedding);
 	}

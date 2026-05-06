@@ -283,9 +283,40 @@ export async function findContradictionsWith(
 			candidates.push({ existing: f, newInfo });
 		}
 	}
+
+	const debug = process.env.NAIA_FILTER_DEBUG === "1";
+	if (debug) {
+		console.error(
+			`[FILTER_DEBUG] newInfo="${newInfo.slice(0, 60)}" facts=${facts.length} candidates=${candidates.length}` +
+				(candidates.length > 0
+					? " | first 3: " +
+						candidates
+							.slice(0, 3)
+							.map((c) => `"${c.existing.content.slice(0, 40)}"`)
+							.join(" / ")
+					: ""),
+		);
+	}
+
 	if (candidates.length === 0) return [];
 
 	const verdicts = await filter.filter(candidates);
+
+	if (debug) {
+		console.error(
+			`[FILTER_DEBUG]   verdicts=${verdicts.length}` +
+				(verdicts.length > 0
+					? " | " +
+						verdicts
+							.map(
+								(v) =>
+									`idx=${v.index} action=${v.result.action} reason="${v.result.reason.slice(0, 50)}"`,
+							)
+							.join(" ; ")
+					: " (LLM said no contradictions or all below threshold)"),
+		);
+	}
+
 	return verdicts.map((v) => ({
 		fact: candidates[v.index]!.existing,
 		result: v.result,
