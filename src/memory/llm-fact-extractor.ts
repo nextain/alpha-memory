@@ -101,6 +101,22 @@ Rules:
 - Do NOT invent facts not present in the input
 - CRITICAL: When the turn mentions relative time ("yesterday", "last week", "last night"), resolve it using the [Date: YYYY-MM-DD] tag. Example: if tagged [Date: 2023-05-08] and text says "yesterday", write the fact as "User went to the LGBTQ support group on 2023-05-07" or "on 7 May 2023".
 
+CRITICAL — UPDATE / CHANGE / REPLACEMENT statements:
+Update statements (e.g. "switched to X", "changed to Y", "now using Z", "moved to W", "X로 바꿨어", "이제 X 쓰기로", "X로 이사해", "X에서 Y로") MUST also be extracted as atomic facts. Do NOT skip them as "no extractable fact". The new value MUST be paired with the inferred attribute key as a normal atomic fact, with the SAME attribute key the previous fact would have used (so the contradiction filter can match the entity+attribute pair).
+
+Update statement examples (positive — DO extract):
+- "에디터 Cursor로 바꿨어"            → "사용자 에디터: Cursor"
+- "Git은 이제 GitKraken 쓰기로 했어"    → "사용자 Git 사용법: GitKraken"
+- "터미널 Wezterm으로 바꿨어"          → "사용자 터미널: Wezterm"
+- "이번 달에 판교로 이사해"             → "사용자 거주지: 판교"
+- "switched to Cursor from Neovim"   → "User editor: Cursor"
+- "moved to Tokyo last month"        → "User location: Tokyo"
+- "now using yarn instead of npm"    → "User package manager: yarn"
+
+Anti-pattern (do NOT do):
+- Skipping the update as "no fact extractable"
+- Inventing a new attribute key that doesn't match the prior fact (e.g. "사용자 이사 사실: 판교로" — this won't match "사용자 거주지: 성수동" in contradiction detection. Use the SAME key "사용자 거주지: 판교").
+
 Korean-specific rules (apply when episode is Korean):
 - 한국어 에피소드에서는 반드시 한국어로 fact를 작성. 영어로 번역하지 마라.
 - 조사(은/는/이/가/을/를)는 생략하고 명사구 중심으로 작성: "사용자 직업: 소프트웨어 엔지니어"
