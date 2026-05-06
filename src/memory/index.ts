@@ -42,6 +42,7 @@ export type { EmbeddingProvider };
 export {
 	OfflineEmbeddingProvider,
 	OpenAICompatEmbeddingProvider,
+	HuggingFaceEmbeddingProvider,
 	NaiaGatewayEmbeddingProvider,
 } from "./embeddings.js";
 export { LocalAdapter } from "./adapters/local.js";
