@@ -1092,10 +1092,23 @@ async function main() {
 						continue;
 					}
 
-					// Handle setup/update/noise — log failures + wait for indexing
+					// Handle setup/update/noise — log failures + wait for indexing.
+					// R2.5/R2.3 (issue #19): inline-added episodes have timestamp=now,
+					// which falls below the 1-hour consolidation gate (index.ts:774).
+					// Force-consolidate after each mutation so the new episode reaches
+					// fact extraction + contradiction filter immediately.
+					const forceConsolidate = async () => {
+						const c = (adapter as any).consolidate;
+						if (typeof c === "function") {
+							try { await c.call(adapter); } catch (e: any) {
+								console.error(`      ⚠ consolidate fail: ${e.message?.slice(0, 60)}`);
+							}
+						}
+					};
 					if (q.setup)
 						try {
 							await adapter.addFact(q.setup);
+							await forceConsolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ setup fail: ${e.message?.slice(0, 60)}`);
@@ -1103,6 +1116,7 @@ async function main() {
 					if (q.update)
 						try {
 							await adapter.addFact(q.update);
+							await forceConsolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ update fail: ${e.message?.slice(0, 60)}`);
@@ -1110,6 +1124,7 @@ async function main() {
 					if (q.noisy_input)
 						try {
 							await adapter.addFact(q.noisy_input);
+							await forceConsolidate();
 							await new Promise((r) => setTimeout(r, THROTTLE_MS));
 						} catch (e: any) {
 							console.error(`      ⚠ noise fail: ${e.message?.slice(0, 60)}`);
