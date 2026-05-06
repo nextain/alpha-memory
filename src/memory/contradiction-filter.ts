@@ -176,8 +176,14 @@ export interface GeminiFlashLiteFilterOptions {
 	confidenceThreshold?: number;
 }
 
-const GEMINI_DEFAULT_BASE_URL =
+const GEMINI_DIRECT_BASE_URL =
 	"https://generativelanguage.googleapis.com/v1beta/openai/";
+/** Prefer Vertex AI gateway when GATEWAY_URL is set — no rate limits,
+ *  routes Gemini calls without 503 spikes. Caller can still pass an
+ *  explicit baseURL to override. */
+const GEMINI_DEFAULT_BASE_URL = process.env.GATEWAY_URL
+	? `${process.env.GATEWAY_URL.replace(/\/+$/, "")}/v1/`
+	: GEMINI_DIRECT_BASE_URL;
 const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
@@ -198,7 +204,12 @@ export class GeminiFlashLiteContradictionFilter
 	private readonly confidenceThreshold: number;
 
 	constructor(options: GeminiFlashLiteFilterOptions) {
-		this.apiKey = options.apiKey;
+		// When the caller didn't pin a baseURL, auto-route via gateway when
+		// GATEWAY_URL is set (gateway needs its own credential).
+		const callerOverrodeBaseURL = options.baseURL !== undefined;
+		this.apiKey = callerOverrodeBaseURL
+			? options.apiKey
+			: (process.env.GATEWAY_MASTER_KEY || options.apiKey);
 		this.baseURL = options.baseURL ?? GEMINI_DEFAULT_BASE_URL;
 		this.model = options.model ?? GEMINI_DEFAULT_MODEL;
 		this.batchSize = options.batchSize ?? GEMINI_DEFAULT_BATCH_SIZE;

@@ -1837,3 +1837,138 @@
 - LLM: gemini-flash-lite
 - Judge: keyword
   - [Phase 1] naia-local: Stored: 310/200 (New: 0, Skipped: 310)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 10:54:45
+- Run ID: `run-2026-05-05T13-54-45-930Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 10:58:32
+- Run ID: `run-2026-05-05T13-58-32-984Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: -209, Skipped: 1209)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 11:02:31
+- Run ID: `run-2026-05-05T14-02-31-251Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 11:28:29
+- Run ID: `run-2026-05-05T14-28-29-973Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 11:38:43
+- Run ID: `run-2026-05-05T14-38-43-131Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 11:47:57
+- Run ID: `run-2026-05-05T14-47-57-916Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 5. 오후 11:56:06
+- Run ID: `run-2026-05-05T14-56-06-744Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오전 2:55:32
+- Run ID: `run-2026-05-05T17-55-32-187Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 3:32:29
+- Run ID: `run-2026-05-06T06-32-29-128Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 3:48:05
+- Run ID: `run-2026-05-06T06-48-05-608Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 4:25:33
+- Run ID: `run-2026-05-06T07-25-33-388Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 4:40:23
+- Run ID: `run-2026-05-06T07-40-23-911Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 4:55:56
+- Run ID: `run-2026-05-06T07-55-56-419Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 5:08:44
+- Run ID: `run-2026-05-06T08-08-44-798Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 6. 오후 11:08:42
+- Run ID: `run-2026-05-06T14-08-42-784Z`
+- Adapters: naia-local
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+
+### 🚀 Run Started: 2026. 5. 6. 오후 11:11:15
+- Run ID: `run-2026-05-06T14-11-15-893Z`
+- Adapters: naia-local, mem0
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)
+
+### 🚀 Run Started: 2026. 5. 7. 오전 1:16:22
+- Run ID: `run-2026-05-06T16-16-22-526Z`
+- Adapters: naia-local, mem0
+- Language: ko
+- LLM: gemini-flash-lite
+- Judge: keyword
+  - [Phase 1] naia-local: Stored: 1000/1000 (New: 0, Skipped: 1000)

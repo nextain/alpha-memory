@@ -27,8 +27,13 @@ export interface LLMFactExtractorOptions {
 	batchSize?: number;
 }
 
-const DEFAULT_BASE_URL =
+const GEMINI_DIRECT_BASE_URL =
 	"https://generativelanguage.googleapis.com/v1beta/openai/";
+/** When `GATEWAY_URL` is set, use it (Vertex AI gateway, no rate limits)
+ *  in preference to direct Gemini API. Direct API hits 503 spikes during
+ *  high-demand periods; gateway routes through Vertex which is rate-managed. */
+const DEFAULT_BASE_URL =
+	process.env.GATEWAY_URL ? `${process.env.GATEWAY_URL.replace(/\/+$/, "")}/v1/` : GEMINI_DIRECT_BASE_URL;
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -45,8 +50,16 @@ const DEFAULT_BATCH_SIZE = 10;
 export function buildLLMFactExtractor(
 	options: LLMFactExtractorOptions,
 ): (episodes: Episode[]) => Promise<ExtractedFact[]> {
+	// When GATEWAY_URL is set, prefer the Vertex AI gateway which has no
+	// rate limits — direct Gemini API hits 503 spikes during high-demand
+	// periods. The gateway requires its own credential (GATEWAY_MASTER_KEY)
+	// so we override apiKey too unless the caller passed an explicit
+	// non-default baseURL.
+	const callerOverrodeBaseURL = options.baseURL !== undefined;
+	const apiKey = callerOverrodeBaseURL
+		? options.apiKey
+		: (process.env.GATEWAY_MASTER_KEY || options.apiKey);
 	const {
-		apiKey,
 		baseURL = DEFAULT_BASE_URL,
 		model = DEFAULT_MODEL,
 		batchSize = DEFAULT_BATCH_SIZE,
