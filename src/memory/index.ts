@@ -45,6 +45,8 @@ export {
 	HuggingFaceEmbeddingProvider,
 	NaiaGatewayEmbeddingProvider,
 } from "./embeddings.js";
+export { buildLLMFactExtractor } from "./llm-fact-extractor.js";
+export type { LLMFactExtractorOptions } from "./llm-fact-extractor.js";
 export { LocalAdapter } from "./adapters/local.js";
 export { QdrantAdapter } from "./adapters/qdrant.js";
 export type {
