@@ -76,18 +76,17 @@ contradiction = false (do NOT supersede) for:
 - temporal continuation (e.g. existing="went to Kyoto last summer", new="going to Kyoto this winter" — separate events)
 - unrelated facts that share an entity by coincidence
 
-confidence guidance:
-- 0.9+ : explicit replacement language ("switched", "바꿨", "이제 X 쓰기로", "moved to")
-- 0.7-0.9 : same entity+attribute, different value, no explicit cue
-- 0.5-0.7 : same entity, attribute may overlap but not certain
-- below 0.5 : ambiguous, prefer false
+Caution against false positives — common over-aggressive patterns:
+- Same category but DIFFERENT attribute: "tool" is a category, but design-tool, documentation-tool, meeting-tool, IaC-tool are *different attributes*. Do not supersede across attributes.
+- Parent-vs-instance: a parent service or platform and one of its sub-services are not the same attribute (a generic "cloud platform" attribute vs an attribute about a specific managed service under it).
+- List-like attributes: hobbies, subscriptions, languages spoken, team members — these naturally hold MULTIPLE concurrent values. A new entry adds, not replaces.
+- Different entities sharing an attribute name: "X's role" and "Y's role" are different entities even if both speak of "role". Verify entity identity before flagging.
 
-Worked examples:
-- existing="에디터로 Neovim 쓰고 있어"   new="에디터 Cursor로 바꿨어"           → {"contradiction": true,  "confidence": 0.95, "reason": "tool replaced explicitly"}
-- existing="Git은 CLI만 써"             new="Git은 이제 GitKraken 쓰기로 했어" → {"contradiction": true,  "confidence": 0.9,  "reason": "tool switched"}
-- existing="성수동에 살아"               new="이번 달에 판교로 이사해"           → {"contradiction": true,  "confidence": 0.9,  "reason": "residence relocation"}
-- existing="키보드는 리얼포스 써"         new="요즘 기계식도 써보고 있어"          → {"contradiction": false, "confidence": 0.8,  "reason": "addition, not replacement"}
-- existing="여름 휴가는 8월에"            new="교토 여행은 가을에"                → {"contradiction": false, "confidence": 0.95, "reason": "different events"}
+confidence guidance:
+- 0.9+ : explicit replacement language present ("switched", "instead of", "moved", "now …" with prior contradicted)
+- 0.7-0.9 : same entity+attribute pair confirmed, different value, but no explicit cue
+- 0.5-0.7 : entity match clear, attribute overlap uncertain (could be sibling attribute) — usually prefer false
+- below 0.5 : ambiguous — prefer false
 
 Pairs:
 ${pairsText}
