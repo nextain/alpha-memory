@@ -247,6 +247,8 @@ export function generateLedger(opts: GeneratorOptions = {}): Ledger {
 
 	// Phase 2: schedule `updateCount` updates targeting random base entries.
 	// Pick distinct base entries to avoid double-supersede confusion.
+	// Each update's timestamp is *strictly after* its base AND monotonically
+	// increasing in encode order (turn order == timestamp order).
 	const targetedBaseIds = new Set<string>();
 	let updatesEmitted = 0;
 	const baseShuffle = [...baseEntries].sort(() => rng() - 0.5);
@@ -258,10 +260,15 @@ export function generateLedger(opts: GeneratorOptions = {}): Ledger {
 		const updateValue = randPick(base.template.updateValues, rng);
 		const id = `L${pad3(entries.length + 1)}`;
 		const turn = entries.length + 1;
+		// Strictly monotone: update day = max(base day + gap, current turn - 1)
+		// → encode order == timestamp order, prevents R2.5 confusion from
+		//   updates that look "earlier" than later base entries.
+		const minDay = base.turn - 1 + Math.floor(gapMin + rng() * (gapMax - gapMin));
+		const day = Math.max(minDay, turn - 1);
 		entries.push({
 			id,
 			turn,
-			timestamp: isoStamp(base.turn - 1 + Math.floor(gapMin + rng() * (gapMax - gapMin))),
+			timestamp: isoStamp(day),
 			role: "user",
 			utterance: utteranceForUpdate(base.template, updateValue),
 			groundTruthFact: factForUpdate(base.template, updateValue),

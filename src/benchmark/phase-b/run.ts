@@ -21,8 +21,9 @@ import {
 	type EmbeddingProvider,
 } from "../../memory/embeddings.js";
 import {
+	GeminiFlashLiteContradictionFilter,
 	HeuristicContradictionFilter,
-	selectFilter,
+	VllmReasoningContradictionFilter,
 } from "../../memory/contradiction-filter.js";
 import { MemorySystem } from "../../memory/index.js";
 import { buildLLMFactExtractor } from "../../memory/llm-fact-extractor.js";
@@ -130,18 +131,18 @@ function buildHooks(
 		embeddingProvider: embedder,
 	});
 	const factExtractor = buildLLMFactExtractor({ apiKey });
-	const contradictionFilter =
-		args.filter === "off"
-			? undefined
-			: args.filter === "heuristic"
-				? new HeuristicContradictionFilter()
-				: selectFilter({
-						provider: args.filter,
-						apiKey,
-						baseURL: process.env.GATEWAY_URL
-							? `${process.env.GATEWAY_URL.replace(/\/+$/, "")}/v1/`
-							: undefined,
-					});
+	const contradictionFilter = (() => {
+		switch (args.filter) {
+			case "off":
+				return undefined;
+			case "heuristic":
+				return new HeuristicContradictionFilter();
+			case "gemini":
+				return new GeminiFlashLiteContradictionFilter({ apiKey: apiKey! });
+			case "vllm":
+				return new VllmReasoningContradictionFilter();
+		}
+	})();
 
 	const sys = new MemorySystem({ adapter, factExtractor, contradictionFilter });
 
