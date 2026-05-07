@@ -15,7 +15,9 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { Mem0Adapter } from "../comparison/adapter-mem0.js";
 import { LocalAdapter } from "../../memory/adapters/local.js";
+import { Mem0Adapter as NaiaMem0Adapter } from "../../memory/adapters/mem0.js";
 import {
 	OpenAICompatEmbeddingProvider,
 	type EmbeddingProvider,
@@ -32,7 +34,7 @@ import { loadAIHub141 } from "./loader.js";
 import { aggregateResults, scoreConversation } from "./scorer.js";
 import type { AIHub141RecallResult } from "./types.js";
 
-type AdapterKind = "naia-local" | "no-memory";
+type AdapterKind = "naia-local" | "no-memory" | "mem0" | "naia-on-mem0";
 
 interface CLIArgs {
 	limit: number;
@@ -89,11 +91,58 @@ async function buildSystem(apiKey: string, cacheId: string): Promise<MemorySyste
 	return new MemorySystem({ adapter, factExtractor });
 }
 
+/** naia-on-mem0 hybrid: naia capability (R2.3 / R2.5 / decay / KG) on top
+ *  of mem0 OSS backend (vector store + LLM dedup). The "stack on top"
+ *  pattern from CLAUDE.md / decision-matrix §A06.
+ */
+async function buildSystemOnMem0(apiKey: string, cacheId: string): Promise<MemorySystem> {
+	const useGateway = !!(process.env.GATEWAY_URL && process.env.GATEWAY_MASTER_KEY);
+	const gwBase = process.env.GATEWAY_URL ?? "";
+	const gwKey = process.env.GATEWAY_MASTER_KEY ?? "";
+	const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
+
+	const embedderConfig = useGateway
+		? {
+				apiKey: gwKey,
+				baseURL: `${gwBase}/v1/`,
+				model: "vertexai:text-embedding-004",
+				user: "benchmark",
+			}
+		: { apiKey, baseURL: GEMINI_BASE, model: "gemini-embedding-001" };
+
+	const llmConfig = useGateway
+		? {
+				apiKey: gwKey,
+				baseURL: `${gwBase}/v1/`,
+				model: "vertexai:gemini-2.5-flash",
+				user: "benchmark",
+			}
+		: { apiKey, baseURL: GEMINI_BASE, model: "gemini-2.5-flash" };
+
+	const mem0Config = {
+		embedder: { provider: "openai", config: embedderConfig as Record<string, any> },
+		vectorStore: {
+			provider: "memory",
+			config: {
+				collectionName: "bench",
+				dimension: useGateway ? 768 : 3072,
+				dbPath: `/tmp/aihub141-naia-on-mem0-${cacheId}-vec.db`,
+			},
+		},
+		llm: { provider: "openai", config: llmConfig as Record<string, any> },
+		historyDbPath: `/tmp/aihub141-naia-on-mem0-${cacheId}-hist.db`,
+	};
+
+	const adapter = new NaiaMem0Adapter({ mem0Config, userId: "benchmark" });
+	const factExtractor = buildLLMFactExtractor({ apiKey });
+	return new MemorySystem({ adapter, factExtractor });
+}
+
 async function main() {
 	const args = parseArgs();
 	const apiKey = process.env.GEMINI_API_KEY;
-	if (args.adapter === "naia-local" && !apiKey) {
-		console.error("ERROR: GEMINI_API_KEY env var required for naia-local");
+	if (args.adapter !== "no-memory" && !apiKey) {
+		console.error(`ERROR: GEMINI_API_KEY env var required for ${args.adapter}`);
 		process.exit(1);
 	}
 
@@ -128,12 +177,52 @@ async function main() {
 		// Build hooks per adapter kind. no-memory = absolute floor (0% expected),
 		// proves naia recall is mechanism-driven not coincidental keyword overlap.
 		let hooks;
+		let mem0Inst: Mem0Adapter | null = null;
 		if (args.adapter === "no-memory") {
 			hooks = {
 				reset: async () => {},
 				encode: async () => {},
 				consolidate: async () => {},
 				recallUserFacts: async () => [] as string[],
+			};
+		} else if (args.adapter === "mem0") {
+			mem0Inst = new Mem0Adapter(apiKey!);
+			await mem0Inst.init(cacheId);
+			const m = mem0Inst;
+			hooks = {
+				reset: async () => {},
+				encode: async ({ content }: { content: string; timestampMs: number }) => {
+					await m.addFact(content);
+				},
+				consolidate: async () => {
+					// mem0 dedup/consolidate happens inside add() — no explicit step.
+				},
+				recallUserFacts: async (query: string, topK: number) => {
+					return await m.search(query, topK);
+				},
+			};
+		} else if (args.adapter === "naia-on-mem0") {
+			system = await buildSystemOnMem0(apiKey!, cacheId);
+			const sys = system;
+			hooks = {
+				reset: async () => {},
+				encode: async ({ content, timestampMs }: { content: string; timestampMs: number }) => {
+					await sys.encode(
+						{ content, role: "user", timestamp: timestampMs },
+						{ project: "aihub141" },
+					);
+				},
+				consolidate: async () => {
+					await sys.consolidateNow(true);
+				},
+				recallUserFacts: async (query: string, topK: number) => {
+					const r = await sys.recall(query, {
+						project: "aihub141",
+						topK,
+						deepRecall: true,
+					});
+					return [...new Set(r.facts.map((f) => f.content))];
+				},
 			};
 		} else {
 			system = await buildSystem(apiKey!, cacheId);
@@ -188,6 +277,7 @@ async function main() {
 		} catch (e: any) {
 			console.warn(`[${idx}] ${conv.multisessionID} failed: ${e?.message}`);
 		}
+		if (mem0Inst) await mem0Inst.cleanup();
 	}
 
 	if (system) await system.close();

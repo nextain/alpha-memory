@@ -1,6 +1,29 @@
 # Naia Memory (formerly Alpha Memory)
 
-> # ⚠️ STATUS: PARTIAL OUTDATED (2026-05-03)
+> # ✅ STATUS: SHIP-READY for naia-agent integration (2026-05-07)
+>
+> **Phase A 한국어 R2.3 measurement 완료** (#23):
+> - 100 conv (AI Hub 141 한국어 멀티세션 대화), recall@20 cosine 0.7 = **76.8%**
+> - keyword 69.1% / polarity-aware 62.8% / cosine 76.8% / no-memory floor 0%
+> - LoCoMo 영어 mid-tier (mem0 67% / Letta 74%) 와 *수치 대등*
+> - 사용자 directive "1등 X, 한국어 쓸만함" 정확 부합
+> - 측정 cost ~$0.5 / 100 conv, naia 2분/conv vs mem0 24분/conv (12x 빠름)
+>
+> **naia-agent 통합 ready**:
+> - `MemoryProvider` interface (@nextain/agent-types) 충실 구현
+> - 8 capability + `isCapable<>()` graceful degradation
+> - `pnpm smoke:naia-memory` (naia-agent/examples/naia-memory-host.ts) 검증 완료
+> - 다음 단계: naia-os#240 의 wire-in (naia-agent 측 작업)
+>
+> **상세**:
+> - `.agents/progress/r2-bench-trust-2026-05-07.md` — Phase A/B/C 분리 path
+> - `reports/aihub141-r2-3-reanalysis-100conv.md` — 정직한 multi-metric 재해석
+> - `reports/aihub141-r2-3-...-embedding-reanalysis.md` — semantic cosine archive
+> - issue #23 — Phase A 결과 + 외부 벤치 비교 archive
+>
+> ---
+>
+> # ⚠️ STATUS: PARTIAL OUTDATED (2026-05-03 → 본문)
 > **본 문서의 본문은 R5~R14 시기 컨텍스트** (4-store, 12 카테고리 벤치 등). 현재 SoT 와 일부 모순.
 > 통합 작업은 R1.4 슬라이스 예정.
 >
@@ -91,16 +114,32 @@ pnpm exec vitest run
 PORT=9876 STORE_PATH=/tmp/naia.json pnpm exec tsx src/server/mem0-api.ts
 ```
 
-## Latest Benchmark (R14, 2026-04-25)
+## Latest Benchmark — Phase A AI Hub 141 (2026-05-07)
 
-| Adapter | KO kw | KO gem | EN kw | EN gem | Note |
-|---------|:-----:|:------:|:-----:|:------:|------|
-| naia-local | 38% (92/241) | 49% (117/241) | — | — | P0+P1+P2 적용 |
-| mem0 | — | — | — | — | R14 미실행 |
+100 conversations × 4 sessions, KO multi-session natural dialogues.
 
-**R14 vs R10**: kw +2pp, gem +3pp. contradiction_indirect 100%, direct_recall +9.
+| Metric | naia-local | no-memory | mem0 (1 conv smoke) |
+|---|---|---|---|
+| recall@20 keyword (loose) | 69.1% | 0% | 70.6% |
+| recall@20 polarity-aware | 62.8% | 0% | — |
+| **recall@20 cosine 0.7** | **76.8%** | 0% | — |
+| recall@5 cosine 0.7 | 44.1% | 0% | — |
+| Per-conv elapsed | **2분** | 0초 | **24분 (12x slower)** |
+| Per-conv cost (estimated) | $0.005 | $0 | ~$0.05+ |
 
-**상세 결과**: `docs/archive/benchmark-history-r5-r14.md`
+**External LoCoMo (영어, J-score, 다른 metric — disclaim 필요)**:
+mem0 67% / Letta 74% / Zep 66-75% / MemU 92%. naia 76.8% (KO cosine) ≈
+mem0/Letta mid-tier baseline 수준.
+
+**상세**: `reports/aihub141-r2-3-reanalysis-100conv.md`,
+`reports/aihub141-r2-3-...-embedding-reanalysis.md`,
+issue #23.
+
+### 이전 Benchmark (R14, 2026-04-25, archive)
+
+`fact-bank.json` 25 query 측정 — naia-local KO kw 38% / gem 49%.
+한계: 합성 contradiction over-fit (#22 retro). Phase A 의 자연 dataset
+측정으로 대체.
 
 ## Known Issues (Top 3)
 
