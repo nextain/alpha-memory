@@ -20,6 +20,7 @@ reports/st-*.json
 reports/disputes.json
 reports/dispute*.txt
 reports/runs/
+reports/aihub141-r2-3-*.json
 
 # misc
 urllib.request

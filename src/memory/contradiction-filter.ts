@@ -184,7 +184,10 @@ const GEMINI_DIRECT_BASE_URL =
 const GEMINI_DEFAULT_BASE_URL = process.env.GATEWAY_URL
 	? `${process.env.GATEWAY_URL.replace(/\/+$/, "")}/v1/`
 	: GEMINI_DIRECT_BASE_URL;
-const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash-lite";
+// Gateway routes via Vertex AI which requires `vertexai:` model prefix.
+const GEMINI_DEFAULT_MODEL = process.env.GATEWAY_URL
+	? "vertexai:gemini-2.5-flash-lite"
+	: "gemini-2.5-flash-lite";
 const GEMINI_DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
 

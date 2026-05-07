@@ -32,9 +32,15 @@ const GEMINI_DIRECT_BASE_URL =
 /** When `GATEWAY_URL` is set, use it (Vertex AI gateway, no rate limits)
  *  in preference to direct Gemini API. Direct API hits 503 spikes during
  *  high-demand periods; gateway routes through Vertex which is rate-managed. */
-const DEFAULT_BASE_URL =
-	process.env.GATEWAY_URL ? `${process.env.GATEWAY_URL.replace(/\/+$/, "")}/v1/` : GEMINI_DIRECT_BASE_URL;
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const USE_GATEWAY = !!process.env.GATEWAY_URL;
+const DEFAULT_BASE_URL = USE_GATEWAY
+	? `${process.env.GATEWAY_URL!.replace(/\/+$/, "")}/v1/`
+	: GEMINI_DIRECT_BASE_URL;
+// Gateway routes via Vertex AI which requires `vertexai:` model prefix.
+// Direct Gemini API uses bare model name.
+const DEFAULT_MODEL = USE_GATEWAY
+	? "vertexai:gemini-2.5-flash-lite"
+	: "gemini-2.5-flash-lite";
 const DEFAULT_BATCH_SIZE = 10;
 
 /**

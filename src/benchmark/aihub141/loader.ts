@@ -52,7 +52,15 @@ function unzipIfNeeded(zipPath: string, scratchDir: string): void {
 			`AI Hub 141 zip not found: ${zipPath}\nSet AIHUB_141_PATH env var to your AI Hub root.`,
 		);
 	}
-	execSync(`unzip -q -o "${zipPath}" -d "${scratchDir}"`, { stdio: "inherit" });
+	// AI Hub zip entries have leading `/` → unzip strips them and exits 1
+	// (warning, not error). Tolerate exit 1 if files were actually extracted.
+	try {
+		execSync(`unzip -q -o "${zipPath}" -d "${scratchDir}"`, {
+			stdio: ["ignore", "ignore", "ignore"],
+		});
+	} catch (e) {
+		if (readdirSync(scratchDir).length === 0) throw e;
+	}
 }
 
 /** Deterministic shuffle (seedable). */

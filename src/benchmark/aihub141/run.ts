@@ -130,16 +130,16 @@ async function main() {
 						await sys.consolidateNow(true);
 					},
 					recallUserFacts: async (query: string, topK: number) => {
+						// CRITICAL: only facts, NOT episodes. Episode raw text would
+						// give keyword-match hits even when fact extraction failed,
+						// making the measurement meaningless (R2.3 verifies that
+						// extracted *facts* survive multi-session, not raw turn text).
 						const r = await sys.recall(query, {
 							project: "aihub141",
 							topK,
 							deepRecall: true,
 						});
-						const raw = [
-							...r.facts.map((f) => f.content),
-							...r.episodes.map((e) => e.content),
-						];
-						return [...new Set(raw)];
+						return [...new Set(r.facts.map((f) => f.content))];
 					},
 				},
 				{ topK: args.topK, verbose: args.verbose },
