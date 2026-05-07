@@ -73,6 +73,46 @@ export function keywordMatch(gt: string, recalled: string[]): boolean {
 	return false;
 }
 
+/** Detect Korean negation markers ("안", "못", "없", "않", "X지 않", "싫"). */
+export function hasNegation(text: string): boolean {
+	return /(?:안\s|못\s|없|않|싫|아니|지\s*않|지않)/.test(text);
+}
+
+/**
+ * Polarity-aware keyword match: same as keywordMatch but requires
+ * negation polarity to agree between GT and the matched recalled fact.
+ * Eliminates false positives like:
+ *   GT: "나는 샤인머스캣을 먹지 않는다" ↔ recalled: "사용자 선호 과일: 샤인머스캣"
+ */
+export function polarityAwareMatch(gt: string, recalled: string[]): boolean {
+	const tokens = extractKeyTokens(gt);
+	if (tokens.length === 0) return false;
+	const gtNeg = hasNegation(gt);
+	for (const r of recalled) {
+		if (hasNegation(r) !== gtNeg) continue;
+		for (const tok of tokens) {
+			if (r.includes(tok)) return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Hard match: entire GT phrase (after stripping leading "나는"/"내가" and
+ * trailing punctuation) appears as substring in some recalled fact.
+ *
+ * Bypasses topK ceiling effect — measures whether the *full* fact survived
+ * encoding+recall, not just a token of it.
+ */
+export function hardMatch(gt: string, recalled: string[]): boolean {
+	const phrase = gt
+		.replace(/^(나는|내가|나|사용자는|사용자가|사용자|User|user)\s*/, "")
+		.replace(/[.!?~]+\s*$/g, "")
+		.trim();
+	if (phrase.length < 4) return false;
+	return recalled.some((r) => r.includes(phrase));
+}
+
 function parseDateTimeMs(date: string, time: string): number {
 	// AI Hub 141 timestamps: "2022-09-06" + "14:16:45" — KST. Use plain ISO.
 	const iso = `${date}T${time}+09:00`;
