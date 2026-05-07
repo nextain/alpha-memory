@@ -73,6 +73,50 @@
 - 사용자 본인 사용 분포 = naia OS 의 *진짜 target distribution*
 - self-bias 가 invalid signal 이 아니라 *valid signal* (이 상황에서)
 
+### Schema 설계 — `phase-b-ledger.jsonl`
+
+각 ledger entry = naia OS 사용 시 1 turn (실제 또는 합성):
+
+```jsonl
+{"id":"L001","turn":1,"timestamp":"2026-04-01T09:00:00+09:00","role":"user","utterance":"내 직업은 소프트웨어 엔지니어야","groundTruthFact":"사용자 직업: 소프트웨어 엔지니어"}
+{"id":"L002","turn":2,"timestamp":"2026-04-15T10:00:00+09:00","role":"user","utterance":"이번에 디자인 회사로 옮겼어","groundTruthFact":"사용자 직업: 디자이너","contradiction":{"type":"update","supersedes":"L001","attributeKey":"사용자 직업"}}
+```
+
+- **`groundTruthFact`** — 사용자가 ledger 작성 시 명시한 \"이 turn 에서 추출돼야 할 fact\".
+- **`contradiction`** — update/replace 일 때 명시. naia 의 R2.5 가 이 turn 처리 시 prior fact (`supersedes`) 를 superseded 로 처리해야 함.
+- **`attributeKey`** — naia 의 R2.5 가 같은 attribute 로 그룹화하는지 검증 (예: \"사용자 직업\" 동일 key 사용).
+
+### Scoring 3-axis
+
+| Axis | 측정 | Pass 기준 |
+|---|---|---|
+| **A. Recall** | 모든 ledger turn 끝난 시점에 recall@k. 최신 fact 가 회상되어야 (예: 디자이너) | recall@10 ≥ 70% |
+| **B. Supersede precision** | naia store 의 superseded fact 수 / `contradiction` 표시 수 | ≥ 80% (false positive 적게) |
+| **C. False positive** | non-update turn 에서 supersede 발생 갯수 | ≤ 5% |
+
+세 axis 동시 측정. 한 axis 만 좋아도 *쓸만하지 않음* — 모두 통과해야 Phase C 또는 ship-ready.
+
+### 산출물
+- `src/benchmark/phase-b/ledger-schema.ts` — type
+- `src/benchmark/phase-b/ledger.jsonl` — 사용자 작성 ledger (or generated 합성, frozen)
+- `src/benchmark/phase-b/scorer.ts` — 3-axis scorer
+- `src/benchmark/phase-b/run.ts` — entry
+- `reports/phase-b-r2-5-{ts}.json` — score + cost (usage-tracker 자동 기록)
+
+### Ledger source — 두 path
+
+**(B-1) 사용자 작성 (권장)** — 사용자가 80 entries 직접 작성. 1-2 시간. self-bias 인정.
+**(B-2) 사용자 ledger 자동 추출** — naia OS 의 실제 사용 history (있으면) 에서 80 추출 + contradiction 자동 라벨. 사용자 측 작업.
+
+(B-1) 이 더 빠르고 *frozen ground truth* 명확. (B-2) 는 더 자연이지만 라벨링 부담.
+
+### Decision gate (Phase B 결과)
+
+- A/B/C 모두 pass → R2.5 mechanism *쓸만함* 입증. Phase C 또는 ship-ready
+- B (supersede precision) ≥ 80% 인데 A (recall) ↓ → recall path 문제, R2.5 자체는 OK
+- B ≤ 50% → R2.5 mechanism 자체 재설계 필요 (over-fit 의심)
+- C (false positive) ≥ 10% → contradiction filter prompt 재검토
+
 ## 5. Anti-overfit guard (CLAUDE.md 정합)
 
 - *범용 단일 전략* 만 — 카테고리별 적응형 가중치 X
