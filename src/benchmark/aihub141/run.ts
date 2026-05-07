@@ -32,12 +32,15 @@ import { loadAIHub141 } from "./loader.js";
 import { aggregateResults, scoreConversation } from "./scorer.js";
 import type { AIHub141RecallResult } from "./types.js";
 
+type AdapterKind = "naia-local" | "no-memory";
+
 interface CLIArgs {
 	limit: number;
 	level: 2 | 3 | 4;
 	topK: number;
 	verbose: boolean;
 	split: "validation" | "training";
+	adapter: AdapterKind;
 }
 
 function parseArgs(): CLIArgs {
@@ -47,14 +50,16 @@ function parseArgs(): CLIArgs {
 	let topK = 20;
 	let verbose = false;
 	let split: "validation" | "training" = "validation";
+	let adapter: AdapterKind = "naia-local";
 	for (const a of args) {
 		if (a.startsWith("--limit=")) limit = Number.parseInt(a.split("=")[1], 10);
 		if (a.startsWith("--level=")) level = Number.parseInt(a.split("=")[1], 10) as 2 | 3 | 4;
 		if (a.startsWith("--topK=")) topK = Number.parseInt(a.split("=")[1], 10);
 		if (a === "--verbose") verbose = true;
 		if (a.startsWith("--split=")) split = a.split("=")[1] as any;
+		if (a.startsWith("--adapter=")) adapter = a.split("=")[1] as AdapterKind;
 	}
-	return { limit, level, topK, verbose, split };
+	return { limit, level, topK, verbose, split, adapter };
 }
 
 function buildEmbedder(apiKey: string): EmbeddingProvider {
@@ -85,15 +90,15 @@ async function buildSystem(apiKey: string, cacheId: string): Promise<MemorySyste
 }
 
 async function main() {
+	const args = parseArgs();
 	const apiKey = process.env.GEMINI_API_KEY;
-	if (!apiKey) {
-		console.error("ERROR: GEMINI_API_KEY env var required");
+	if (args.adapter === "naia-local" && !apiKey) {
+		console.error("ERROR: GEMINI_API_KEY env var required for naia-local");
 		process.exit(1);
 	}
 
-	const args = parseArgs();
 	console.log(
-		`[aihub141] split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK}`,
+		`[aihub141] adapter=${args.adapter} split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK}`,
 	);
 
 	const conversations = await loadAIHub141({
@@ -119,36 +124,50 @@ async function main() {
 			const fs = await import("node:fs");
 			fs.rmSync(`/tmp/aihub141-naia-${cacheId}.json`, { force: true });
 		} catch {}
-		system = await buildSystem(apiKey, cacheId);
 
-		const sys = system;
+		// Build hooks per adapter kind. no-memory = absolute floor (0% expected),
+		// proves naia recall is mechanism-driven not coincidental keyword overlap.
+		let hooks;
+		if (args.adapter === "no-memory") {
+			hooks = {
+				reset: async () => {},
+				encode: async () => {},
+				consolidate: async () => {},
+				recallUserFacts: async () => [] as string[],
+			};
+		} else {
+			system = await buildSystem(apiKey!, cacheId);
+			const sys = system;
+			hooks = {
+				reset: async () => {},
+				encode: async ({ content, timestampMs }: { content: string; timestampMs: number }) => {
+					await sys.encode(
+						{ content, role: "user", timestamp: timestampMs },
+						{ project: "aihub141" },
+					);
+				},
+				consolidate: async () => {
+					await sys.consolidateNow(true);
+				},
+				recallUserFacts: async (query: string, topK: number) => {
+					// CRITICAL: only facts, NOT episodes. Episode raw text would
+					// give keyword-match hits even when fact extraction failed,
+					// making the measurement meaningless (R2.3 verifies that
+					// extracted *facts* survive multi-session, not raw turn text).
+					const r = await sys.recall(query, {
+						project: "aihub141",
+						topK,
+						deepRecall: true,
+					});
+					return [...new Set(r.facts.map((f) => f.content))];
+				},
+			};
+		}
+
 		try {
 			const result = await scoreConversation(
 				conv,
-				{
-					reset: async () => {},
-					encode: async ({ content, timestampMs }) => {
-						await sys.encode(
-							{ content, role: "user", timestamp: timestampMs },
-							{ project: "aihub141" },
-						);
-					},
-					consolidate: async () => {
-						await sys.consolidateNow(true);
-					},
-					recallUserFacts: async (query: string, topK: number) => {
-						// CRITICAL: only facts, NOT episodes. Episode raw text would
-						// give keyword-match hits even when fact extraction failed,
-						// making the measurement meaningless (R2.3 verifies that
-						// extracted *facts* survive multi-session, not raw turn text).
-						const r = await sys.recall(query, {
-							project: "aihub141",
-							topK,
-							deepRecall: true,
-						});
-						return [...new Set(r.facts.map((f) => f.content))];
-					},
-				},
+				hooks,
 				{ topK: args.topK, verbose: args.verbose },
 			);
 			allResults.push(result);
@@ -215,13 +234,14 @@ async function main() {
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
 	const reportDir = "reports";
 	mkdirSync(reportDir, { recursive: true });
-	const reportPath = join(reportDir, `aihub141-r2-3-${ts}.json`);
+	const reportPath = join(reportDir, `aihub141-r2-3-${args.adapter}-${ts}.json`);
 	writeFileSync(
 		reportPath,
 		JSON.stringify(
 			{
 				meta: {
 					ts,
+					adapter: args.adapter,
 					split: args.split,
 					level: args.level,
 					limit: args.limit,
