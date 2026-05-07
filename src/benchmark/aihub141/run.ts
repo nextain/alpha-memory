@@ -22,6 +22,12 @@ import {
 } from "../../memory/embeddings.js";
 import { MemorySystem } from "../../memory/index.js";
 import { buildLLMFactExtractor } from "../../memory/llm-fact-extractor.js";
+import {
+	estimateCostUSD,
+	getPricingFromEnv,
+	getUsage,
+	resetUsage,
+} from "../../memory/usage-tracker.js";
 import { loadAIHub141 } from "./loader.js";
 import { aggregateResults, scoreConversation } from "./scorer.js";
 import type { AIHub141RecallResult } from "./types.js";
@@ -97,6 +103,7 @@ async function main() {
 	});
 	console.log(`[aihub141] loaded ${conversations.length} conversations`);
 
+	resetUsage();
 	const allResults: AIHub141RecallResult[] = [];
 	const startMs = Date.now();
 	let system: MemorySystem | null = null;
@@ -168,6 +175,9 @@ async function main() {
 
 	const elapsedMs = Date.now() - startMs;
 	const agg = aggregateResults(allResults);
+	const usage = getUsage();
+	const pricing = getPricingFromEnv();
+	const costUSD = estimateCostUSD(usage, pricing);
 
 	console.log("\n=== AI Hub 141 R2.3 Recall Results ===");
 	console.log(`Conversations:       ${allResults.length} / ${conversations.length}`);
@@ -187,6 +197,20 @@ async function main() {
 		);
 	}
 	console.log(`\nElapsed: ${(elapsedMs / 1000).toFixed(1)}s`);
+	console.log("\n=== Cost ===");
+	console.log(
+		`LLM:    ${usage.llmCalls} calls, ${usage.llmPromptTokens} in / ${usage.llmCompletionTokens} out tokens`,
+	);
+	console.log(
+		`Embed:  ${usage.embedCalls} calls, ${usage.embedTokens} tokens`,
+	);
+	console.log(
+		`Pricing: $${pricing.llmInputPerM}/M in, $${pricing.llmOutputPerM}/M out, $${pricing.embedPerM}/M embed`,
+	);
+	console.log(`Total estimated cost: $${costUSD.toFixed(4)}`);
+	console.log(
+		`Per-conv: $${(costUSD / Math.max(1, allResults.length)).toFixed(5)} / ${(elapsedMs / 1000 / Math.max(1, allResults.length)).toFixed(1)}s`,
+	);
 
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
 	const reportDir = "reports";
@@ -203,6 +227,13 @@ async function main() {
 					limit: args.limit,
 					topK: args.topK,
 					elapsedMs,
+				},
+				cost: {
+					usage,
+					pricing,
+					estimatedUSD: costUSD,
+					perConvUSD: costUSD / Math.max(1, allResults.length),
+					perConvSec: elapsedMs / 1000 / Math.max(1, allResults.length),
 				},
 				aggregate: agg,
 				results: allResults,

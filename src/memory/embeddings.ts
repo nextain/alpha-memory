@@ -132,7 +132,20 @@ export class OpenAICompatEmbeddingProvider implements EmbeddingProvider {
 			body: JSON.stringify({ model: this.model, input: texts }),
 		});
 		if (!res.ok) throw new Error(`Embedding API error: ${res.status} ${await res.text().catch(() => "")}`);
-		const data = (await res.json()) as { data: Array<{ embedding: number[] }> };
+		const data = (await res.json()) as {
+			data: Array<{ embedding: number[] }>;
+			usage?: { prompt_tokens?: number; total_tokens?: number };
+		};
+		// Track usage for benchmark cost reporting (no-op if tracker not used).
+		try {
+			const { recordEmbedding } = await import("./usage-tracker.js");
+			const tok =
+				data.usage?.total_tokens ??
+				data.usage?.prompt_tokens ??
+				// Fallback: rough estimate by char count (4 chars/token avg KO/EN mixed)
+				Math.ceil(texts.reduce((s, t) => s + t.length, 0) / 4);
+			recordEmbedding(tok);
+		} catch {}
 		return data.data.map((d) => d.embedding);
 	}
 

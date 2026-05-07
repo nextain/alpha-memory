@@ -198,6 +198,14 @@ Format: {"1": ["fact", ...], "2": ["fact", ...], ...}`;
 
 	try {
 		const data = await response.json();
+		// Track usage for benchmark cost reporting (no-op if tracker not used).
+		try {
+			const { recordLLM } = await import("./usage-tracker.js");
+			recordLLM(
+				data?.usage?.prompt_tokens ?? 0,
+				data?.usage?.completion_tokens ?? 0,
+			);
+		} catch {}
 		let raw = data.choices?.[0]?.message?.content ?? "{}";
 		raw = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 		const parsed: Record<string, unknown> = JSON.parse(raw);
