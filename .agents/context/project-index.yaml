@@ -1,19 +1,71 @@
-project: alpha-memory
+project: naia-memory
 description: Cognitive memory architecture for AI agents — part of Naia OS
-repo: nextain/alpha-memory
+repo: nextain/naia-memory
 license: Apache-2.0
 parent: nextain/naia-os
+status: ship-ready (2026-05-08) — naia-agent integration ready
 
 structure:
-  src/memory: Core memory system (MemorySystem, adapters, types)
-  src/benchmark: Benchmark runner + comparison adapters
+  src/memory: Core memory system (MemorySystem, adapters, types, R2.5 filter, usage tracker)
+  src/benchmark/aihub141: Korean R2.3 multi-session bench (Phase A) — loader, scorer, run, analyze, reanalyze, embedding-reanalyze
+  src/benchmark/comparison: Legacy fact-bank.json bench (R5–R14, archived)
+  docs/integration.md: naia-agent integration SoT (interface + params + buildMemory sample)
   docs/reports: Generated benchmark reports (committed summaries only)
   .agents/context: AI-optimized context (English, YAML/JSON)
+  .agents/progress: SoT plan + decision matrix + Phase A results
   .users/context: Human-readable mirror (same structure)
 
 entry_points:
   - README.md
+  - README.ko.md
+  - docs/integration.md  # SoT for naia-agent / naia-os integration
   - .agents/context/project-index.yaml
+  - .agents/progress/r2-bench-trust-2026-05-07.md  # current SoT plan
+
+phase_a_status:
+  dataset: AI Hub 141 한국어 멀티세션 대화 (100 conv × 4 sessions, S4 validation)
+  metric: recall@k on persona ground truth (sessionInfo.prevAggregatedpersonaSummary)
+  scores:
+    keyword_recall_at_5: 0.384
+    keyword_recall_at_10: 0.600
+    keyword_recall_at_20: 0.691  # original (inflated by topK ceiling)
+    polarity_aware_at_20: 0.628  # false positive excluded
+    cosine_07_at_20: 0.768       # honest semantic signal
+    no_memory_floor: 0.000
+  comparison_external_locomo:
+    mem0: 0.67       # English LoCoMo J-score (different metric — disclaim)
+    letta: 0.74
+    zep: 0.66        # 0.66-0.75 disputed
+    memu: 0.92
+    memmachine: 0.85
+  comparison_same_dataset:
+    mem0_smoke_1conv_keyword: 0.706    # 1 conv only, noise high
+    naia_local_per_conv_min: 2          # vs mem0 24 min — 12x faster
+  cost_per_conv_usd: 0.005
+
+issue: 23
+
+next_path:
+  phase_b_alpha:
+    title: R2.5 contradiction filter framework
+    plan: synthetic ledger generator + 3-axis scorer (recall/supersede precision/false positive)
+    code: ~400 LOC
+    cost: ~$0.5
+  phase_b_beta:
+    title: R2.3 forgetting curve
+    status: SKIP (사용자 directive 2026-05-08) — coupled to context-compression work
+  phase_b_gamma:
+    title: A/B mechanism comparison (importance / KG / hybrid)
+    code: ~300 LOC
+    cost: ~$1.5
+  phase_b_delta:
+    title: Generalizability — KLUE / KorQuAD subset
+    code: ~200 LOC
+    cost: ~$1
+  integration_level:
+    title: naia-agent + naia-memory only verifiable mechanisms
+    items: [R2.3 NL temporal recall, R2.5 natural update detection, importance with full context, procedural memory, daily-use ground]
+    location: tracked in naia-agent / naia-os bench issues
 
 adapters:
   - id: naia

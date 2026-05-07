@@ -1,8 +1,14 @@
 # Naia Memory (formerly Alpha Memory)
 
-**Cognitive memory architecture for AI agents** — importance-gated encoding, vector retrieval, knowledge graph, Ebbinghaus decay, and a head-to-head benchmark suite against popular memory systems.
+**Cognitive memory architecture for AI agents** — importance-gated encoding, vector retrieval, knowledge graph, Ebbinghaus decay, and a multi-language benchmark suite.
 
 [English](README.md) | [한국어](README.ko.md)
+
+> **Status (2026-05-08)** — Ship-ready for `naia-agent` integration.
+> Phase A Korean R2.3 measurement complete: **76.8% recall@20 (cosine semantic)** on AI Hub 141 multi-session conversations. Mid-tier baseline level (≈ mem0 67% / Letta 74% on LoCoMo English J-score). 12× faster than mem0 for the same workload.
+> See [`docs/integration.md`](docs/integration.md) for naia-agent / naia-os wire-in. See [issue #23](https://github.com/nextain/naia-memory/issues/23) for measurement details.
+
+---
 
 ## Place in the Naia ecosystem
 
@@ -43,9 +49,33 @@ Naia Memory implements a 4-store memory architecture inspired by cognitive scien
 - **Importance gating** — 3-axis scoring (importance × surprise × emotion) filters what gets stored
 - **Knowledge graph** — entity/relation extraction + spreading activation for semantic recall
 - **Ebbinghaus decay** — memory strength fades over time, strengthened by recall
-- **Reconsolidation** — contradiction detection on retrieval
-- **Pluggable adapters** — swap the vector backend (local SQLite, mem0, Qdrant)
-- **Benchmark suite** — compare against mem0, SillyTavern, Letta, SAP, OpenClaw, Graphiti, and more
+- **Reconsolidation (R2.5)** — contradiction filter on consolidation; supersedes outdated facts
+- **Bi-temporal recall (R2.3)** — recall at a past timestamp; multi-session continuity
+- **Pluggable adapters** — swap the vector backend (LocalAdapter / Mem0 / Qdrant)
+- **Multi-language benchmark** — Korean (AI Hub 141 multi-session) + English (LoCoMo planned)
+
+---
+
+## How it works (plain language)
+
+Most memory systems are "search engines" (vector store) — store everything, retrieve by cosine.
+
+Naia is **closer to a human brain**: store the important parts only, forget what isn't used, periodically organize during sleep cycles, update when contradictions appear.
+
+| Mechanism | Brain analogy | Effect |
+|---|---|---|
+| Importance gating | Selective attention | Filters trivial turns ("hello") |
+| Sleep cycle (consolidation) | Memory consolidation during sleep | Batched fact extraction (raw conversation → atomic facts) |
+| Ebbinghaus decay | Forgetting curve | Old unused facts fade |
+| Reconsolidation | Update on contradiction | "I switched jobs" supersedes prior occupation fact |
+| Knowledge graph + spreading | Associative recall | "ramen" activates "friend" + "Friday" |
+
+**Trade-offs**:
+- ✅ Fast (lazy batch consolidate, ~2 min per 60-turn conversation)
+- ✅ Cheap ($0.005 / 100-turn conversation in cloud mode)
+- ✅ Cognitive mechanisms (not just vector search)
+- ❌ Not the absolute top tier (MemU 92% / MemMachine 85% English)
+- ❌ Some mechanisms (decay curve, R2.5 natural triggers) hard to verify in unit benchmarks; require integration-level testing
 
 ---
 
@@ -54,37 +84,29 @@ Naia Memory implements a 4-store memory architecture inspired by cognitive scien
 ```
 src/
 ├── memory/
-│   ├── index.ts            # MemorySystem — main orchestrator
-│   ├── types.ts            # Type definitions
-│   ├── importance.ts       # 3-axis importance scoring
-│   ├── decay.ts            # Ebbinghaus forgetting curve
-│   ├── reconsolidation.ts  # Contradiction detection on retrieval
-│   ├── knowledge-graph.ts  # Entity/relation extraction + spreading activation
-│   ├── embeddings.ts       # Embedding abstraction (Gemini text-embedding-004)
+│   ├── index.ts                # MemorySystem — main orchestrator
+│   ├── types.ts                # MemoryProvider type contract
+│   ├── importance.ts           # 3-axis importance scoring
+│   ├── decay.ts                # Ebbinghaus forgetting curve
+│   ├── reconsolidation.ts      # Contradiction detection on consolidation
+│   ├── contradiction-filter.ts # R2.5 — heuristic / Gemini / vLLM filter providers
+│   ├── knowledge-graph.ts      # Entity/relation extraction + spreading activation
+│   ├── embeddings.ts           # 5 providers (OpenAI-compat, offline, HF, gateway)
+│   ├── llm-fact-extractor.ts   # LLM-based atomic fact extraction
+│   ├── usage-tracker.ts        # Per-run token + cost tracking
 │   └── adapters/
-│       ├── local.ts        # 독자 엔진: JSON + vector + BM25 + KG (default, 실제 사용중)
-│       ├── mem0.ts         # mem0 OSS backend (존재하나 미사용)
-│       └── qdrant.ts       # Qdrant vector DB backend (존재하나 미사용)
+│       ├── local.ts            # JSON + cosine + BM25 + KG (default, recommended)
+│       ├── mem0.ts             # mem0 OSS backend (stack-on-top hybrid)
+│       └── qdrant.ts           # Qdrant vector DB
 └── benchmark/
-    ├── fact-bank.json          # 1000 Korean facts (fictional persona)
-    ├── fact-bank.en.json       # 1000 English facts
-    ├── query-templates.json    # Korean test queries (12 categories)
-    ├── query-templates.en.json # English test queries
-    ├── criteria.ts             # Scoring criteria
-    └── comparison/
-        ├── run-comparison.ts        # Main benchmark runner
-        ├── types.ts                 # BenchmarkAdapter interface
-        ├── judge.ts                 # Standalone re-judge script
-        ├── adapter-naia.ts          # Naia Memory (this project)
-        ├── adapter-mem0.ts          # mem0 OSS
-        ├── adapter-sillytavern.ts   # SillyTavern
-        ├── adapter-letta.ts         # Letta (formerly MemGPT)
-        ├── adapter-openclaw.ts      # OpenClaw
-        ├── adapter-sap.ts           # Super Agent Party
-        ├── adapter-open-llm-vtuber.ts  # Open-LLM-VTuber
-        ├── adapter-graphiti.ts      # Graphiti (Neo4j temporal KG)
-        ├── adapter-starnion.ts      # Starnion (SQLite + ChromaDB)
-        └── adapter-no-memory.ts    # Baseline (no memory)
+    ├── aihub141/               # Korean R2.3 multi-session bench (Phase A)
+    │   ├── loader.ts           # AI Hub 141 zip → conversations
+    │   ├── scorer.ts           # recall@k, polarity-aware, hard match
+    │   ├── run.ts              # Entry — naia-local / no-memory / mem0 / naia-on-mem0
+    │   ├── analyze.ts          # report → markdown breakdown
+    │   ├── reanalyze.ts        # report → multi-metric reanalysis (cost 0)
+    │   └── embedding-reanalyze.ts  # report → cosine semantic recall
+    └── comparison/             # Legacy fact-bank.json (R5–R14, archived)
 ```
 
 ---
@@ -97,201 +119,184 @@ npm install @nextain/naia-memory
 pnpm add @nextain/naia-memory
 ```
 
+---
+
 ## Usage
 
 ```typescript
-import { MemorySystem } from "@nextain/naia-memory";
+import {
+  MemorySystem,
+  LocalAdapter,
+  OpenAICompatEmbeddingProvider,
+  buildLLMFactExtractor,
+} from "@nextain/naia-memory";
 
-// Initialize with local SQLite backend (no API key needed)
-const memory = new MemorySystem({ adapter: "local" });
-await memory.init();
+// 3 explicit injections — no env-var magic
+const embedder = new OpenAICompatEmbeddingProvider(
+  baseURL, apiKey, "gemini-embedding-001", 3072,
+);
+const adapter = new LocalAdapter({
+  storePath: "/path/to/store.json",
+  embeddingProvider: embedder,
+});
+const factExtractor = buildLLMFactExtractor({
+  apiKey, baseURL, model: "gemini-2.5-flash-lite",
+});
 
-// Encode a message into memory
-await memory.encode("User prefers dark mode and uses Neovim as their editor");
+const memory = new MemorySystem({ adapter, factExtractor });
 
-// Recall relevant memories for a query
-const results = await memory.recall("What editor does the user use?");
-console.log(results); // ["User prefers Neovim as their editor"]
+// Encode
+await memory.encode(
+  { content: "Switched jobs to a design firm", role: "user" },
+  { project: "personal" },
+);
 
-// At session start — inject into system prompt
-const context = await memory.sessionRecall("new conversation started");
-// context: string to prepend to system prompt
+// Recall
+const result = await memory.recall("What is the user's job?", {
+  project: "personal", topK: 10,
+});
+// result.facts: Fact[], result.episodes: Episode[]
+
+// Sleep cycle (manual or automatic every 30 min)
+await memory.consolidateNow();
 ```
+
+For naia-agent / naia-os integration, see [`docs/integration.md`](docs/integration.md) — the SoT for wire-in patterns, settable parameters, and 2 prefab profiles (cloud / local privacy).
 
 ---
 
-## Quick Start (Benchmark)
+## Latest Benchmark — Phase A (2026-05-07)
+
+**AI Hub 141 — 한국어 멀티세션 대화** (Korean multi-session natural conversations).
+100 conversations × 4 sessions, persona-grounded annotation as ground truth.
+
+### Recall metrics (naia-local)
+
+| Metric | Score | Note |
+|---|:-:|---|
+| recall@5 (keyword loose) | 38.4% | Top-5 ranking — daily LLM context budget |
+| recall@10 (keyword loose) | 60.0% | Mid-bound |
+| **recall@20 (keyword loose)** | **69.1%** | Original report (inflated by topK ceiling) |
+| recall@20 (polarity-aware keyword) | 62.8% | Negation-flipped false positives excluded |
+| **recall@20 (cosine 0.7 semantic)** | **76.8%** | **Honest signal — semantic preservation** |
+| recall@20 (hard substring) | 0.0% | Naia paraphrases — substring miss is *correct behavior* |
+
+### Floor + comparison
+
+| Adapter | recall@20 | Per-conv elapsed | Per-conv cost |
+|---|:-:|:-:|:-:|
+| naia-local | 69.1% (kw) / **76.8%** (cosine) | **~2 min** | ~$0.005 |
+| no-memory (floor) | 0.0% | 0 | 0 |
+| mem0 (1-conv smoke) | 70.6% (kw) | ~24 min (12× slower) | ~$0.05+ |
+
+### External LoCoMo English baseline (different metric — disclaim)
+
+| System | LoCoMo J-score | Comment |
+|---|:-:|---|
+| MemU | 92.1% | Top tier |
+| MemMachine | 84.9% | Top tier |
+| Letta | 74.0% | Mid tier |
+| **naia (Korean cosine)** | **76.8%** | **Numerically comparable** |
+| Mem0 | 67.0% | Mid tier |
+| OpenAI ChatGPT memory | 52.9% | Lower tier |
+
+**Caveat**: LoCoMo metric is LLM-as-judge J-score on QA; naia metric is recall@k on extracted facts. **Direct comparison disclaimed**, but mid-tier ordering is consistent.
+
+Full report: [`reports/aihub141-r2-3-reanalysis-100conv.md`](reports/aihub141-r2-3-reanalysis-100conv.md), [issue #23](https://github.com/nextain/naia-memory/issues/23).
+
+### Legacy benchmarks (archived)
+
+R5-R14 `fact-bank.json` results (R5 EN 84%, R6 KO 24.7%, …) → see [`docs/archive/benchmark-history-r5-r14.md`](docs/archive/). Replaced by Phase A natural-conversation measurement; legacy fact-bank had synthetic-contradiction over-fit (#22 retro).
+
+---
+
+## Run the benchmark
 
 ```bash
 pnpm install
 
-# Korean benchmark, keyword judge
-GEMINI_API_KEY=your-key pnpm exec tsx src/benchmark/comparison/run-comparison.ts \
-  --adapters=naia,mem0 \
-  --judge=keyword \
-  --lang=ko
+# Phase A — Korean R2.3 multi-session (AI Hub 141 dataset, user must download separately)
+GEMINI_API_KEY=xxx \
+GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=xxx \
+AIHUB_141_PATH=/path/to/aihub/141.한국어멀티세션대화/...
+  pnpm exec tsx src/benchmark/aihub141/run.ts \
+    --adapter=naia-local \
+    --limit=100 --level=4 --topK=20
 
-# English benchmark via gateway (Vertex AI, no rate limits)
-GATEWAY_URL=https://your-gateway GATEWAY_MASTER_KEY=your-key \
-  pnpm exec tsx src/benchmark/comparison/run-comparison.ts \
-  --adapters=naia \
-  --judge=glm-api \
-  --lang=en
+# Adapters: naia-local | no-memory | mem0 | naia-on-mem0
+# Levels:   2 / 3 / 4 (multi-session count)
 
-# Re-judge existing results with a different judge
-pnpm exec tsx src/benchmark/comparison/judge.ts \
-  --input=reports/runs/run-xxx/report-naia.json \
-  --judge=glm-api
+# Multi-metric reanalysis (cost 0 — uses existing report)
+pnpm exec tsx src/benchmark/aihub141/reanalyze.ts \
+  reports/aihub141-r2-3-naia-local-*.json
+
+# Embedding cosine semantic reanalysis (~$0.005 per report)
+pnpm exec tsx src/benchmark/aihub141/embedding-reanalyze.ts \
+  reports/aihub141-r2-3-naia-local-*.json
 ```
 
-### CLI Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--adapters=a,b,c` | `naia,mem0` | Adapters to run |
-| `--judge=keyword\|glm-api\|gemini-pro-cli\|claude-cli` | `keyword` | Scoring method |
-| `--lang=ko\|en` | `ko` | Fact bank language |
-| `--embedder=gemini\|solar\|qwen3\|bge-m3` | `gemini` | Embedding model |
-| `--llm=gemini-flash-lite\|qwen3` | `gemini-flash-lite` | Response LLM |
-| `--skip-encode` | off | Reuse cached encoding DB |
-| `--cache-id=name` | `cache-${lang}` | Cache DB identifier |
-| `--runs=N` | `1` | Runs per test |
-| `--categories=a,b` | all | Filter categories |
-
-### Available Adapters
-
-| ID | System | Backend |
-|----|--------|---------|
-| `naia` | Naia Memory (this project) | JSON + vector + BM25 + KG |
-| `mem0` | [mem0 OSS](https://github.com/mem0ai/mem0) | Vector + LLM dedup |
-| `sillytavern` | [SillyTavern](https://github.com/SillyTavern/SillyTavern) | vectra + transformers.js |
-| `letta` | [Letta](https://github.com/letta-ai/letta) | Archival memory + vector |
-| `openclaw` | OpenClaw | FTS5 + vector hybrid |
-| `sap` | Super Agent Party | mem0 + FAISS |
-| `open-llm-vtuber` | [Open-LLM-VTuber](https://github.com/t41372/Open-LLM-VTuber) | Letta-based |
-| `graphiti` | [Graphiti](https://github.com/getzep/graphiti) | Neo4j temporal KG |
-| `starnion` | Starnion | SQLite + ChromaDB |
-| `no-memory` | Baseline | No memory (LLM only) |
-
-### Judge Modes
-
-| Mode | How | Speed |
-|------|-----|-------|
-| `keyword` | Exact/substring match | Instant |
-| `glm-api` | GLM-5.1 via Z.AI API (batch 10) | Fast |
-| `gemini-pro-cli` | Gemini CLI (batch 10) | Fast |
-| `claude-cli` | Claude CLI via gateway (one-by-one) | Slow |
+**Dataset**: [AI Hub 한국어 멀티세션 대화](https://www.aihub.or.kr/aihubdata/data/view.do?dataSetSn=71630) (NIA license — research/educational, redistribution prohibited; loader-only commit pattern, raw data via `AIHUB_141_PATH` env).
 
 ---
 
-## Embedding Backends
+## Configuration — what naia-agent must inject
 
-| Backend | Model | Dims | Notes |
-|---------|-------|------|-------|
-| `gemini` (default) | text-embedding-004 via gateway | 768 | `GATEWAY_URL` + `GATEWAY_MASTER_KEY` |
-| `gemini-direct` | text-embedding-004 direct | 768 | `GEMINI_API_KEY` |
-| `solar` | embedding-query/passage | 4096 | `UPSTAGE_API_KEY` |
-| `qwen3` | qwen3-embedding (Ollama) | 2048 | Local |
-| `bge-m3` | bge-m3 (Ollama) | 1024 | Local, multilingual |
+Naia Memory takes 3 explicit injections (no env-var magic in production paths):
 
----
+| Injection | What you provide | Default fallback |
+|---|---|---|
+| **Embedding provider** | `OpenAICompatEmbeddingProvider(baseURL, apiKey, model, dims)` or `OfflineEmbeddingProvider`, `HuggingFaceEmbeddingProvider`, `NaiaGatewayEmbeddingProvider` | none |
+| **LLM fact extractor** | `buildLLMFactExtractor({ apiKey, baseURL, model })` | none |
+| **Contradiction filter (optional)** | `selectFilter({ provider: 'heuristic'\|'gemini'\|'vllm', ... })` | heuristic (no LLM) |
 
-## Benchmark Results
+### Recommended profiles
 
-### R5 EN — English Benchmark (2026-04-12, GLM-5.1 judge)
+**Profile A — Quick start (cloud)**:
+- LLM: Gemini 2.5 Flash Lite (Vertex AI gateway recommended for production rate limits)
+- Embedding: gemini-embedding-001 (3072d) or vertex text-embedding-004 (768d)
+- Filter: heuristic (off)
+- Cost: ~$0.005 per 100 turns; ~$1–3/month for daily use
 
-1000 facts · 240 queries · 9 systems
+**Profile B — Local privacy (user GPU)**:
+- LLM: vLLM Gemma 4 E4B (port 8000, OpenAI-compatible)
+- Embedding: vLLM `bge-m3` or offline `multilingual-e5-large`
+- Filter: vLLM Gemma 4 E4B
+- Cost: GPU electricity only
 
-| Rank | System | Score | Grade |
-|:----:|--------|:-----:|:-----:|
-| 1 | Letta | 87.5% | F(abs) |
-| 2 | Open-LLM-VTuber | 85.2% | F(abs) |
-| 3 | **Naia Memory** | **84.0%** | F(abs) |
-| 4 | mem0 | 83.1% | F(abs) |
-| 5 | SillyTavern | 79.8% | F(abs) |
-| 6 | SAP | 74.1% | F(abs) |
-| 7 | Graphiti | 55.8% | F |
-| 8 | OpenClaw | 43.3% | F |
-| 9 | Baseline (no memory) | 33.9% | F |
-
-**Key findings:**
-- All memory-capable systems fail abstention (40–65%) — structural issue where memory retrieval is not confidence-gated
-- Graphiti: contradiction 100% vs semantic_search 4% — Neo4j KG alone cannot substitute vector search
-- Retrieval latency and per-query token cost not measured — planned for R7
-
-### R6 KO — Korean Benchmark (2026-04-13, keyword judge)
-
-1000 facts · 240 queries · 8 systems
-
-| Rank | System | Score | EN R5 | Drop |
-|:----:|--------|:-----:|:-----:|:----:|
-| 1 | Letta | 67.5% | 87.5% | -20pp |
-| 2 | **Naia Memory** | **24.7%** | 84.0% | -60pp |
-| 3 | mem0 | 24.0% | 83.1% | -59pp |
-| 4 | SillyTavern | 17.6% | 79.8% | -62pp |
-| 5 | Baseline (no memory) | 16.0% | 33.9% | -18pp |
-| 6 | OpenClaw | 14.8% | 43.3% | -29pp |
-| 7 | Open-LLM-VTuber | 14.4% | 85.2% | -71pp |
-| 8 | SAP | 12.9% | 74.1% | -61pp |
-| — | Graphiti | DNF | 55.8% | — |
-
-**Key findings:**
-- Korean language is a system-level barrier: most systems drop 50–70pp vs EN
-- Letta alone retains meaningful Korean performance — internal multilingual LLM processing
-- **Naia Memory ranks #2 in KO** (24.7%), narrowly ahead of mem0 (24.0%) — same EN-optimized pipeline; improvement path is LocalAdapter + gemini-embedding-001
-- Memory systems largely fail to beat the no-memory baseline in Korean — retrieval quality collapses at the LLM synthesis layer
-
-> Grade legend: A ≥90% · B ≥75% · C ≥60% · F <60% · F(abs) = abstention criterion failed
-
-Full reports: [`reports/r5-en-benchmark/`](reports/r5-en-benchmark/) · [`reports/r6-ko-benchmark/`](reports/r6-ko-benchmark/)
-
----
-
-## Benchmark Categories (12)
-
-| Category | Weight | What it tests |
-|----------|:------:|---------------|
-| `direct_recall` | ×1 | Direct fact retrieval |
-| `semantic_search` | ×2 | Meaning-based search |
-| `proactive_recall` | ×2 | Proactive memory suggestion |
-| `abstention` | ×2 | Knowing what you don't know (hallucination prevention) |
-| `irrelevant_isolation` | ×1 | Not injecting personal info into unrelated queries |
-| `multi_fact_synthesis` | ×2 | Combining multiple memories |
-| `entity_disambiguation` | ×2 | Distinguishing entities by context |
-| `contradiction_direct` | ×2 | Handling direct contradictions |
-| `contradiction_indirect` | ×2 | Handling indirect contradictions |
-| `noise_resilience` | ×2 | Recalling signal amid noise |
-| `unchanged_persistence` | ×1 | Preserving facts that shouldn't change after updates |
-| `temporal` | ×2 | Recalling past states over time |
+See [`docs/integration.md`](docs/integration.md) for full details and `buildMemory(setting)` reference code.
 
 ---
 
 ## Roadmap
 
-### R7 Sprint — Core Fixes (next benchmark target)
+### Done
 
-R6 KO benchmark (GLM-5.1 judge) revealed two root causes behind naia's 24% KO vs letta's 67%:
-1. **Mem0Adapter LLM dedup** strips Korean text during normalization (confirmed: mem0 24.5% = naia 24.0%)
-2. **Deprecated embedding** — `text-embedding-004` (768d, EN-optimized) vs letta's `gemini-embedding-001` (3072d, MTEB multilingual #1)
+- ✅ R1 stabilization (7 slices) · R2 capability (4 slices) · R3 Korean tuning
+- ✅ Phase A — Korean R2.3 multi-session bench (AI Hub 141, 100 conv, **76.8% cosine**)
+- ✅ MemoryProvider 8-capability interface alignment with `@nextain/agent-types`
+- ✅ Cost tracking — per-run usage + estimated USD in report
+- ✅ Multi-metric scorer (keyword / polarity-aware / hard / embedding cosine)
+- ✅ naia-agent integration ready — `pnpm smoke:naia-memory` verified
 
-R7 goal: switch to `LocalAdapter` + `gemini-embedding-001` → target KO 55%+ (letta parity).
+### Next — bench framework
 
-| Issue | Description | Priority |
-|-------|-------------|:--------:|
-| [#5](https://github.com/nextain/alpha-memory/issues/5) | **LocalAdapter + gemini-embedding-001** — wire vector search, replace deprecated text-embedding-004, switch benchmark to LocalAdapter backend | **Critical** |
-| [#9](https://github.com/nextain/alpha-memory/issues/9) | Abstention — cosine similarity threshold (requires #5 first; current 100% KO is retrieval failure, not confidence gating) | High |
-| [#10](https://github.com/nextain/alpha-memory/issues/10) | unchanged_persistence — fix cascade delete on contradiction update | Medium |
-| [#8](https://github.com/nextain/alpha-memory/issues/8) | Temporal recall — preserve fact history with timestamps | Medium |
-| [#6](https://github.com/nextain/alpha-memory/issues/6) | CompactionMap — encode provenance tracking + safe compact() | Medium |
-| [#12](https://github.com/nextain/alpha-memory/issues/12) | Korean language support — after #5, add KO-aware prompts + tokenizer | Medium |
-| [#11](https://github.com/nextain/alpha-memory/issues/11) | R7 benchmark — retrieval latency + per-query token cost | Low |
+| Phase | What | Cost |
+|---|---|---|
+| **B-α** R2.5 contradiction filter framework | Synthetic ledger + 3-axis scorer (recall / supersede precision / false positive) | ~400 LOC + ~$0.5 |
+| ~~B-β R2.3 forgetting curve~~ | **Skipped** — coupled to context-compression work; deferred until small-context-model real-time compaction is in scope |
+| **B-γ** A/B mechanism comparison | Importance gating / KG spreading / naia-on-mem0 hybrid on/off | ~300 LOC + ~$1.5 |
+| **B-δ** Generalizability — other Korean datasets | KLUE / KorQuAD subset | ~200 LOC + ~$1 |
 
-### Future Directions
+### Future — integration-level
 
-- **Hybrid search** — dense (vector) + sparse (keyword) RRF fusion for higher precision
-- **5k+ fact scale test** — stress test with 5000 facts to validate KG and decay at scale
-- **Multilingual embeddings** — compare `qwen3-embedding` (MTEB multilingual 70.58) vs `gemini-embedding-001` (68.32) in R8
-- **Abstention 2.0** — uncertainty layer: pass Ebbinghaus strength as LLM metadata hint
+Mechanisms that **only verify under naia-memory + naia-agent integration** (not unit-level):
+- R2.3 natural-language temporal recall ("yesterday" → timestamp)
+- R2.5 natural update detection in free-form conversation
+- Importance gating with full emotion/surprise context
+- Procedural memory (skills) inside agent loop
+- Daily-use ground (multi-month history) — only measurable post-naia-os integration
+
+These are tracked separately in `naia-agent` / `naia-os` benchmark issues.
 
 ---
 
@@ -299,8 +304,8 @@ R7 goal: switch to `LocalAdapter` + `gemini-embedding-001` → target KO 55%+ (l
 
 ```bash
 pnpm install
-pnpm run typecheck   # TypeScript check
-pnpm run check       # Biome lint + format
+pnpm exec tsc --noEmit  # type-check
+pnpm exec vitest run    # unit tests
 ```
 
 ---
@@ -320,6 +325,6 @@ AI context in `.agents/` and `.users/` is licensed under [CC-BY-SA 4.0](https://
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE)
+Apache 2.0 — see [LICENSE](LICENSE).
 
 Part of [Naia OS](https://github.com/nextain/naia-os) by [Nextain](https://nextain.io).

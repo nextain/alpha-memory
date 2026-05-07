@@ -1,10 +1,17 @@
 # Naia Memory
 
+> **현 상태 (2026-05-08)**: Phase A 한국어 R2.3 측정 완료 + naia-agent 통합 ship-ready.
+> - Phase A 결과: AI Hub 141 100 conv, recall@20 cosine 0.7 = **76.8%** (mid-tier baseline)
+> - 외부 LoCoMo 영어 mem0 67% / Letta 74% 와 *수치 대등*
+> - naia-agent 통합 가이드: `docs/integration.md` (SoT)
+> - 다음: Phase B-α (R2.5 contradiction filter framework). B-β skip (사용자 directive — 컨텍스트 압축 작업과 결합)
+>
 > **AI Session 시작 시 읽기 순서 (강제, plan-v3-anchor §0 기준)**:
-> 1. `.agents/progress/plan-v3-anchor-2026-05-02.md` ← **현 SoT** (모든 작업의 anchor)
-> 2. `.agents/progress/decision-matrix.md` ← §A 채택 / §B 거부 / §C pending / §D 신규
-> 3. `.agents/progress/gap-analysis-r0-2026-05-02.md` ← 코드 vs plan, 모순 5건
-> 4. `.agents/progress/README.md` ← 인덱스 + AI 흔들림 first 참조점
+> 1. `.agents/progress/r2-bench-trust-2026-05-07.md` ← **현 SoT** (Phase A/B/C 분리 path + Phase A 결과)
+> 2. `.agents/progress/plan-v3-anchor-2026-05-02.md` ← 아키텍처 anchor (immutable)
+> 3. `.agents/progress/decision-matrix.md` ← §A 채택 / §B 거부 / §C pending / §D 신규
+> 4. `docs/integration.md` ← naia-agent 통합 SoT (interface + 파라미터 + sample)
+> 5. `.agents/progress/README.md` ← 인덱스 + AI 흔들림 first 참조점
 >
 > ## ⚓ AI 흔들림 시 자가 수정 — Quick Reference
 >

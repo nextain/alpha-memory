@@ -134,3 +134,84 @@
 - LoCoMo 영어 측정 (이번 path 와 분리)
 - mem0/zep KO embedder 정렬 (Phase C 유보)
 - naia mechanism iteration (R2.3/R2.5 기존 구현 그대로 측정)
+
+## 8. Phase A 결과 (2026-05-07 완료)
+
+- 100 conv (AI Hub 141 Validation S4) 측정 완료
+- recall@20 keyword 69.1% (inflated) → cosine 0.7 = **76.8%** (정직)
+- LoCoMo 영어 mem0 67% / Letta 74% 와 *수치 대등*
+- no-memory floor 0% — mechanism 가치 입증
+- 외부 leaderboard 없는 영역의 *novel KO multi-session memory benchmark* 첫 시도
+
+## 9. Phase B 분리 — B-α / B-γ / B-δ (B-β skip)
+
+사용자 directive (2026-05-08): "벤치마크 구현 필요. 객관화 위해. B-β
+(기억 소실) skip — 컨텍스트 작은 모델 + 실시간 압축 적용 시 고민".
+
+### B-α — R2.5 contradiction filter framework (우선)
+
+목표: R2.5 mechanism 의 진짜 동작 검증. 자연 contradiction <1% 인
+141 dataset 으로는 측정 X — 의도 contradiction 주입 dataset 필요.
+
+산출물:
+- `src/benchmark/phase-b/ledger-schema.ts` — type
+- `src/benchmark/phase-b/ledger-generator.ts` — 합성 generator (사용자
+  검토용 초안)
+- `src/benchmark/phase-b/ledger.jsonl` — frozen ledger (사용자가 검토
+  + 수정 후 commit, hybrid path)
+- `src/benchmark/phase-b/scorer.ts` — 3-axis (recall / supersede
+  precision / false positive)
+- `src/benchmark/phase-b/run.ts` — entry, naia + mem0 + no-memory
+  비교 가능
+
+3-axis scoring:
+- A. **Recall@10** ≥ 70% (최신 fact, 모든 turn 끝난 시점)
+- B. **Supersede precision** ≥ 80% (contradiction-tagged turn 처리 정확)
+- C. **False positive** ≤ 5% (non-update turn 의 잘못된 supersede)
+
+비용: 코드 ~400 LOC + 측정 ~$0.5.
+
+### B-β — R2.3 forgetting curve (SKIP)
+
+사용자 directive: 컨텍스트 작은 모델 + 실시간 압축 적용 시 고민할
+영역. 별도 시점.
+
+- "기억 소실" 은 working memory 의 컨텍스트 압축과 연결
+- **naia-agent vs naia-memory 책임 미정**:
+  - naia-agent — LLM context 관리, 압축 trigger
+  - naia-memory — long-term decay, importance gating
+  - hybrid — agent 가 trigger, memory 가 importance 제공
+- 결정 시점: naia-os 통합 후 daily 사용 ground 위에서
+
+### B-γ — A/B mechanism 측정 (decay 제외)
+
+importance gating / KG spreading / naia-on-mem0 hybrid on/off 측정.
+decay 는 B-β skip 으로 제외.
+
+산출물:
+- `--mechanism=importance|kg|hybrid` 분기 옵션
+- 같은 100 conv (또는 30 conv) 위에서 on/off 비교
+- mechanism 효과 정량
+
+비용: 코드 ~300 LOC + 측정 ~$1.5 (3개 mechanism A/B).
+
+### B-δ — 다른 한국어 dataset (generalizability)
+
+산출물:
+- KLUE / KorQuAD 일부 loader (~200 LOC)
+- 같은 ScoringHooks interface
+- AI Hub 141 over-fit 검증
+
+비용: 코드 ~200 LOC + 측정 ~$1.
+
+## 10. 권고 순서
+
+**B-α → B-γ → B-δ** (B-β skip)
+
+총 ~900 LOC + ~$3 측정. 3-4일 코드 작업 + 측정 시간 별도.
+
+## 11. Anti-overfit guard (지속)
+
+- 합성 ledger 의 over-fit risk 인정 — 사용자 hybrid 검토로 mitigation
+- B-γ 의 A/B 측정 시 *prompt iteration X* — measurement 만
+- B-δ 는 *generalizability 검증 only* — AI Hub 141 결과 정당화 X
