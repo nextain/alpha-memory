@@ -55,15 +55,47 @@ export interface ScoringOptions {
 }
 
 /**
- * Compute the *final-state* facts: base facts NOT in any
- * `contradiction.supersedes` set + the latest update entry per attributeKey.
+ * Extract attribute key from an entry. Contradiction-tagged entries carry
+ * the explicit `attributeKey`. Base entries derive it from the
+ * `groundTruthFact` prefix (everything before `:`).
+ */
+function getAttributeKey(e: LedgerEntry): string {
+	if (e.contradiction) return e.contradiction.attributeKey;
+	const parts = e.groundTruthFact.split(":");
+	return (parts[0] ?? "").trim();
+}
+
+/**
+ * Compute the *final-state* facts.
+ *
+ * For each attribute key, only the *last emitted entry* (turn order ≡
+ * timestamp order) survives — earlier entries on the same attribute are
+ * naturally superseded (whether explicitly tagged or just sequential). This
+ * matches naia's R2.5 expected behavior: same-attribute newer fact wins.
  */
 export function computeFinalState(ledger: Ledger): LedgerEntry[] {
-	const supersededIds = new Set<string>();
-	for (const e of ledger.entries) {
-		if (e.contradiction) supersededIds.add(e.contradiction.supersedes);
+	const lastByAttribute = new Map<string, LedgerEntry>();
+	const sorted = [...ledger.entries].sort((a, b) => a.turn - b.turn);
+	for (const e of sorted) {
+		lastByAttribute.set(getAttributeKey(e), e);
 	}
-	return ledger.entries.filter((e) => !supersededIds.has(e.id));
+	return [...lastByAttribute.values()];
+}
+
+/**
+ * Compute legitimately-superseded entries: any entry whose attribute key has
+ * a later entry on the same attribute. Used by axis C to avoid penalizing
+ * R2.5 for correctly handling same-attribute base→base sequences (where no
+ * explicit `contradiction` tag exists but R2.5 should still supersede).
+ */
+function computeLegitimatelySuperseded(ledger: Ledger): Set<string> {
+	const lastByAttribute = new Map<string, LedgerEntry>();
+	const sorted = [...ledger.entries].sort((a, b) => a.turn - b.turn);
+	for (const e of sorted) lastByAttribute.set(getAttributeKey(e), e);
+	const finalIds = new Set([...lastByAttribute.values()].map((e) => e.id));
+	const out = new Set<string>();
+	for (const e of ledger.entries) if (!finalIds.has(e.id)) out.add(e.id);
+	return out;
 }
 
 function parseIso(ts: string): number {
@@ -155,12 +187,12 @@ export async function scoreLedger(
 			? correctlySuperseded / contradictionEntries.length
 			: 0;
 
-	// Axis C — incorrect supersede on non-contradiction entries.
-	// Heuristic: count facts in the store that are marked superseded BUT do
-	// NOT correspond to any contradiction-tagged entry's supersede target.
-	const legitimatelySupersededIds = new Set(
-		contradictionEntries.map((ce) => ce.contradiction!.supersedes),
-	);
+	// Axis C — incorrect supersede.
+	// Legitimate target = any entry not in final state (same-attribute newer
+	// entry exists) regardless of whether it carries an explicit
+	// `contradiction` tag. This prevents penalizing R2.5 for correctly
+	// handling base→base same-attribute sequences in synthetic ledgers.
+	const legitimatelySupersededIds = computeLegitimatelySuperseded(ledger);
 	const legitimatelySupersededFacts = new Set(
 		ledger.entries
 			.filter((e) => legitimatelySupersededIds.has(e.id))
