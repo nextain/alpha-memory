@@ -513,7 +513,9 @@ export class MemorySystem {
 		project?: string,
 	): Promise<void> {
 		// Search for semantically similar facts instead of loading all
-		const candidates = await this.adapter.semantic.search(newInfo, 10, false, { project });
+		// Reconsolidation 용 search — 모든 후보 검토해야 (#27 minConfidence
+		// 적용 X). 명시적 0 으로 future default 변경 시 안전.
+		const candidates = await this.adapter.semantic.search(newInfo, 10, false, { project, minConfidence: 0 });
 		const contradictions = findContradictions(candidates, newInfo);
 
 		// Update ALL contradicted facts to prevent stale contradictory data
@@ -576,7 +578,12 @@ export class MemorySystem {
 
 		const [episodes, facts, reflections] = await Promise.all([
 			this.adapter.episode.recall(query, { ...context, topK }),
-			this.adapter.semantic.search(query, topK, context.deepRecall, { project: context.project }),
+			this.adapter.semantic.search(query, topK, context.deepRecall, {
+				project: context.project,
+				atTimestamp: context.atTimestamp,
+				mode: context.mode,
+				minConfidence: context.minConfidence,
+			}),
 			this.adapter.procedural.getReflections(query, topK),
 		]);
 

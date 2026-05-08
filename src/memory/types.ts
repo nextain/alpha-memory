@@ -107,6 +107,31 @@ export interface RecallContext {
 	mode?: "latest" | "history" | "at-time";
 	/** Bi-temporal anchor for `mode: 'at-time'`. ms unix timestamp. */
 	atTimestamp?: number;
+	/**
+	 * #27 Retrieval ranking 강화 — minimum confidence threshold.
+	 *
+	 * Filters out facts with *adapter-internal final score* < this. Score
+	 * distribution differs by searchMode:
+	 *   - vector-only (high-dim embedder): typical range 0~1.3, recommended
+	 *     0.5-0.7 (cosine-like).
+	 *   - rrf (default): typical range 0.001~0.03 (RRF formula), recommended
+	 *     0.005-0.015. **0.6 will exclude everything.**
+	 *
+	 * Adversarial review (2026-05-08): score is composite (relevance×0.7 +
+	 * strength×0.3 in normal mode), not raw cosine. Future #27 step
+	 * (cross-encoder) will replace this with calibrated 0-1 confidence —
+	 * minConfidence semantic will then be cosine-like.
+	 *
+	 * deepRecall=true 와 결합 시 cutoff 를 0.5 배 — \"오래된 기억 회상\"
+	 * 의도와 충돌 회피.
+	 *
+	 * Default 0 (no threshold). Companion to #9 abstention: caller
+	 * (naia-agent) abstains when result is empty.
+	 *
+	 * 사용자 directive A09 — preservation-first 의 짝, mem0 \"97.8% junk\"
+	 * 회피.
+	 */
+	minConfidence?: number;
 }
 
 // ─── Semantic Memory (Neocortex) ─────────────────────────────────────────────
@@ -238,7 +263,7 @@ export interface MemoryAdapter {
 		 *  context.atTimestamp (optional, ms): bi-temporal recall — only fact versions valid
 		 *  at the given timestamp are considered. Adapters without bi-temporal support may
 		 *  ignore this option (degrades to standard search). */
-		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time" }): Promise<Fact[]>;
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time"; minConfidence?: number }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */

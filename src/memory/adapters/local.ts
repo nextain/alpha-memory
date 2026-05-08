@@ -539,6 +539,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  				atTimestamp?: number;
  				/** R2.5 v2 recall mode. default 'latest' (backward compat). */
  				mode?: "latest" | "history" | "at-time";
+ 				/** #27 minimum confidence threshold (default 0). */
+ 				minConfidence?: number;
  			},
  		): Promise<Fact[]> => {
  			// R2.5 v2 fix #1: mode='at-time' requires atTimestamp explicit.
@@ -684,6 +686,19 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					// latest 명시 mode: status === 'active' 만 (strict, archived 제외).
 					scored = scored.filter((f) => (f.fact.status ?? "active") === "active");
 				}
+			}
+
+			// #27 confidence threshold — preservation-first 의 짝.
+			// score 가 minConfidence 미만인 fact 는 제외. 사용자 directive
+			// A09 + mem0 "97.8% junk" 회피.
+			//
+			// Adversarial review fix: deepRecall=true 시 cutoff 를 0.5배
+			// — "오래된 기억 회상" 의도와 충돌 방지. deepRecall 자체가 이미
+			// strict mode (decay 무시) 라 추가 strict 는 over-filter.
+			let minConfidence = context?.minConfidence ?? 0;
+			if (deepRecall && minConfidence > 0) minConfidence *= 0.5;
+			if (minConfidence > 0) {
+				scored = scored.filter((f) => f.score >= minConfidence);
 			}
 
 			scored = scored.slice(0, topK);
