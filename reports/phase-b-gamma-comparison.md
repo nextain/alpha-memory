@@ -63,3 +63,28 @@ Baseline = first report (naia-local | default).
 - baseline ≈ treatment → mechanism 효과 미미 (noise band)
 - baseline < treatment → mechanism 이 *오히려 방해* (재검토 필요)
 
+
+---
+
+## Cosine 0.7 (semantic axis) reanalysis
+
+같은 5 reports 의 cosine 0.7 recall — embedding-reanalyze.ts 결과.
+
+| Mode | recall@5 | recall@10 | recall@20 |
+|---|:-:|:-:|:-:|
+| baseline 100 conv | 44.1% | 66.9% | **76.8%** |
+| no-importance 30 | 44.1% | 65.3% | 77.1% |
+| no-kg 30 | 44.6% | 66.7% | 77.6% |
+| 둘 다 OFF 30 | 43.9% | 66.3% | 76.5% |
+| **naia-on-mem0 5** | **27.8%** | 48.1% | 77.8% |
+
+## Axis 종합 결론
+
+1. **naia-local 의 4 mode 모두 semantic 차이 noise band 안** — importance / KG mechanism 의 visible 효과 X (현재 measurement)
+2. **naia-on-mem0 recall@5 = 27.8% (naia-local 44.1% 대비 -16pp)** — recall@20 은 비슷한데 *top-5 ranking 약점* 명확. mem0 backend 의 약점은 retrieval *순서*
+3. **naia 의 진짜 가치 = LocalAdapter retrieval ranking** (vector + BM25 + RRF) — backend 자체가 차별
+
+## #27 (Retrieval ranking 강화) priority 강하게 보강
+
+- naia-on-mem0 의 recall@5 약점 = ranking 강화 (HyDE / cross-encoder / MMR) 가 *진짜 향상 path*
+- preservation-first (#25) prerequisite 도 ranking 강화 — mem0 \"97.8% junk\" 회피
