@@ -43,6 +43,12 @@ export interface Mem0AdapterOptions {
 	};
 	/** User ID for mem0 scoping */
 	userId?: string;
+	/** Phase B-γ A/B measurement toggle — when true, the knowledge-graph
+	 *  spreading-activation step is skipped during episode/fact recall so
+	 *  ranking falls back to mem0's vector cosine only.
+	 *  Default false. The KG itself is preserved (touchNode/strengthen
+	 *  remain reachable); only the lookup-side propagation is bypassed. */
+	disableKGSpreading?: boolean;
 }
 
 /**
@@ -61,12 +67,15 @@ export class Mem0Adapter implements MemoryAdapter {
 	private reflections: Reflection[] = [];
 	private kg: KnowledgeGraph;
 	private kgState: KGState;
+	/** Phase B-γ A/B toggle — see Mem0AdapterOptions.disableKGSpreading. */
+	private readonly disableKGSpreading: boolean;
 
 	constructor(options: Mem0AdapterOptions) {
 		this.config = options;
 		this.userId = options.userId ?? "naia-user";
 		this.kgState = emptyKGState();
 		this.kg = new KnowledgeGraph(this.kgState);
+		this.disableKGSpreading = options.disableKGSpreading ?? false;
 	}
 
 	private async ensureMem0(): Promise<Mem0Memory> {
@@ -179,15 +188,20 @@ export class Mem0Adapter implements MemoryAdapter {
 				}
 			}
 
-			// KG spreading activation for episode re-ranking
+			// KG spreading activation for episode re-ranking.
+			// Phase B-γ toggle: when disabled, leave `activated` empty so
+			// the kg boost contribution to scoring is 0 (graph itself
+			// preserved — propagation only is skipped).
 			const queryTokens = query.split(/\s+/).filter((t) => t.length >= 2);
 			const activated = new Map<string, number>();
-			try {
-				const kgResults = this.kg.spreadingActivation(queryTokens);
-				for (const { entity, activation } of kgResults) {
-					activated.set(entity.toLowerCase(), activation);
-				}
-			} catch {}
+			if (!this.disableKGSpreading) {
+				try {
+					const kgResults = this.kg.spreadingActivation(queryTokens);
+					for (const { entity, activation } of kgResults) {
+						activated.set(entity.toLowerCase(), activation);
+					}
+				} catch {}
+			}
 
 			// Sort by: relevance first, decay as tiebreaker
 			// No filter — memories are never removed from search results.
@@ -281,15 +295,20 @@ export class Mem0Adapter implements MemoryAdapter {
 			const now = Date.now();
 			const resultItems = results?.results ?? results ?? [];
 
-			// KG spreading activation for re-ranking
+			// KG spreading activation for re-ranking.
+			// Phase B-γ toggle: when disabled, leave `activated` empty so
+			// kgBoost evaluates to 0 below (graph itself preserved —
+			// propagation only is skipped).
 			const queryTokens = query.split(/\s+/).filter((t) => t.length >= 2);
 			const activated = new Map<string, number>();
-			try {
-				const kgResults = this.kg.spreadingActivation(queryTokens);
-				for (const { entity, activation } of kgResults) {
-					activated.set(entity.toLowerCase(), activation);
-				}
-			} catch {}
+			if (!this.disableKGSpreading) {
+				try {
+					const kgResults = this.kg.spreadingActivation(queryTokens);
+					for (const { entity, activation } of kgResults) {
+						activated.set(entity.toLowerCase(), activation);
+					}
+				} catch {}
+			}
 
 			const facts: Array<Fact & { _score: number }> = resultItems.map(
 				(r: any, idx: number) => {

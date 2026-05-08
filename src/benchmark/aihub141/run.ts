@@ -11,6 +11,10 @@
  *
  * Usage:
  *   GEMINI_API_KEY=xxx pnpm exec tsx src/benchmark/aihub141/run.ts [--limit=100] [--level=4] [--topK=20] [--verbose]
+ *
+ * Phase B-γ A/B mechanism toggles (independent, can be combined):
+ *   --no-importance   neutralize 3-axis importance score (utility=1.0)
+ *   --no-kg           skip knowledge-graph spreading-activation at recall
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -43,6 +47,17 @@ interface CLIArgs {
 	verbose: boolean;
 	split: "validation" | "training";
 	adapter: AdapterKind;
+	/** Phase B-γ A/B toggle — when true, MemorySystem is built with
+	 *  `disableImportanceGating: true` so the 3-axis importance score is
+	 *  neutralized for the run. Used to compare gating ON vs OFF. */
+	noImportance: boolean;
+	/** Phase B-γ A/B toggle — when true, the underlying adapter is built
+	 *  with `disableKGSpreading: true` so the knowledge-graph spreading
+	 *  activation step is skipped at recall time (ranking falls back to
+	 *  vector cosine + BM25 only). The graph itself is still built —
+	 *  only the lookup-side propagation is bypassed. Used to compare
+	 *  KG spreading ON vs OFF. */
+	noKg: boolean;
 }
 
 function parseArgs(): CLIArgs {
@@ -53,6 +68,8 @@ function parseArgs(): CLIArgs {
 	let verbose = false;
 	let split: "validation" | "training" = "validation";
 	let adapter: AdapterKind = "naia-local";
+	let noImportance = false;
+	let noKg = false;
 	for (const a of args) {
 		if (a.startsWith("--limit=")) limit = Number.parseInt(a.split("=")[1], 10);
 		if (a.startsWith("--level=")) level = Number.parseInt(a.split("=")[1], 10) as 2 | 3 | 4;
@@ -60,8 +77,10 @@ function parseArgs(): CLIArgs {
 		if (a === "--verbose") verbose = true;
 		if (a.startsWith("--split=")) split = a.split("=")[1] as any;
 		if (a.startsWith("--adapter=")) adapter = a.split("=")[1] as AdapterKind;
+		if (a === "--no-importance") noImportance = true;
+		if (a === "--no-kg") noKg = true;
 	}
-	return { limit, level, topK, verbose, split, adapter };
+	return { limit, level, topK, verbose, split, adapter, noImportance, noKg };
 }
 
 function buildEmbedder(apiKey: string): EmbeddingProvider {
@@ -83,19 +102,41 @@ function buildEmbedder(apiKey: string): EmbeddingProvider {
 	);
 }
 
-async function buildSystem(apiKey: string, cacheId: string): Promise<MemorySystem> {
+async function buildSystem(
+	apiKey: string,
+	cacheId: string,
+	opts: {
+		disableImportanceGating?: boolean;
+		disableKGSpreading?: boolean;
+	} = {},
+): Promise<MemorySystem> {
 	const storePath = `/tmp/aihub141-naia-${cacheId}.json`;
 	const embedder = buildEmbedder(apiKey);
-	const adapter = new LocalAdapter({ storePath, embeddingProvider: embedder });
+	const adapter = new LocalAdapter({
+		storePath,
+		embeddingProvider: embedder,
+		disableKGSpreading: opts.disableKGSpreading ?? false,
+	});
 	const factExtractor = buildLLMFactExtractor({ apiKey });
-	return new MemorySystem({ adapter, factExtractor });
+	return new MemorySystem({
+		adapter,
+		factExtractor,
+		disableImportanceGating: opts.disableImportanceGating ?? false,
+	});
 }
 
 /** naia-on-mem0 hybrid: naia capability (R2.3 / R2.5 / decay / KG) on top
  *  of mem0 OSS backend (vector store + LLM dedup). The "stack on top"
  *  pattern from CLAUDE.md / decision-matrix §A06.
  */
-async function buildSystemOnMem0(apiKey: string, cacheId: string): Promise<MemorySystem> {
+async function buildSystemOnMem0(
+	apiKey: string,
+	cacheId: string,
+	opts: {
+		disableImportanceGating?: boolean;
+		disableKGSpreading?: boolean;
+	} = {},
+): Promise<MemorySystem> {
 	const useGateway = !!(process.env.GATEWAY_URL && process.env.GATEWAY_MASTER_KEY);
 	const gwBase = process.env.GATEWAY_URL ?? "";
 	const gwKey = process.env.GATEWAY_MASTER_KEY ?? "";
@@ -133,9 +174,17 @@ async function buildSystemOnMem0(apiKey: string, cacheId: string): Promise<Memor
 		historyDbPath: `/tmp/aihub141-naia-on-mem0-${cacheId}-hist.db`,
 	};
 
-	const adapter = new NaiaMem0Adapter({ mem0Config, userId: "benchmark" });
+	const adapter = new NaiaMem0Adapter({
+		mem0Config,
+		userId: "benchmark",
+		disableKGSpreading: opts.disableKGSpreading ?? false,
+	});
 	const factExtractor = buildLLMFactExtractor({ apiKey });
-	return new MemorySystem({ adapter, factExtractor });
+	return new MemorySystem({
+		adapter,
+		factExtractor,
+		disableImportanceGating: opts.disableImportanceGating ?? false,
+	});
 }
 
 async function main() {
@@ -147,7 +196,7 @@ async function main() {
 	}
 
 	console.log(
-		`[aihub141] adapter=${args.adapter} split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK}`,
+		`[aihub141] adapter=${args.adapter} split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK} importance=${args.noImportance ? "OFF" : "ON"} kg=${args.noKg ? "OFF" : "ON"}`,
 	);
 
 	const conversations = await loadAIHub141({
@@ -202,7 +251,10 @@ async function main() {
 				},
 			};
 		} else if (args.adapter === "naia-on-mem0") {
-			system = await buildSystemOnMem0(apiKey!, cacheId);
+			system = await buildSystemOnMem0(apiKey!, cacheId, {
+				disableImportanceGating: args.noImportance,
+				disableKGSpreading: args.noKg,
+			});
 			const sys = system;
 			hooks = {
 				reset: async () => {},
@@ -225,7 +277,10 @@ async function main() {
 				},
 			};
 		} else {
-			system = await buildSystem(apiKey!, cacheId);
+			system = await buildSystem(apiKey!, cacheId, {
+				disableImportanceGating: args.noImportance,
+				disableKGSpreading: args.noKg,
+			});
 			const sys = system;
 			hooks = {
 				reset: async () => {},
@@ -324,7 +379,14 @@ async function main() {
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
 	const reportDir = "reports";
 	mkdirSync(reportDir, { recursive: true });
-	const reportPath = join(reportDir, `aihub141-r2-3-${args.adapter}-${ts}.json`);
+	const tagParts: string[] = [];
+	if (args.noImportance) tagParts.push("no-importance");
+	if (args.noKg) tagParts.push("no-kg");
+	const tag = tagParts.length > 0 ? tagParts.join("+") : "default";
+	const reportPath = join(
+		reportDir,
+		`aihub141-r2-3-${args.adapter}-${tag}-${ts}.json`,
+	);
 	writeFileSync(
 		reportPath,
 		JSON.stringify(
@@ -336,6 +398,8 @@ async function main() {
 					level: args.level,
 					limit: args.limit,
 					topK: args.topK,
+					disableImportanceGating: args.noImportance,
+					disableKGSpreading: args.noKg,
 					elapsedMs,
 				},
 				cost: {

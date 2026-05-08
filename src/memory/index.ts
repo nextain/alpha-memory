@@ -123,6 +123,32 @@ export interface MemorySystemOptions {
 	 *  Vllm > Gemini > Heuristic based on env. Pass an explicit provider
 	 *  (e.g. `new HeuristicContradictionFilter()`) for deterministic tests. */
 	contradictionFilter?: ContradictionFilterProvider;
+	/** Phase B-γ A/B measurement toggle — when true, the 3-axis importance
+	 *  score (importance × surprise × emotion) is **neutralized** (utility
+	 *  forced to 1.0) so every encoded episode reaches semantic store with
+	 *  equal weight, and ranking/decay no longer differentiate by score.
+	 *  Default false (current production behaviour).
+	 *
+	 *  This option does NOT remove or rewrite the importance code path —
+	 *  it only bypasses scoring for measurement. Used to compare
+	 *  importance-gating ON vs OFF on AI Hub 141.  */
+	disableImportanceGating?: boolean;
+	/** Phase B-γ A/B measurement toggle — when true, the knowledge-graph
+	 *  spreading-activation step is skipped during semantic recall so
+	 *  ranking falls back to vector cosine + BM25 only. Default false
+	 *  (current production behaviour).
+	 *
+	 *  Preservation-first: KG entities and associations are NOT deleted.
+	 *  `semantic.upsert()` still calls `kg.touchNode()` /
+	 *  `kg.strengthen()` so the graph keeps building during a no-KG run.
+	 *  Only the lookup-side propagation is bypassed, allowing a clean
+	 *  spreading ON vs OFF measurement on AI Hub 141.
+	 *
+	 *  When `adapter` is supplied by the caller, this flag is forwarded
+	 *  only to the auto-built `LocalAdapter`. Pre-built adapters must be
+	 *  configured with their own `disableKGSpreading` option directly
+	 *  (same model as `embeddingProvider`). */
+	disableKGSpreading?: boolean;
 }
 
 // Placeholder for heuristicFactExtractor and related functions
@@ -333,6 +359,10 @@ export class MemorySystem {
 	private readonly consolidationIntervalMs: number;
 	private readonly factExtractor: FactExtractor;
 	private readonly contradictionFilter: ContradictionFilterProvider;
+	/** Phase B-γ A/B toggle. When true, encode() bypasses scoreImportance()
+	 *  and uses a neutral max-utility score so importance gating has no
+	 *  effect on retrieval ranking or decay. Default false. */
+	private readonly disableImportanceGating: boolean;
 	private _isConsolidating = false;
 
 	/**
@@ -364,6 +394,7 @@ export class MemorySystem {
 			(typeof process !== "undefined" && process.env
 				? selectFilter(process.env)
 				: new HeuristicContradictionFilter());
+		this.disableImportanceGating = options.disableImportanceGating ?? false;
 		if (options.summarizer) this.summarizer = options.summarizer;
 		this.rollingHeadroom = options.rollingSummaryOptions?.headroom ?? 24;
 		this.rollingCompressedMax = options.rollingSummaryOptions?.compressedMax ?? 4000;
@@ -387,6 +418,7 @@ export class MemorySystem {
 		} else {
 			const localAdapter = new LocalAdapter({
 				embeddingProvider: options.embeddingProvider,
+				disableKGSpreading: options.disableKGSpreading,
 			});
 			this.adapter = localAdapter;
 			this._initPromise = Promise.resolve();
@@ -416,7 +448,13 @@ export class MemorySystem {
 		input: MemoryInput,
 		context: EncodingContext,
 	): Promise<Episode> {
-		const score = scoreImportance(input);
+		// Phase B-γ A/B measurement toggle. When importance gating is
+		// disabled we neutralize the 3-axis score (utility=1.0) so all
+		// episodes carry equal weight through ranking, decay, and fact
+		// extraction. The scoreImportance() function itself is unchanged.
+		const score = this.disableImportanceGating
+			? { importance: 1.0, surprise: 0.0, emotion: 0.5, utility: 1.0 }
+			: scoreImportance(input);
 
 		const now = input.timestamp ?? Date.now();
 		const episode: Episode = {

@@ -106,6 +106,17 @@ export interface LocalAdapterOptions {
 	/** Cosine similarity threshold for filtering noise (default: 0.7).
 	 *  Higher values reduce hallucinations but may skip relevant context. */
 	similarityThreshold?: number;
+	/** Phase B-γ A/B measurement toggle — when true, the knowledge-graph
+	 *  spreading-activation step is skipped during `semantic.search()` so
+	 *  ranking falls back to vector cosine + BM25 only.
+	 *  Default false (current production behaviour).
+	 *
+	 *  Preservation-first: this option does NOT delete KG entities or
+	 *  associations. `upsert()` still calls `kg.touchNode()` /
+	 *  `kg.strengthen()` so the graph keeps building during a no-KG run.
+	 *  Only the lookup-side spreading propagation is bypassed, allowing a
+	 *  clean spreading ON vs OFF measurement on AI Hub 141. */
+	disableKGSpreading?: boolean;
 }
 
 /** Normalize association key (alphabetical order for consistency) */
@@ -217,6 +228,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	private kg: KnowledgeGraph;
 	/** Optional vector embedding provider (null = keyword-only mode) */
 	private readonly embedder: EmbeddingProvider | null;
+	/** Phase B-γ A/B toggle — see LocalAdapterOptions.disableKGSpreading. */
+	private readonly disableKGSpreading: boolean;
 	/**
 	 * In-memory embedding cache — avoids duplicate API calls for the same text.
 	 * Key: text content. Value: embedding vector.
@@ -229,6 +242,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			typeof options === "string" ? options : options?.storePath;
 		this.embedder =
 			typeof options === "object" ? (options.embeddingProvider ?? null) : null;
+		this.disableKGSpreading =
+			typeof options === "object"
+				? (options?.disableKGSpreading ?? false)
+				: false;
 		this.storePath =
 			storePath ?? join(homedir(), ".naia", "memory", "naia-memory.json");
 		this.store = this.load();
@@ -521,11 +538,13 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const queryVec = await this.embedWithCache(query);
 
 			const queryTokens = tokenize(query);
-			const activatedEntities = this.kg.spreadingActivation(
-				queryTokens,
-				2,
-				0.5,
-			);
+			// Phase B-γ toggle: skip spreading activation entirely when disabled
+			// so ranking falls back to vector cosine + BM25 only. The graph
+			// itself is preserved (touchNode/strengthen still run on upsert)
+			// — only this lookup-side propagation is bypassed.
+			const activatedEntities = this.disableKGSpreading
+				? []
+				: this.kg.spreadingActivation(queryTokens, 2, 0.5);
 			const activationMap = new Map<string, number>();
 			for (const { entity, activation } of activatedEntities) {
 				activationMap.set(entity, activation);
