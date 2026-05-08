@@ -5,7 +5,17 @@ import { join } from "node:path";
 /**
  * Advanced Adversarial Cross-Review Engine v3.0
  * Optimized for Planning Phase Audits.
+ *
+ * @deprecated 2026-05-08 — 사용자 directive: "왠만하믄 로컬만, 또는 Gemini".
+ *   cross-review 는 Claude Code 의 sub-agent (Plan / general-purpose) 사용
+ *   권장 — 외부 LLM (GLM/Claude API/GPT) 호출 자체 회피.
+ *   본 script 는 standalone 으로 직접 실행 시 warning 후 진행 (사용자 명시
+ *   의도로 가정). naia-memory runtime 에서는 import 되지 않음.
  */
+console.warn(
+	"[cross-review-engine] DEPRECATED 2026-05-08 — Claude Code 의 sub-agent " +
+		"(Plan / general-purpose) 사용 권장. 외부 LLM (GLM/Claude API/GPT) 호출 회피.",
+);
 
 interface ReviewConfig {
 	gemini: string;

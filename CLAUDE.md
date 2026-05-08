@@ -67,6 +67,11 @@
 >    - naia-memory = background consolidation worker + replay + spike emit + priority dynamic adjust
 >    - naia-agent = spike subscriber + source monitor + pragmatic gate + active context inject
 >    - 학계 정합: Complementary Learning Systems (CLS) + Sharp-wave ripples + Source monitoring + DMN
+> 8. **외부 LLM 정책 — Gemini + vLLM (Gemma 4 E4B) + Claude Code sub-agent 만** (사용자 directive 2026-05-08)
+>    - naia-memory 코드의 LLM 호출 = Gemini Flash Lite (cloud) 또는 vLLM Gemma 4 E4B (local). 외부 cloud LLM (GLM/Claude API/GPT) 호출 X
+>    - cross-review / adversarial review = Claude Code 의 sub-agent (Plan / general-purpose) 사용. naia-memory 코드 자체는 외부 LLM 호출 X
+>    - GLM 은 opencode 등 별도 CLI 도구에서 사용 (zai coding plan 정합)
+>    - 이미 deprecate: `run-comparison.ts:callGlmApi`, `cross-review-engine.ts`, `cross-review.ts`
 >
 > ## SoT 우선순위 (현재)
 >

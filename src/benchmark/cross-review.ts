@@ -1,6 +1,14 @@
 import { readFileSync } from "node:fs";
 
+/**
+ * @deprecated 2026-05-08 — naia-memory 측 외부 LLM 호출 회피.
+ *   Claude Code 의 sub-agent (Plan / general-purpose) 사용 권장.
+ *   본 script standalone 실행 시 warning.
+ */
 async function callLLM(model: string, prompt: string) {
+	console.warn(
+		"[cross-review] DEPRECATED 2026-05-08 — Claude Code sub-agent 사용 권장.",
+	);
 	const gwUrl =
 		process.env.GATEWAY_URL ||
 		"https://any-llm-gateway-70423245233.asia-northeast3.run.app";
