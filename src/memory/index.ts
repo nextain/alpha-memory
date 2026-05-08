@@ -149,6 +149,10 @@ export interface MemorySystemOptions {
 	 *  configured with their own `disableKGSpreading` option directly
 	 *  (same model as `embeddingProvider`). */
 	disableKGSpreading?: boolean;
+	/** #27 Step 3 — Cross-encoder reranker (caller-injected).
+	 *  Forwarded to auto-built LocalAdapter. Pre-built adapter 의 reranker
+	 *  는 caller 가 직접 설정. */
+	reranker?: import("./reranker.js").RerankerProvider;
 }
 
 // Placeholder for heuristicFactExtractor and related functions
@@ -419,6 +423,7 @@ export class MemorySystem {
 			const localAdapter = new LocalAdapter({
 				embeddingProvider: options.embeddingProvider,
 				disableKGSpreading: options.disableKGSpreading,
+				reranker: options.reranker,
 			});
 			this.adapter = localAdapter;
 			this._initPromise = Promise.resolve();

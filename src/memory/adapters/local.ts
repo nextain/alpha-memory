@@ -117,6 +117,17 @@ export interface LocalAdapterOptions {
 	 *  Only the lookup-side spreading propagation is bypassed, allowing a
 	 *  clean spreading ON vs OFF measurement on AI Hub 141. */
 	disableKGSpreading?: boolean;
+	/** #27 Step 3 — Cross-encoder reranker (optional).
+	 *  When set, search 의 final ranking 후 (cosine + BM25 + KG + MMR
+	 *  + threshold 모두 적용 후) reranker 가 query-fact relevance 를
+	 *  재평가. naia 의 진짜 ranking 강화 path.
+	 *
+	 *  caller (naia-agent) 가 인스턴스 주입 (책임 분리, anchor §A08).
+	 *  미설정 시 reranker 미적용 (backward compat).
+	 *
+	 *  권장: BGE-reranker-v2-m3 (transformers.js, multilingual KO).
+	 */
+	reranker?: import("../reranker.js").RerankerProvider;
 }
 
 /** Normalize association key (alphabetical order for consistency) */
@@ -230,6 +241,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 	private readonly embedder: EmbeddingProvider | null;
 	/** Phase B-γ A/B toggle — see LocalAdapterOptions.disableKGSpreading. */
 	private readonly disableKGSpreading: boolean;
+	/** #27 Step 3 — Cross-encoder reranker. null when disabled. */
+	private readonly reranker: import("../reranker.js").RerankerProvider | null;
 	/**
 	 * In-memory embedding cache — avoids duplicate API calls for the same text.
 	 * Key: text content. Value: embedding vector.
@@ -246,6 +259,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			typeof options === "object"
 				? (options?.disableKGSpreading ?? false)
 				: false;
+		this.reranker =
+			typeof options === "object" ? (options?.reranker ?? null) : null;
 		this.storePath =
 			storePath ?? join(homedir(), ".naia", "memory", "naia-memory.json");
 		this.store = this.load();
@@ -704,6 +719,24 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			if (deepRecall && minConfidence > 0) minConfidence *= 0.5;
 			if (minConfidence > 0) {
 				scored = scored.filter((f) => f.score >= minConfidence);
+			}
+
+			// #27 Step 3 — Cross-encoder reranker (caller-injected, optional).
+			// final ranking 후 (cosine + BM25 + KG + threshold 모두 적용 후)
+			// query-fact relevance 재평가. 진짜 ranking 강화.
+			if (this.reranker && scored.length > 0) {
+				const reranked = await this.reranker.rerank(
+					query,
+					scored.map((s) => ({ ...s, content: s.fact.content })),
+					Math.min(scored.length, topK * 2),
+				);
+				const orderMap = new Map(reranked.map((r, i) => [r.fact.id, i]));
+				scored.sort((a, b) => {
+					const ra = orderMap.get(a.fact.id) ?? scored.length;
+					const rb = orderMap.get(b.fact.id) ?? scored.length;
+					return ra - rb;
+				});
+				scored = scored.slice(0, topK * 2); // reranker 가 본 candidate set
 			}
 
 			// #27 MMR (Maximal Marginal Relevance) — top-K 의 *유사 fact 중복*
