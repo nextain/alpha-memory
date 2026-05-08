@@ -108,6 +108,23 @@ export interface RecallContext {
 	/** Bi-temporal anchor for `mode: 'at-time'`. ms unix timestamp. */
 	atTimestamp?: number;
 	/**
+	 * #27 Retrieval ranking 강화 — HyDE (Hypothetical Document Embedding).
+	 *
+	 * Caller (naia-agent) 가 query 받은 후 LLM 으로 *가상의 답변* 생성하여
+	 * 여기에 주입. naia-memory 는 query 대신 (또는 함께) `queryHint` 로
+	 * embedding 검색. paraphrase 의미 매칭 정확도 ↑.
+	 *
+	 * 책임 분리: naia-memory 가 LLM 호출 X, caller (naia-agent) 책임.
+	 * 사용자 directive A08 (Background/Active brain 분리) 정합.
+	 *
+	 * 예: query="내 직업?" + queryHint="사용자 직업: 소프트웨어 엔지니어"
+	 *  → embedding 시 queryHint 사용 → fact "사용자 직업: 디자이너" 와
+	 *  cosine 더 높음 (둘 다 \"직업\" attribute key).
+	 *
+	 * 미설정 시 query 그대로 embedding (현재 동작).
+	 */
+	queryHint?: string;
+	/**
 	 * #27 Retrieval ranking 강화 — minimum confidence threshold.
 	 *
 	 * Filters out facts with *adapter-internal final score* < this. Score
@@ -263,7 +280,7 @@ export interface MemoryAdapter {
 		 *  context.atTimestamp (optional, ms): bi-temporal recall — only fact versions valid
 		 *  at the given timestamp are considered. Adapters without bi-temporal support may
 		 *  ignore this option (degrades to standard search). */
-		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time"; minConfidence?: number }): Promise<Fact[]>;
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time"; minConfidence?: number; queryHint?: string }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */

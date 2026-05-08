@@ -583,6 +583,7 @@ export class MemorySystem {
 				atTimestamp: context.atTimestamp,
 				mode: context.mode,
 				minConfidence: context.minConfidence,
+				queryHint: context.queryHint,
 			}),
 			this.adapter.procedural.getReflections(query, topK),
 		]);

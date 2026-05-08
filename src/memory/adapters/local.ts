@@ -541,6 +541,8 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  				mode?: "latest" | "history" | "at-time";
  				/** #27 minimum confidence threshold (default 0). */
  				minConfidence?: number;
+ 				/** #27 HyDE — caller-provided 가상 답. embedding 시 사용. */
+ 				queryHint?: string;
  			},
  		): Promise<Fact[]> => {
  			// R2.5 v2 fix #1: mode='at-time' requires atTimestamp explicit.
@@ -553,7 +555,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			const BROAD_FACTOR = 3;
 			const searchMode = process.env.NAIA_SEARCH_MODE ?? (this.embedder && this.embedder.dims >= 2000 ? "vector-only" : "rrf");
 
-			const queryVec = await this.embedWithCache(query);
+			// #27 HyDE — caller 가 queryHint 주면 그것으로 embedding (가상 답 →
+			// fact form 정합). 미설정 시 query 그대로.
+			const embedTarget = context?.queryHint ?? query;
+			const queryVec = await this.embedWithCache(embedTarget);
 
 			const queryTokens = tokenize(query);
 			// Phase B-γ toggle: skip spreading activation entirely when disabled
@@ -701,7 +706,40 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				scored = scored.filter((f) => f.score >= minConfidence);
 			}
 
-			scored = scored.slice(0, topK);
+			// #27 MMR (Maximal Marginal Relevance) — top-K 의 *유사 fact 중복*
+			// 줄임. 같은 attribute key 또는 매우 유사한 content 의 fact 가
+			// top-K 에 모두 들어가는 것 방지. λ=0.7 (relevance 우선, diversity
+			// 30%).
+			const useMMR = process.env.NAIA_MMR !== "off";
+			if (useMMR && scored.length > topK) {
+				const lambda = 0.7;
+				const selected: typeof scored = [];
+				const remaining = [...scored];
+				while (selected.length < topK && remaining.length > 0) {
+					let bestIdx = 0;
+					let bestScore = -Infinity;
+					for (let i = 0; i < remaining.length; i++) {
+						const cand = remaining[i];
+						let maxSim = 0;
+						for (const s of selected) {
+							// Use attribute-key prefix as cheap diversity signal.
+							const candKey = cand.fact.content.split(":")[0]?.trim() ?? "";
+							const selKey = s.fact.content.split(":")[0]?.trim() ?? "";
+							if (candKey && candKey === selKey) maxSim = Math.max(maxSim, 0.8);
+						}
+						const mmrScore = lambda * cand.score - (1 - lambda) * maxSim;
+						if (mmrScore > bestScore) {
+							bestScore = mmrScore;
+							bestIdx = i;
+						}
+					}
+					selected.push(remaining[bestIdx]);
+					remaining.splice(bestIdx, 1);
+				}
+				scored = selected;
+			} else {
+				scored = scored.slice(0, topK);
+			}
 
 			// Update recall counts
 			for (const { fact } of scored) {
