@@ -341,15 +341,26 @@ function callGeminiCli(prompt: string): string {
 	}
 }
 
-/** Call GLM-5.1 API (Z.AI) for judge */
-async function callGlmApi(prompt: string): Promise<string> {
-	const apiKey = process.env.GLM_API_KEY ?? "";
-	if (!apiKey) {
-		console.error("  ❌ GLM_API_KEY not found in environment.");
-		return "";
-	}
-
-	const url = "https://api.z.ai/api/coding/paas/v4/chat/completions";
+/**
+ * Call GLM-5.1 API (Z.AI) for judge.
+ *
+ * @deprecated 2026-05-08 — naia-memory 의 zai 호출 차단 (사용자 directive).
+ *   zai coding plan 의 *coding 패턴 분류* 가 judging 호출을 plan 외 결제로
+ *   처리할 가능성. opencode 등 별도 CLI 도구에서 zai 사용 권장.
+ *   본 judge 사용 시 console.warn + 빈 응답 반환 (caller 가 keyword
+ *   judge 로 fallback 하도록).
+ */
+async function callGlmApi(_prompt: string): Promise<string> {
+	console.warn(
+		"  ⚠ glm-api judge deprecated (사용자 directive 2026-05-08). " +
+			"opencode 등 다른 CLI 도구에서 zai 사용 권장. " +
+			"--judge=keyword 또는 --judge=gemini-pro 로 변경 필요.",
+	);
+	return "";
+	// 아래 코드는 보존 — 추후 zai 정책 변경 시 재활성화 가능.
+	// const apiKey = process.env.GLM_API_KEY ?? "";
+	// if (!apiKey) return "";
+	// const url = "https://api.z.ai/api/coding/paas/v4/chat/completions";
 	for (let attempt = 0; attempt < 5; attempt++) {
 		// Mandatory wait to respect RPM (Coding Plan might have tight limits)
 		await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
