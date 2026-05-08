@@ -115,6 +115,22 @@ export interface Fact extends Record<string, unknown> {
 	strength: number;
 	/** Lifecycle status — superseded facts are hidden from default search */
 	status: "active" | "superseded" | "archived";
+	/** R2.5 v2 chain — predecessor fact id (chain backward).
+	 *  Set when this fact replaces an older one on the same attribute.
+	 *  Older fact's `successorId` should point back here. */
+	supersedes?: string | null;
+	/** R2.5 v2 chain — successor fact id (chain forward).
+	 *  Set when a newer fact has replaced this one. Allows
+	 *  history-mode recall to traverse the chain. */
+	successorId?: string | null;
+	/** R2.5 v2 — bi-temporal validity start (defaults to createdAt).
+	 *  Fact is "active" between validFrom and validTo. */
+	validFrom?: number;
+	/** R2.5 v2 — bi-temporal validity end. `null` means currently active.
+	 *  Set to the supersede timestamp when a successor takes over.
+	 *  *Data preservation guarantee*: validTo replaces hard delete; the
+	 *  fact record itself is never spliced from the store. */
+	validTo?: number | null;
 	/** Source episode IDs that contributed to this fact */
 	sourceEpisodes: string[];
 	/** Cosine similarity score from vector search (0.0–1.0, optional) */

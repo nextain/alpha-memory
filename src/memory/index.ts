@@ -517,18 +517,30 @@ export class MemorySystem {
 		const contradictions = findContradictions(candidates, newInfo);
 
 		// Update ALL contradicted facts to prevent stale contradictory data
-		// (Partial resolution bug #4 fixed)
+		// (Partial resolution bug #4 fixed).
+		//
+		// R2.5 v2 (사용자 directive 2026-05-08, 보존 우선):
+		//  - 옛 fact 의 *데이터 그대로* — splice X, status `superseded` 유지
+		//  - validTo = now (bi-temporal validity 종료)
+		//  - successorId = 새 fact id (chain forward)
+		//  - 새 fact: supersedes = 옛 fact id (chain backward), validFrom = now,
+		//    validTo = null (현재 active)
+		// status="superseded" 는 default search filter 와 backward compat 유지.
+		// 새로 추가된 chain pointer + validTo 가 history mode recall 에 사용됨.
 		for (const { fact, result } of contradictions) {
 			if (result.action === "update" && result.updatedContent) {
 				const newImportance = Math.max(fact.importance, importance, 0.7);
+				const successorId = `${fact.id}-v${Date.now()}`;
 				await this.adapter.semantic.upsert({
 					...fact,
 					status: "superseded",
 					updatedAt: now,
+					validTo: now,
+					successorId,
 				});
 				await this.adapter.semantic.upsert({
 					...fact,
-					id: `${fact.id}-v${Date.now()}`,
+					id: successorId,
 					content: result.updatedContent,
 					status: "active",
 					createdAt: now,
@@ -537,6 +549,9 @@ export class MemorySystem {
 					importance: newImportance,
 					strength: newImportance,
 					sourceEpisodes: [...new Set([...fact.sourceEpisodes, episodeId])],
+					supersedes: fact.id,
+					validFrom: now,
+					validTo: null,
 				});
 			}
 		}
@@ -778,7 +793,8 @@ export class MemorySystem {
 
 					if (contradictions.length > 0) {
 						// Update ALL contradicted facts to prevent stale contradictory data
-						// (Partial resolution bug #4 fixed)
+						// (Partial resolution bug #4 fixed).
+						// R2.5 v2: chain + bi-temporal validity (보존 우선).
 						for (const { fact, result } of contradictions) {
 							if (result.action === "update" && result.updatedContent) {
 								const newImportance = Math.max(
@@ -786,14 +802,17 @@ export class MemorySystem {
 									ef.importance,
 									0.7,
 								);
+								const successorId = `${fact.id}-v${Date.now()}`;
 								await this.adapter.semantic.upsert({
 									...fact,
 									status: "superseded",
 									updatedAt: now,
+									validTo: now,
+									successorId,
 								});
 								await this.adapter.semantic.upsert({
 									...fact,
-									id: `${fact.id}-v${Date.now()}`,
+									id: successorId,
 									content: result.updatedContent,
 									status: "active",
 									createdAt: now,
@@ -808,6 +827,9 @@ export class MemorySystem {
 										]),
 									],
 									encodingContext: fact.encodingContext ?? srcEp?.encodingContext,
+									supersedes: fact.id,
+									validFrom: now,
+									validTo: null,
 								});
 								factsUpdated++;
 							}
