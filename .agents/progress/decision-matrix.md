@@ -55,3 +55,12 @@
 - §B 도입 시 별도 ADR + 사용자 승인 (강한 근거 필요)
 - §C 결정 시 본 표에서 §A 또는 §B 로 이동
 - §D 의 항목은 다음 cross-review 후 §A/B/C 중 하나로 분류
+
+## §A 채택 — 2026-05-08 추가
+
+| ID | 항목 | 일자 |
+|----|------|---|
+| **A07** | **삭제 보수적 + 보존 우선 + recall latency 수용** — 모든 mechanism 데이터 영구 보존. status 변경 + recall priority 약화 만. 임계 도달 시 (#29) 만 strength-weighted forget. | 2026-05-08 (사용자 directive) |
+| **A08** | **Background brain + Active brain 책임 분리** — naia-memory = consolidation + replay + spike emit + priority adjust. naia-agent = subscribe + source monitor + pragmatic gate. CLS / Sharp-wave ripples / Source monitoring 학계 정합. | 2026-05-08 (사용자 directive) |
+| **A09** | **Retrieval ranking 강화 우선** — preservation-first 의 짝. mem0 "97.8% junk" 회피 위해 HyDE / cross-encoder / threshold 필수. (#27) | 2026-05-08 (cross-review) |
+| **A10** | **Privacy 5 차원 분리** — confidence + project scope + irrelevant = naia-memory; PII redaction + source/pragmatic = naia-agent. cross-project leak 의 진짜 위험은 LLM 발화. | 2026-05-08 (사용자 통찰) |

@@ -45,6 +45,9 @@
 > | "mem0 fork 해서 KO fix" | decision-matrix §B01 (fork 금지) + plan §0.2.1 |
 > | "naia-memory 가 자연어 파싱" | decision-matrix §B02 (자연어는 agent) + plan §2.2 |
 > | "abstention 우리가 결정" | decision-matrix §B03 (응답 결정은 agent) + plan §2.2 |
+> | "오래된 fact 삭제하자" | anchor §6 (보존 우선) + #25 audit + #29 임계 망각 |
+> | "recall 빠르게 만들자" | anchor §6 (latency 수용) — 정확도 우선, ranking 강화 (#27) |
+> | "background 에 LLM 판단 넣자" | anchor §7 (책임 분리) — naia-memory 는 spike emit 만, 판단은 naia-agent |
 >
 > **규칙**: 큰 의사결정 전 위 항목 적어도 1개 인용 의무.
 >
@@ -55,6 +58,15 @@
 > 3. **자연어 의도 파악은 naia-agent 책임** — naia-memory 는 검색 로직만
 > 4. **Capability pattern** — `isCapable<>()` graceful degradation
 > 5. **Adapter swap 가능** — 어떤 backend 든 contract-tests 통과
+> 6. **삭제 보수적 + 보존 우선 + recall latency 수용** (사용자 directive 2026-05-08)
+>    - 모든 mechanism (decay/prune/splice/delete/compaction/supersede) 데이터 영구 보존
+>    - status 변경 + recall priority 약화 만, splice/delete X (임계 도달 시만 — #29)
+>    - recall latency 증가 trade-off 수용 (꺼내는데 오래 걸려도 OK)
+>    - retrieval ranking 강화 (HyDE / cross-encoder / threshold) 가 prerequisite — preservation-first 의 짝
+> 7. **Background brain + Active brain 책임 분리** (사용자 directive 2026-05-08)
+>    - naia-memory = background consolidation worker + replay + spike emit + priority dynamic adjust
+>    - naia-agent = spike subscriber + source monitor + pragmatic gate + active context inject
+>    - 학계 정합: Complementary Learning Systems (CLS) + Sharp-wave ripples + Source monitoring + DMN
 >
 > ## SoT 우선순위 (현재)
 >
