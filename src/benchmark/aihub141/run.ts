@@ -58,6 +58,8 @@ interface CLIArgs {
 	 *  only the lookup-side propagation is bypassed. Used to compare
 	 *  KG spreading ON vs OFF. */
 	noKg: boolean;
+	/** #27 Step 1 sweep — minConfidence threshold for retrieval. */
+	minConfidence: number;
 }
 
 function parseArgs(): CLIArgs {
@@ -70,6 +72,7 @@ function parseArgs(): CLIArgs {
 	let adapter: AdapterKind = "naia-local";
 	let noImportance = false;
 	let noKg = false;
+	let minConfidence = 0;
 	for (const a of args) {
 		if (a.startsWith("--limit=")) limit = Number.parseInt(a.split("=")[1], 10);
 		if (a.startsWith("--level=")) level = Number.parseInt(a.split("=")[1], 10) as 2 | 3 | 4;
@@ -79,8 +82,9 @@ function parseArgs(): CLIArgs {
 		if (a.startsWith("--adapter=")) adapter = a.split("=")[1] as AdapterKind;
 		if (a === "--no-importance") noImportance = true;
 		if (a === "--no-kg") noKg = true;
+		if (a.startsWith("--min-confidence=")) minConfidence = Number.parseFloat(a.split("=")[1]);
 	}
-	return { limit, level, topK, verbose, split, adapter, noImportance, noKg };
+	return { limit, level, topK, verbose, split, adapter, noImportance, noKg, minConfidence };
 }
 
 function buildEmbedder(apiKey: string): EmbeddingProvider {
@@ -196,7 +200,7 @@ async function main() {
 	}
 
 	console.log(
-		`[aihub141] adapter=${args.adapter} split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK} importance=${args.noImportance ? "OFF" : "ON"} kg=${args.noKg ? "OFF" : "ON"}`,
+		`[aihub141] adapter=${args.adapter} split=${args.split} level=${args.level} limit=${args.limit} topK=${args.topK} importance=${args.noImportance ? "OFF" : "ON"} kg=${args.noKg ? "OFF" : "ON"} minConfidence=${args.minConfidence}`,
 	);
 
 	const conversations = await loadAIHub141({
@@ -272,6 +276,7 @@ async function main() {
 						project: "aihub141",
 						topK,
 						deepRecall: true,
+						minConfidence: args.minConfidence,
 					});
 					return [...new Set(r.facts.map((f) => f.content))];
 				},
@@ -302,6 +307,7 @@ async function main() {
 						project: "aihub141",
 						topK,
 						deepRecall: true,
+						minConfidence: args.minConfidence,
 					});
 					return [...new Set(r.facts.map((f) => f.content))];
 				},
