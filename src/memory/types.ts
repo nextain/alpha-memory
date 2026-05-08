@@ -57,6 +57,10 @@ export interface Episode extends Record<string, unknown> {
 	lastAccessed: number;
 	/** Current memory strength (Ebbinghaus decay applied) */
 	strength: number;
+	/** Lifecycle status — R3 보존 우선 (사용자 directive 2026-05-08).
+	 *  decay 가 strength 약화 시 'archived' 로 변경, splice X.
+	 *  default search 에서 hide. */
+	status?: "active" | "archived";
 }
 
 /** Context captured at the time of memory encoding (Tulving's encoding specificity) */

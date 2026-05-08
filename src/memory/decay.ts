@@ -93,7 +93,17 @@ export function calculatePruneScore(
 
 /**
  * Determine if a memory should be pruned based on its current strength.
+ *
+ * R3 보존 우선 (사용자 directive 2026-05-08): caller 가 *splice* 대신
+ * `status: 'archived'` 로 변경하는 게 권장. 이 함수는 그 *판단* 만 — 실제
+ * splice 동작 X. `shouldArchive` 는 의도 명확 alias (deprecated 표시 X,
+ * 두 이름 모두 유효).
  */
 export function shouldPrune(strength: number): boolean {
+	return strength < PRUNE_THRESHOLD;
+}
+
+/** R3 의도 명확 alias for `shouldPrune`. caller 는 splice X, status 변경만. */
+export function shouldArchive(strength: number): boolean {
 	return strength < PRUNE_THRESHOLD;
 }

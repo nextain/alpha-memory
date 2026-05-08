@@ -392,6 +392,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 
 			const scored = this.store.episodes
 				.map((ep) => {
+					// R3 보존 우선 (Step 6 fix): archived episode 는 default recall hide.
+					// deepRecall=true 시 archived 도 회상 가능 (오래된 기억 explicit 회상).
+					if (!deepRecall && ep.status === "archived") return null;
+
 					// Recalculate strength with current time
 					const strength = calculateStrength(
 						ep.importance.utility,
@@ -457,8 +461,9 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		},
 
 		getRecent: async (n: number): Promise<Episode[]> => {
+			// R3 보존 우선: archived episode 제외 (default getRecent 의도).
 			return this.store.episodes
-				.slice()
+				.filter((ep) => ep.status !== "archived")
 				.sort((a, b) => b.timestamp - a.timestamp)
 				.slice(0, n);
 		},
@@ -707,8 +712,12 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		},
 
 		decay: async (now: number): Promise<number> => {
-			const before = this.store.facts.length;
-			this.store.facts = this.store.facts.filter((fact) => {
+			// R3 보존 우선 (사용자 directive 2026-05-08, #25):
+			// splice X. strength 약한 fact/episode 는 status='archived'.
+			// 데이터 영구 보존, default search 에서 hide. 임계 도달 (#29) 시만
+			// 별도 망각 logic — 본 decay() 는 *영원히 splice X*.
+			let archivedCount = 0;
+			for (const fact of this.store.facts) {
 				const strength = calculateStrength(
 					fact.importance,
 					fact.createdAt,
@@ -717,13 +726,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					now,
 				);
 				fact.strength = strength;
-				return !shouldPrune(strength);
-			});
-			const pruned = before - this.store.facts.length;
+				if (shouldPrune(strength) && fact.status === "active") {
+					fact.status = "archived";
+					archivedCount++;
+				}
+			}
 
-			// Also decay episodes
-			const epBefore = this.store.episodes.length;
-			this.store.episodes = this.store.episodes.filter((ep) => {
+			// Episodes 도 동일 — splice X, status 변경만.
+			for (const ep of this.store.episodes) {
 				const strength = calculateStrength(
 					ep.importance.utility,
 					ep.timestamp,
@@ -732,16 +742,19 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 					now,
 				);
 				ep.strength = strength;
-				// Keep consolidated episodes longer (they've contributed to semantic memory)
-				return !shouldPrune(strength) || ep.consolidated;
-			});
-			const totalPruned = pruned + (epBefore - this.store.episodes.length);
+				// Consolidated episode 는 유지 (semantic memory 에 기여).
+				// 그 외 strength 약하면 archived.
+				if (shouldPrune(strength) && !ep.consolidated && ep.status !== "archived") {
+					ep.status = "archived";
+					archivedCount++;
+				}
+			}
 
-			if (totalPruned > 0) {
+			if (archivedCount > 0) {
 				this.markDirty();
 				this.save();
 			}
-			return totalPruned;
+			return archivedCount;
 		},
 
 		associate: async (
@@ -764,9 +777,13 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		},
 
 		delete: async (id: string): Promise<boolean> => {
-			const idx = this.store.facts.findIndex((f) => f.id === id);
-			if (idx === -1) return false;
-			this.store.facts.splice(idx, 1);
+			// R3 보존 우선 (사용자 directive 2026-05-08, #25):
+			// splice X. archive 로 redirect. 사용자 explicit GC (#29) 후 만
+			// 진짜 splice 가능. caller 가 진짜 hard delete 원하면 #29 의
+			// forgetSweep API 사용해야 함.
+			const fact = this.store.facts.find((f) => f.id === id);
+			if (!fact) return false;
+			fact.status = "archived";
 			this.markDirty();
 			this.save();
 			return true;
@@ -841,18 +858,14 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 		result.memoriesPruned = await this.semantic.decay(now);
 
 		// 2. Association decay (Hebbian: unused associations weaken)
-		const keysToRemove: string[] = [];
+		// R3 보존 우선 (사용자 directive 2026-05-08, #25):
+		// association 영구 보존. weight 만 약화 — 0.01 미만이어도 *delete X*.
+		// recall 시 weight 가중치라 자연 무시. 임계 도달 (#29) 시만 explicit
+		// forget 가능.
 		for (const [key, weight] of Object.entries(this.store.associations)) {
-			const decayed = weight * 0.95; // 5% decay per consolidation cycle
-			if (decayed < 0.01) {
-				keysToRemove.push(key);
-			} else {
-				this.store.associations[key] = decayed;
-				result.associationsUpdated++;
-			}
-		}
-		for (const key of keysToRemove) {
-			delete this.store.associations[key];
+			const decayed = weight * 0.95;
+			this.store.associations[key] = decayed;
+			result.associationsUpdated++;
 		}
 
 		// 3. Knowledge graph edge decay
