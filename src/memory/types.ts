@@ -88,6 +88,21 @@ export interface RecallContext {
 	 * Uses pure vector similarity without strength weighting.
 	 */
 	deepRecall?: boolean;
+	/**
+	 * R2.5 v2 — recall mode for chain + bi-temporal facts.
+	 *  - 'latest' (default): only currently active facts (status==='active'
+	 *    and validTo===null/undefined). Backward compat with R2.5 v1.
+	 *  - 'history': include superseded chain (active + superseded). Caller
+	 *    can traverse `supersedes` / `successorId` for chain order.
+	 *  - 'at-time': fact versions valid at `atTimestamp` — pre-existing
+	 *    bi-temporal recall (uses `factsValidAtTime`).
+	 *
+	 * 사용자 directive (2026-05-08): 시간 연관 회상 + 장기기억 보존.
+	 * latest 가 default — 자연어 의도 파악 ("history 보여줘") 은 naia-agent.
+	 */
+	mode?: "latest" | "history" | "at-time";
+	/** Bi-temporal anchor for `mode: 'at-time'`. ms unix timestamp. */
+	atTimestamp?: number;
 }
 
 // ─── Semantic Memory (Neocortex) ─────────────────────────────────────────────
@@ -219,7 +234,7 @@ export interface MemoryAdapter {
 		 *  context.atTimestamp (optional, ms): bi-temporal recall — only fact versions valid
 		 *  at the given timestamp are considered. Adapters without bi-temporal support may
 		 *  ignore this option (degrades to standard search). */
-		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number }): Promise<Fact[]>;
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time" }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */

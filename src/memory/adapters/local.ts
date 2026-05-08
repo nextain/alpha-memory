@@ -529,8 +529,19 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  			query: string,
  			topK: number,
  			deepRecall = false,
- 			context?: { project?: string; atTimestamp?: number },
+ 			context?: {
+ 				project?: string;
+ 				atTimestamp?: number;
+ 				/** R2.5 v2 recall mode. default 'latest' (backward compat). */
+ 				mode?: "latest" | "history" | "at-time";
+ 			},
  		): Promise<Fact[]> => {
+ 			// R2.5 v2 fix #1: mode='at-time' requires atTimestamp explicit.
+ 			if (context?.mode === "at-time" && context?.atTimestamp === undefined) {
+ 				throw new Error(
+ 					"semantic.search: mode='at-time' requires `atTimestamp` to be set",
+ 				);
+ 			}
 			const now = Date.now();
 			const BROAD_FACTOR = 3;
 			const searchMode = process.env.NAIA_SEARCH_MODE ?? (this.embedder && this.embedder.dims >= 2000 ? "vector-only" : "rrf");
@@ -652,8 +663,22 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 				.filter((x) => x.score > 0)
 				.sort((a, b) => b.score - a.score);
 
-			if (!deepRecall && atT === undefined) {
-				scored = scored.filter(f => f.fact.status !== "superseded");
+			// R2.5 v2 mode handling. backward compat:
+			//  - deepRecall=true 그대로 superseded 포함 (기존 동작)
+			//  - mode='latest' (default): only status === 'active' (archived
+			//    fact 도 hide — adversarial review fix #2)
+			//  - mode='history': superseded 도 포함 — chain 회상
+			//  - mode='at-time': atT 가 set 된 path (이미 위 factsValidAtTime 처리)
+			const mode = context?.mode ?? "latest";
+			const includeSuperseded = mode === "history" || deepRecall;
+			if (!includeSuperseded && atT === undefined) {
+				if (deepRecall) {
+					// deepRecall + latest mode: 기존 동작 — superseded 만 제외 (loose).
+					scored = scored.filter((f) => f.fact.status !== "superseded");
+				} else {
+					// latest 명시 mode: status === 'active' 만 (strict, archived 제외).
+					scored = scored.filter((f) => (f.fact.status ?? "active") === "active");
+				}
 			}
 
 			scored = scored.slice(0, topK);
