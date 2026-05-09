@@ -22,6 +22,7 @@ import { join } from "node:path";
 import { Mem0Adapter } from "../comparison/adapter-mem0.js";
 import { LocalAdapter } from "../../memory/adapters/local.js";
 import { Mem0Adapter as NaiaMem0Adapter } from "../../memory/adapters/mem0.js";
+import { OfflineRerankerProvider } from "../../memory/reranker.js";
 import {
 	OpenAICompatEmbeddingProvider,
 	type EmbeddingProvider,
@@ -60,6 +61,8 @@ interface CLIArgs {
 	noKg: boolean;
 	/** #27 Step 1 sweep — minConfidence threshold for retrieval. */
 	minConfidence: number;
+	/** #50 — Cross-encoder reranker (BGE-reranker-v2-m3) on/off. */
+	reranker: boolean;
 }
 
 function parseArgs(): CLIArgs {
@@ -73,6 +76,7 @@ function parseArgs(): CLIArgs {
 	let noImportance = false;
 	let noKg = false;
 	let minConfidence = 0;
+	let reranker = false;
 	for (const a of args) {
 		if (a.startsWith("--limit=")) limit = Number.parseInt(a.split("=")[1], 10);
 		if (a.startsWith("--level=")) level = Number.parseInt(a.split("=")[1], 10) as 2 | 3 | 4;
@@ -83,8 +87,9 @@ function parseArgs(): CLIArgs {
 		if (a === "--no-importance") noImportance = true;
 		if (a === "--no-kg") noKg = true;
 		if (a.startsWith("--min-confidence=")) minConfidence = Number.parseFloat(a.split("=")[1]);
+		if (a === "--reranker") reranker = true;
 	}
-	return { limit, level, topK, verbose, split, adapter, noImportance, noKg, minConfidence };
+	return { limit, level, topK, verbose, split, adapter, noImportance, noKg, minConfidence, reranker };
 }
 
 function buildEmbedder(apiKey: string): EmbeddingProvider {
@@ -112,14 +117,19 @@ async function buildSystem(
 	opts: {
 		disableImportanceGating?: boolean;
 		disableKGSpreading?: boolean;
+		reranker?: boolean;
 	} = {},
 ): Promise<MemorySystem> {
 	const storePath = `/tmp/aihub141-naia-${cacheId}.json`;
 	const embedder = buildEmbedder(apiKey);
+	const reranker = opts.reranker
+		? new OfflineRerankerProvider("bge-reranker-v2-m3")
+		: undefined;
 	const adapter = new LocalAdapter({
 		storePath,
 		embeddingProvider: embedder,
 		disableKGSpreading: opts.disableKGSpreading ?? false,
+		reranker,
 	});
 	const factExtractor = buildLLMFactExtractor({ apiKey });
 	return new MemorySystem({
@@ -283,6 +293,7 @@ async function main() {
 			};
 		} else {
 			system = await buildSystem(apiKey!, cacheId, {
+				reranker: args.reranker,
 				disableImportanceGating: args.noImportance,
 				disableKGSpreading: args.noKg,
 			});
