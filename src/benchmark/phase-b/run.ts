@@ -230,6 +230,19 @@ async function main() {
 	console.log(
 		`Cost: $${costUSD.toFixed(4)} (${usage.llmCalls} LLM calls, ${usage.embedCalls} embedding calls)`,
 	);
+	// R4 #26 활성도 보고 (spike emit + replay boost count).
+	const spikeTotal = usage.spikeEmits
+		? Object.values(usage.spikeEmits).reduce((a, b) => a + b, 0)
+		: 0;
+	console.log(
+		`R4 spikes: ${spikeTotal}${
+			usage.spikeEmits && Object.keys(usage.spikeEmits).length > 0
+				? ` (${Object.entries(usage.spikeEmits)
+						.map(([r, c]) => `${r}=${c}`)
+						.join(", ")})`
+				: ""
+		} | replay boost: ${usage.replayBoosted ?? 0}`,
+	);
 
 	const ts = new Date().toISOString().replace(/[:.]/g, "-");
 	const reportDir = "reports";
