@@ -61,14 +61,21 @@ export class IdentityReranker implements RerankerProvider {
 /**
  * OfflineRerankerProvider — transformers.js 의 cross-encoder 사용.
  *
- * 권장 모델: BGE-reranker-v2-m3 (multilingual, 한국어 OK, ~570MB).
+ * 권장 모델 (Xenova ONNX 검증, 2026-05-09):
+ * - bge-reranker-base (multilingual XLM-RoBERTa, ~280MB, **default**)
+ * - bge-reranker-large (multilingual XLM-RoBERTa-large, ~570MB)
+ * - ms-marco-MiniLM-L-6-v2 (영어 small, ~80MB)
+ *
  * 첫 사용 시 ~/.cache/huggingface/hub/ 에 download. 이후 cached.
  *
- * GPU 권장 (FP16 ~600MB), CPU 도 작동 (느림 ~200ms/pair).
+ * GPU 권장 (FP16 ~280-600MB), CPU 도 작동 (느림 ~100-200ms/pair).
  *
  * 사용 예:
- *   const reranker = new OfflineRerankerProvider("bge-reranker-v2-m3");
+ *   const reranker = new OfflineRerankerProvider("bge-reranker-base");
  *   const memory = new MemorySystem({ reranker, ... });
+ *
+ * NOTE: BGE-reranker-v2-m3 는 Xenova 에 ONNX 형식 없음 (2026-05-09 확인).
+ * v2-m3 사용 시 BAAI/bge-reranker-v2-m3 + transformers (Python) 필요.
  */
 export class OfflineRerankerProvider implements RerankerProvider {
 	readonly name = "offline-reranker";
@@ -78,9 +85,9 @@ export class OfflineRerankerProvider implements RerankerProvider {
 
 	constructor(
 		model:
-			| "bge-reranker-v2-m3"
 			| "bge-reranker-base"
-			| "ms-marco-MiniLM-L-6-v2" = "bge-reranker-v2-m3",
+			| "bge-reranker-large"
+			| "ms-marco-MiniLM-L-6-v2" = "bge-reranker-base",
 	) {
 		this.modelName = model;
 	}

@@ -123,7 +123,7 @@ async function buildSystem(
 	const storePath = `/tmp/aihub141-naia-${cacheId}.json`;
 	const embedder = buildEmbedder(apiKey);
 	const reranker = opts.reranker
-		? new OfflineRerankerProvider("bge-reranker-v2-m3")
+		? new OfflineRerankerProvider("bge-reranker-base")
 		: undefined;
 	const adapter = new LocalAdapter({
 		storePath,
