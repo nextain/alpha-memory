@@ -582,6 +582,18 @@ export class MemorySystem {
 					validFrom: now,
 					validTo: null,
 				});
+				// R4 #26 Step 3a — supersede 시점 spike emit (contradiction reason).
+				// naia-agent 가 subscribe 시 source-monitor + pragmatic-gate 로
+				// "아.. 그거 아니었어, [새 fact]" 자연 inject 결정.
+				await this.emitSpike({
+					factId: successorId,
+					content: result.updatedContent,
+					reason: "contradiction",
+					confidence: 0.9, // R2.5 detection 자체는 high confidence
+					relatedFactIds: [fact.id], // predecessor (옛 fact)
+					emittedAt: now,
+					scope: project ? { project } : undefined,
+				});
 			}
 		}
 	}
@@ -868,6 +880,19 @@ export class MemorySystem {
 									validFrom: now,
 									validTo: null,
 								});
+								// R4 #26 Step 3a — supersede 시점 spike emit
+								// (consolidate path).
+								await this.emitSpike({
+									factId: successorId,
+									content: result.updatedContent,
+									reason: "contradiction",
+									confidence: 0.9,
+									relatedFactIds: [fact.id],
+									emittedAt: now,
+									scope: fact.encodingContext?.project
+										? { project: fact.encodingContext.project }
+										: undefined,
+								});
 								factsUpdated++;
 							}
 						}
@@ -901,6 +926,26 @@ export class MemorySystem {
 						};
 						await this.adapter.semantic.upsert(newFact);
 						factsCreated++;
+						// R4 #26 Step 3b — high-importance + active context relevant
+						// 시점 spike emit. naia-agent 가 active context push 했고,
+						// 새 fact 가 active topic 또는 entity 매칭 + importance ≥ 0.8.
+						if (
+							this.activeContext &&
+							newImportance >= 0.8 &&
+							this.matchesActiveContext(newFact)
+						) {
+							await this.emitSpike({
+								factId: deterministicId,
+								content: ef.content,
+								reason: "high-importance-relevant",
+								confidence: newImportance,
+								relatedFactIds: [],
+								emittedAt: now,
+								scope: srcEp?.encodingContext?.project
+									? { project: srcEp.encodingContext.project }
+									: undefined,
+							});
+						}
 					}
 
 					// Strengthen associations between extracted entities (cycle-level dedup)
@@ -1211,11 +1256,28 @@ export class MemorySystem {
 		return this.activeContext;
 	}
 
-	/** Internal — emit spike to all subscribers. R4 Step 3 의 trigger 에서
-	 *  호출 예정. 현재는 placeholder. */
+	/** Internal — emit spike to all subscribers. R4 Step 3 — supersede /
+	 *  high-importance-relevant trigger 에서 호출. */
 	protected async emitSpike(
 		event: import("./spike.js").SpikeEvent,
 	): Promise<void> {
+		// R4 Step 3 — optOutTopics 검사 (cross-project / privacy 차단).
+		if (this.activeContext?.optOutTopics?.length) {
+			const optOut = this.activeContext.optOutTopics;
+			const lower = event.content.toLowerCase();
+			if (optOut.some((t) => lower.includes(t.toLowerCase()))) {
+				return; // skip
+			}
+		}
+		// Cross-project leak 차단 (anchor §A10): scope.project 가 active
+		// context project 와 다르면 skip.
+		if (
+			this.activeContext &&
+			event.scope?.project &&
+			event.scope.project !== this.activeContext.scope.project
+		) {
+			return;
+		}
 		for (const handler of this.spikeHandlers) {
 			try {
 				await handler(event);
@@ -1223,6 +1285,24 @@ export class MemorySystem {
 				console.warn(`[MemorySystem] spike handler failed: ${e?.message}`);
 			}
 		}
+	}
+
+	/** R4 Step 3b — fact 가 active context topic / recentFactIds / entity
+	 *  와 매칭? heuristic — fact content/topics 가 active topic substring 매칭. */
+	private matchesActiveContext(fact: Fact): boolean {
+		if (!this.activeContext) return false;
+		const lower = fact.content.toLowerCase();
+		// active topic substring 매칭
+		for (const t of this.activeContext.topics) {
+			if (lower.includes(t.toLowerCase())) return true;
+		}
+		// fact entity 가 active topic 매칭
+		for (const e of fact.entities) {
+			for (const t of this.activeContext.topics) {
+				if (e.toLowerCase().includes(t.toLowerCase())) return true;
+			}
+		}
+		return false;
 	}
 
 	// ─── Lifecycle ────────────────────────────────────────────────────────
