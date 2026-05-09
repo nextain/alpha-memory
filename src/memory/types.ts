@@ -65,7 +65,8 @@ export interface Episode extends Record<string, unknown> {
 
 /** Context captured at the time of memory encoding (Tulving's encoding specificity) */
 export interface EncodingContext {
-	/** What project/workspace was active */
+	/** What project/workspace was active. R5 #28: hard partition key —
+	 *  recall 시 strict mode 면 해당 project 의 fact 만 노출. */
 	project?: string;
 	/** What file was being discussed */
 	activeFile?: string;
@@ -73,6 +74,11 @@ export interface EncodingContext {
 	taskDescription?: string;
 	/** Session identifier */
 	sessionId?: string;
+	/** R5 #28 — privacy / topic category for irrelevant isolation.
+	 *  encode 시점 fact 의 카테고리 추론 (예: "personal" / "work" /
+	 *  "tech"). recall 시점 query 의 intent 와 mismatch 일 때 score
+	 *  penalty 적용. heuristic 또는 LLM 으로 추론, default null. */
+	category?: string;
 }
 
 /** Context used when recalling episodes */
@@ -107,6 +113,24 @@ export interface RecallContext {
 	mode?: "latest" | "history" | "at-time";
 	/** Bi-temporal anchor for `mode: 'at-time'`. ms unix timestamp. */
 	atTimestamp?: number;
+	/**
+	 * R5 #28 — Privacy: project scope hard partition.
+	 *
+	 *  - 'strict' (권장 for production): 해당 project 의 fact 만 노출.
+	 *    cross-project 조회 시 explicit \`crossProject: true\` 필요.
+	 *  - 'soft' (default): 기존 동작 — project 명시 시 우선, 미명시 시
+	 *    cross-project 도 노출 (backward compat).
+	 *
+	 *  사용자 directive (2026-05-08): cross-project leak 의 진짜 위험은
+	 *  naia-agent LLM 발화. naia-memory 측 hard partition 으로 *데이터
+	 *  level* 차단 + naia-agent 의 source-monitor + pragmatic-gate 와 결합.
+	 */
+	scopeMode?: "strict" | "soft";
+	/** R5 #28 — explicit cross-project recall (scopeMode='strict' 시 필요). */
+	crossProject?: boolean;
+	/** R5 #28 — query intent category. fact.category 와 mismatch 시
+	 *  penalty 적용. heuristic 또는 caller-injected. */
+	queryIntent?: string;
 	/**
 	 * #27 Retrieval ranking 강화 — HyDE (Hypothetical Document Embedding).
 	 *
@@ -280,7 +304,7 @@ export interface MemoryAdapter {
 		 *  context.atTimestamp (optional, ms): bi-temporal recall — only fact versions valid
 		 *  at the given timestamp are considered. Adapters without bi-temporal support may
 		 *  ignore this option (degrades to standard search). */
-		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time"; minConfidence?: number; queryHint?: string }): Promise<Fact[]>;
+		search(query: string, topK: number, deepRecall?: boolean, context?: { project?: string; atTimestamp?: number; mode?: "latest" | "history" | "at-time"; minConfidence?: number; queryHint?: string; scopeMode?: "strict" | "soft"; crossProject?: boolean }): Promise<Fact[]>;
 		/** Run Ebbinghaus decay sweep, returns number of pruned memories */
 		decay(now: number): Promise<number>;
 		/** Strengthen association between two entities (Hebbian) */

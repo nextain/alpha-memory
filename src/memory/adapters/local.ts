@@ -558,6 +558,10 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
  				minConfidence?: number;
  				/** #27 HyDE — caller-provided 가상 답. embedding 시 사용. */
  				queryHint?: string;
+ 				/** R5 #28 — privacy scope mode. strict 권장 production. */
+ 				scopeMode?: "strict" | "soft";
+ 				/** R5 #28 — explicit cross-project recall (strict mode). */
+ 				crossProject?: boolean;
  			},
  		): Promise<Fact[]> => {
  			// R2.5 v2 fix #1: mode='at-time' requires atTimestamp explicit.
@@ -594,14 +598,40 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 
 			const proj = context?.project;
 			const atT = context?.atTimestamp;
+			const scopeMode = (context as any)?.scopeMode ?? "soft";
+			const crossProject = (context as any)?.crossProject ?? false;
 			const baseFacts = atT !== undefined ? this.factsValidAtTime(atT) : this.store.facts;
-			const allFacts = proj
-				? baseFacts.filter(
+			// R5 #28 — Privacy: project scope hard partition.
+			// strict mode (권장 production):
+			//   - project 명시 + crossProject=false: 해당 project fact 만
+			//   - project 미명시 + crossProject=false: project 없는 fact 만
+			//     (cross-project leak 방지)
+			//   - crossProject=true: 모든 project (explicit cross-project recall)
+			// soft mode (default, backward compat):
+			//   - project 명시: 해당 project 우선 (그러나 다른 project 도 검색 가능)
+			//   - project 미명시: 모두
+			let allFacts: Fact[];
+			if (scopeMode === "strict" && !crossProject) {
+				if (proj) {
+					allFacts = baseFacts.filter(
 						(f) =>
 							f.encodingContext?.project === proj ||
 							(f.topics?.includes(proj) ?? false),
-					)
-				: baseFacts;
+					);
+				} else {
+					// strict + no project: cross-project leak 방지 → project 없는 fact 만
+					allFacts = baseFacts.filter((f) => !f.encodingContext?.project);
+				}
+			} else {
+				// soft mode (legacy default).
+				allFacts = proj
+					? baseFacts.filter(
+							(f) =>
+								f.encodingContext?.project === proj ||
+								(f.topics?.includes(proj) ?? false),
+						)
+					: baseFacts;
+			}
 			const vectorScores: Map<string, number> = new Map();
 			const bm25Scores: Map<string, number> = new Map();
 			const entityBonuses: Map<string, number> = new Map();

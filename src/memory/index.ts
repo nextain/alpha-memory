@@ -594,6 +594,8 @@ export class MemorySystem {
 				mode: context.mode,
 				minConfidence: context.minConfidence,
 				queryHint: context.queryHint,
+				scopeMode: context.scopeMode,
+				crossProject: context.crossProject,
 			}),
 			this.adapter.procedural.getReflections(query, topK),
 		]);
