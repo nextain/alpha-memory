@@ -115,6 +115,50 @@ const factExtractor = buildLLMFactExtractor({
 
 LLM 모델은 OpenAI-compat chat completion endpoint 면 동작 (Gemini, OpenAI, vLLM 등).
 
+### 1.5 R4 Background brain spike subscription (선택, naia-agent 측 책임)
+
+```ts
+import type {
+  SpikeEvent,
+  SpikeAction,
+  ActiveContext,
+} from "@nextain/naia-memory";
+
+memory.on("spike", async (event: SpikeEvent): Promise<SpikeAction | void> => {
+  // naia-agent: source-monitor + pragmatic-gate 로 결정
+  const source = await sourceMonitor(event, currentTurn, recent);
+  if (source.relevance < 0.6) return;
+  const pragmatic = await pragmaticGate(event, dialogueFlow);
+  if (!pragmatic.shouldInject) return;
+  return {
+    decision: "inject-now",
+    reason: pragmatic.reason,
+    modifiedContent: pragmatic.refined,
+  };
+});
+
+// 사용자 turn 처리 시 active context push
+memory.setActiveContext({
+  topics: ["직업", "이직"],
+  recentFactIds: ["fact-id-1", "fact-id-2"],
+  scope: { project: "personal" }, // 필수 — cross-project leak 방지
+  optOutTopics: ["민감주제"], // 선택
+});
+```
+
+SpikeEvent reason (7 종):
+- `contradiction` — R2.5 supersede 시점 (구현됨)
+- `high-importance-relevant` — 새 fact + active context 매칭 (구현됨)
+- `recall-failure-resolved` — 사용자 query 가 자주 fail 했는데 새 fact 추출 (future)
+- `temporal-anchor` — \"1년 전 오늘\" 같은 시간 anchor (future)
+- `cross-domain-analogy` — KG 의 두 도메인 사이 bridging fact (future)
+- `user-emotion-anniversary` — high emotion fact 의 같은 날 (future)
+- `repeated-fail` — 사용자 같은 query 반복했는데 답 변경됨 (future)
+
+책임 분리 (anchor §A08):
+- naia-memory = consolidation + replay + spike emit (구현 R4 Step 1-4 완료)
+- naia-agent = subscribe + source-monitor + pragmatic-gate + active context inject
+
 ### 1.4 R2.5 Contradiction filter (선택)
 
 ```ts
