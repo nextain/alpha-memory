@@ -52,6 +52,13 @@ export {
 	OfflineRerankerProvider,
 	type RerankerProvider,
 } from "./reranker.js";
+export type {
+	SpikeEvent,
+	SpikeAction,
+	SpikeHandler,
+	ActiveContext,
+	SubscribableMemory,
+} from "./spike.js";
 export { LocalAdapter } from "./adapters/local.js";
 export { QdrantAdapter } from "./adapters/qdrant.js";
 export type {
@@ -373,6 +380,16 @@ export class MemorySystem {
 	 *  effect on retrieval ranking or decay. Default false. */
 	private readonly disableImportanceGating: boolean;
 	private _isConsolidating = false;
+	/** R4 #26 — Background brain spike subscribers. naia-agent 가 on('spike')
+	 *  으로 등록. emit 시점은 consolidate / decay / fact upsert 등 (R4 Step 3+). */
+	private spikeHandlers: Array<
+		(event: import("./spike.js").SpikeEvent) => Promise<
+			import("./spike.js").SpikeAction | void
+		>
+	> = [];
+	/** R4 #26 — Active context (naia-agent → naia-memory).
+	 *  spike rule 평가 시 사용. cross-project leak 방지 (anchor §A10). */
+	private activeContext: import("./spike.js").ActiveContext | null = null;
 
 	/**
 	 * Rolling summaries keyed by sessionId. Incrementally built by
@@ -1155,10 +1172,65 @@ export class MemorySystem {
 		};
 	}
 
+	// ─── R4 #26 Background brain — spike + active context ──────────────
+
+	/** Subscribe spike events. naia-agent 가 source-monitor + pragmatic-gate
+	 *  로 처리 후 SpikeAction 반환 (또는 skip).
+	 *  R4 Step 2 — emit infrastructure. 실 emit 은 Step 3 (consolidate
+	 *  / R2.5 supersede / decay 시점) 에서 trigger 예정. */
+	on(
+		event: "spike",
+		handler: (e: import("./spike.js").SpikeEvent) => Promise<
+			import("./spike.js").SpikeAction | void
+		>,
+	): void {
+		if (event === "spike") this.spikeHandlers.push(handler);
+	}
+
+	off(
+		event: "spike",
+		handler: (e: import("./spike.js").SpikeEvent) => Promise<
+			import("./spike.js").SpikeAction | void
+		>,
+	): void {
+		if (event === "spike") {
+			const idx = this.spikeHandlers.indexOf(handler);
+			if (idx >= 0) this.spikeHandlers.splice(idx, 1);
+		}
+	}
+
+	/** Push active context — naia-agent 가 *현재 대화 context* 명시.
+	 *  Background brain 의 spike rule 평가 시 사용. cross-project leak
+	 *  방지 (anchor §A10) — scope.project 필수. */
+	setActiveContext(ctx: import("./spike.js").ActiveContext): void {
+		this.activeContext = ctx;
+	}
+
+	/** Read current active context (debug / introspection). */
+	getActiveContext(): import("./spike.js").ActiveContext | null {
+		return this.activeContext;
+	}
+
+	/** Internal — emit spike to all subscribers. R4 Step 3 의 trigger 에서
+	 *  호출 예정. 현재는 placeholder. */
+	protected async emitSpike(
+		event: import("./spike.js").SpikeEvent,
+	): Promise<void> {
+		for (const handler of this.spikeHandlers) {
+			try {
+				await handler(event);
+			} catch (e: any) {
+				console.warn(`[MemorySystem] spike handler failed: ${e?.message}`);
+			}
+		}
+	}
+
 	// ─── Lifecycle ────────────────────────────────────────────────────────
 
 	async close(): Promise<void> {
 		this.stopConsolidation();
+		this.spikeHandlers = [];
+		this.activeContext = null;
 		await this.adapter.close();
 	}
 }
