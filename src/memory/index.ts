@@ -970,6 +970,9 @@ export class MemorySystem {
 			// 5. Run adapter-level decay + cleanup
 			const adapterResult = await this.adapter.consolidate();
 
+			// 5b. R4 #26 Step 5a — Temporal-anchor scan (consolidate 마다).
+			await this.detectTemporalAnchors(now);
+
 			// 6. R4 #26 Step 4 — Replay-worthy fact strength boost.
 			//    학계 정합 (anchor §7): Sharp-wave ripples + CLS — 자다가
 			//    *recent + important + recently-recalled* fact 의 strength
@@ -1000,6 +1003,11 @@ export class MemorySystem {
 			} catch (e: any) {
 				console.warn(`[MemorySystem] replay boost failed: ${e?.message}`);
 			}
+			// 측정 framework — replay 갯수 기록.
+			try {
+				const { recordReplayBoost } = await import("./usage-tracker.js");
+				recordReplayBoost(replayBoosted);
+			} catch {}
 
 			return {
 				episodesProcessed: readyEpisodes.length,
@@ -1312,12 +1320,52 @@ export class MemorySystem {
 		) {
 			return;
 		}
+		// R4 측정 framework — emit count 기록 (handler 미등록도 count).
+		try {
+			const { recordSpike } = await import("./usage-tracker.js");
+			recordSpike(event.reason);
+		} catch {}
 		for (const handler of this.spikeHandlers) {
 			try {
 				await handler(event);
 			} catch (e: any) {
 				console.warn(`[MemorySystem] spike handler failed: ${e?.message}`);
 			}
+		}
+	}
+
+	/** R4 Step 5a — Temporal-anchor spike detection.
+	 *  Consolidate cycle 마다 fact 의 createdAt 이 *N 일 전 같은 날짜* 인지
+	 *  확인 (1년 / 6개월 / 3개월 / 1개월). 매칭 시 emit.
+	 *  학계 정합 (anchor §7): DMN 의 spontaneous reorganization — 시간
+	 *  anchor 에 의한 연관 fact 떠올림. */
+	private async detectTemporalAnchors(now: number): Promise<void> {
+		try {
+			const allFacts = await this.adapter.semantic.getAll();
+			const ANCHORS = [365, 180, 90, 30]; // days
+			const TOL = 1; // ±1 day
+			const dayMs = 24 * 60 * 60 * 1000;
+			for (const fact of allFacts) {
+				if (fact.status !== "active") continue;
+				if (fact.importance < 0.7) continue; // 중요 fact 만 anchor
+				const ageDays = Math.round((now - fact.createdAt) / dayMs);
+				const matched = ANCHORS.find((a) => Math.abs(ageDays - a) <= TOL);
+				if (matched) {
+					await this.emitSpike({
+						factId: fact.id,
+						content: fact.content,
+						reason: "temporal-anchor",
+						confidence: fact.importance,
+						relatedFactIds: [],
+						emittedAt: now,
+						scope: fact.encodingContext?.project
+							? { project: fact.encodingContext.project }
+							: undefined,
+					});
+				}
+			}
+		} catch (e: any) {
+			console.warn(`[MemorySystem] temporal-anchor scan failed: ${e?.message}`);
 		}
 	}
 

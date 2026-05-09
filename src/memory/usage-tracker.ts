@@ -12,6 +12,10 @@ export interface UsageStats {
 	llmCompletionTokens: number;
 	embedCalls: number;
 	embedTokens: number;
+	/** R4 #26 — spike emit counts by reason (Step 4-5). */
+	spikeEmits?: Record<string, number>;
+	/** R4 #26 — replay boost count (Step 4). */
+	replayBoosted?: number;
 }
 
 const _stats: UsageStats = {
@@ -20,6 +24,8 @@ const _stats: UsageStats = {
 	llmCompletionTokens: 0,
 	embedCalls: 0,
 	embedTokens: 0,
+	spikeEmits: {},
+	replayBoosted: 0,
 };
 
 export function resetUsage(): void {
@@ -28,6 +34,19 @@ export function resetUsage(): void {
 	_stats.llmCompletionTokens = 0;
 	_stats.embedCalls = 0;
 	_stats.embedTokens = 0;
+	_stats.spikeEmits = {};
+	_stats.replayBoosted = 0;
+}
+
+/** R4 #26 — record spike emit for measurement framework. */
+export function recordSpike(reason: string): void {
+	if (!_stats.spikeEmits) _stats.spikeEmits = {};
+	_stats.spikeEmits[reason] = (_stats.spikeEmits[reason] ?? 0) + 1;
+}
+
+/** R4 #26 — record replay boost for measurement framework. */
+export function recordReplayBoost(count: number): void {
+	_stats.replayBoosted = (_stats.replayBoosted ?? 0) + count;
 }
 
 export function recordLLM(promptTokens: number, completionTokens: number): void {
