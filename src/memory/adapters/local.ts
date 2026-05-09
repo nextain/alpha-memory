@@ -405,7 +405,21 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			// Vector search path: embed query and use cosine similarity
 			const queryVec = await this.embedWithCache(query);
 
-			const scored = this.store.episodes
+			// R5 #28 Part 2 — Episode strict scope (project hard partition).
+			// fact 와 같은 logic — strict mode + cross-project 의도 명시 시만
+			// cross-project episode 회상.
+			const epScopeMode = (context as any)?.scopeMode ?? "soft";
+			const epCrossProject = (context as any)?.crossProject ?? false;
+			const epProj = context.project;
+			const eligibleEpisodes =
+				epScopeMode === "strict" && !epCrossProject
+					? epProj
+						? this.store.episodes.filter(
+								(ep) => ep.encodingContext?.project === epProj,
+							)
+						: this.store.episodes.filter((ep) => !ep.encodingContext?.project)
+					: this.store.episodes;
+			const scored = eligibleEpisodes
 				.map((ep) => {
 					// R3 보존 우선 (Step 6 fix): archived episode 는 default recall hide.
 					// deepRecall=true 시 archived 도 회상 가능 (오래된 기억 explicit 회상).
@@ -749,6 +763,20 @@ export class LocalAdapter implements MemoryAdapter, BackupCapable {
 			if (deepRecall && minConfidence > 0) minConfidence *= 0.5;
 			if (minConfidence > 0) {
 				scored = scored.filter((f) => f.score >= minConfidence);
+			}
+
+			// R5 #28 Part 2 — Intent penalty: query 의 intent category 와 fact
+			// 의 category 가 mismatch 시 score 감소 (×0.7). irrelevant_isolation
+			// 효과 — \"업무 query\" 시 \"개인 fact\" 노출 줄임.
+			const queryIntent = (context as any)?.queryIntent;
+			if (queryIntent) {
+				for (const s of scored) {
+					const factCategory = s.fact.encodingContext?.category;
+					if (factCategory && factCategory !== queryIntent) {
+						s.score *= 0.7;
+					}
+				}
+				scored.sort((a, b) => b.score - a.score);
 			}
 
 			// #27 Step 3 — Cross-encoder reranker (caller-injected, optional).
