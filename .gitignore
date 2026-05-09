@@ -12,7 +12,10 @@ dist/
 
 # benchmark runtime artifacts
 reports/checkpoint-*.json
+reports/checkpoint-*.json.heuristic-*
+reports/checkpoint-*.json.heuristic-baseline
 reports/encode-checkpoint-*.json
+reports/encode-checkpoint-*.json.heuristic-*
 reports/log-*.txt
 reports/memory-comparison-*.json
 reports/naia-*.json
@@ -21,6 +24,23 @@ reports/disputes.json
 reports/dispute*.txt
 reports/runs/
 reports/aihub141-r2-3-*.json
+reports/aihub141-r2-3-*-embedding-reanalysis.md
+reports/phase-b-*.json
+reports/summary-run-*.json
+
+# memory store cache (data 보존, commit X — 보존 우선 directive 정합)
+memory-*-cache-*.json
+memory-*-cache-*.json.heuristic-*
+memory-*-cache-*.json.heuristic-baseline
+memory-*-cache-*.json.hybrid-*
+memory-*-cache-*.json.local-backup
+memory-mem0-raw-*-vec.db
+memory-mem0-raw-*-hist.db
+locomo-memory.json
+
+# session / user-side mirror
+.claude/
+.users/context/agents-rules.md
 
 # misc
 urllib.request
