@@ -970,12 +970,46 @@ export class MemorySystem {
 			// 5. Run adapter-level decay + cleanup
 			const adapterResult = await this.adapter.consolidate();
 
+			// 6. R4 #26 Step 4 — Replay-worthy fact strength boost.
+			//    학계 정합 (anchor §7): Sharp-wave ripples + CLS — 자다가
+			//    *recent + important + recently-recalled* fact 의 strength
+			//    를 강화 (replay). decay 의 반대 동작.
+			//
+			// 기준:
+			//  - createdAt < 14일 이내 (recent)
+			//  - importance >= 0.7 (high)
+			//  - 또는 lastAccessed < 7일 이내 (recent recall)
+			//  - active context topic 매칭 시 추가 boost
+			const sevenDays = 7 * 24 * 60 * 60 * 1000;
+			const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+			let replayBoosted = 0;
+			try {
+				const allFacts = await this.adapter.semantic.getAll();
+				for (const fact of allFacts) {
+					if (fact.status !== "active") continue;
+					const isRecent = now - fact.createdAt < fourteenDays;
+					const isImportant = fact.importance >= 0.7;
+					const recentRecall = now - fact.lastAccessed < sevenDays;
+					if (!(isRecent && isImportant) && !recentRecall) continue;
+					// boost = +5% strength, capped 1.0
+					const boost = this.matchesActiveContextFact(fact) ? 0.1 : 0.05;
+					fact.strength = Math.min(1.0, fact.strength + boost);
+					await this.adapter.semantic.upsert(fact);
+					replayBoosted++;
+				}
+			} catch (e: any) {
+				console.warn(`[MemorySystem] replay boost failed: ${e?.message}`);
+			}
+
 			return {
 				episodesProcessed: readyEpisodes.length,
 				factsCreated,
 				factsUpdated,
 				memoriesPruned: adapterResult.memoriesPruned,
 				associationsUpdated: adapterResult.associationsUpdated,
+				// R4 Step 4 — replay boost count (informational, not part of legacy
+				// ConsolidationResult contract; type-assert to extend).
+				...({ replayBoosted } as any),
 			};
 		} finally {
 			this._isConsolidating = false;
@@ -1285,6 +1319,11 @@ export class MemorySystem {
 				console.warn(`[MemorySystem] spike handler failed: ${e?.message}`);
 			}
 		}
+	}
+
+	/** R4 Step 4 — fact 가 active context 매칭 (replay boost 시 사용). */
+	private matchesActiveContextFact(fact: Fact): boolean {
+		return this.matchesActiveContext(fact);
 	}
 
 	/** R4 Step 3b — fact 가 active context topic / recentFactIds / entity
