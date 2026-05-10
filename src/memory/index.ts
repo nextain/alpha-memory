@@ -970,8 +970,10 @@ export class MemorySystem {
 			// 5. Run adapter-level decay + cleanup
 			const adapterResult = await this.adapter.consolidate();
 
-			// 5b. R4 #26 Step 5a — Temporal-anchor scan (consolidate 마다).
+			// 5b. R4 #26 Step 5a + 5c — Temporal-anchor + Emotion-anniversary
+			//     scan (consolidate 마다).
 			await this.detectTemporalAnchors(now);
+			await this.detectEmotionAnniversaries(now);
 
 			// 6. R4 #26 Step 4 — Replay-worthy fact strength boost.
 			//    학계 정합 (anchor §7): Sharp-wave ripples + CLS — 자다가
@@ -1331,6 +1333,48 @@ export class MemorySystem {
 			} catch (e: any) {
 				console.warn(`[MemorySystem] spike handler failed: ${e?.message}`);
 			}
+		}
+	}
+
+	/** R4 Step 5c — User-emotion-anniversary spike detection.
+	 *  Consolidate cycle 마다 *high importance + 같은 month/day* fact 매칭
+	 *  시 emit. 학계 정합 (anchor §7): emotion-modulated memory (LeDoux 1996,
+	 *  amygdala) + DMN 의 *anniversary effect*.
+	 *
+	 *  temporal-anchor 와 차이:
+	 *  - temporal-anchor: 365 ± 1 day (1년 전 정확)
+	 *  - user-emotion-anniversary: month/day 매칭 (연도 무관, 매년)
+	 */
+	private async detectEmotionAnniversaries(now: number): Promise<void> {
+		try {
+			const today = new Date(now);
+			const todayMonth = today.getMonth();
+			const todayDay = today.getDate();
+			const allFacts = await this.adapter.semantic.getAll();
+			for (const fact of allFacts) {
+				if (fact.status !== "active") continue;
+				if (fact.importance < 0.8) continue; // high importance only
+				const factDate = new Date(fact.createdAt);
+				if (
+					factDate.getMonth() === todayMonth &&
+					factDate.getDate() === todayDay &&
+					factDate.getFullYear() < today.getFullYear() // 작년 이상
+				) {
+					await this.emitSpike({
+						factId: fact.id,
+						content: fact.content,
+						reason: "user-emotion-anniversary",
+						confidence: fact.importance,
+						relatedFactIds: [],
+						emittedAt: now,
+						scope: fact.encodingContext?.project
+							? { project: fact.encodingContext.project }
+							: undefined,
+					});
+				}
+			}
+		} catch (e: any) {
+			console.warn(`[MemorySystem] anniversary scan failed: ${e?.message}`);
 		}
 	}
 

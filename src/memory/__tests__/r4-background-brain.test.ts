@@ -293,6 +293,50 @@ describe("R4 Step 5a — temporal-anchor trigger", () => {
 		await memory.close();
 	});
 
+	it("user-emotion-anniversary — 같은 month/day + 작년 이상 emit", async () => {
+		const tmpPath = `/tmp/r4-anniv-${Date.now()}.json`;
+		const adapter = new LocalAdapter({ storePath: tmpPath });
+		const now = Date.now();
+		const today = new Date(now);
+		// 작년 같은 month/day fact
+		const lastYearSameDate = new Date(
+			today.getFullYear() - 1,
+			today.getMonth(),
+			today.getDate(),
+			today.getHours(),
+		);
+		const fact: Fact = {
+			id: "f1-anniv",
+			content: "결혼 기념일",
+			entities: [],
+			topics: [],
+			createdAt: lastYearSameDate.getTime(),
+			updatedAt: lastYearSameDate.getTime(),
+			importance: 0.9,
+			recallCount: 0,
+			lastAccessed: now,
+			strength: 0.9,
+			status: "active",
+			sourceEpisodes: [],
+		};
+		await adapter.semantic.upsert(fact);
+
+		const memory = new MemorySystem({ adapter });
+		const received: SpikeEvent[] = [];
+		memory.on("spike", async (e) => {
+			received.push(e);
+		});
+
+		await memory.consolidateNow(true);
+
+		const anniv = received.filter(
+			(s) => s.reason === "user-emotion-anniversary",
+		);
+		expect(anniv.length).toBeGreaterThanOrEqual(1);
+		expect(anniv[0].factId).toBe("f1-anniv");
+		await memory.close();
+	});
+
 	it("importance < 0.7 fact 는 anchor X (skip)", async () => {
 		const tmpPath = `/tmp/r4-anchor-skip-${Date.now()}.json`;
 		const adapter = new LocalAdapter({ storePath: tmpPath });
