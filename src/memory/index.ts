@@ -688,6 +688,41 @@ export class MemorySystem {
 		}
 	}
 
+	/** R4 Step 3d — repeated-fail 매칭 fact 자동 emit.
+	 *  consolidate 시 새 fact 가 *repeated-fail query* 와 매칭되면 자동
+	 *  emit reason='repeated-fail'. polling-free pattern (다른 trigger 와
+	 *  일관성). */
+	private async checkRepeatedFailResolved(
+		newFact: { id: string; content: string; encodingContext?: any },
+		now: number,
+	): Promise<void> {
+		const repeated = this.getRepeatedFailQueries(3, 3);
+		if (repeated.length === 0) return;
+		const factLower = newFact.content.toLowerCase();
+		for (const rq of repeated) {
+			const tokens = rq.split(/[\s,.\?!]+/).filter((t) => t.length >= 2);
+			const hit = tokens.some((t) => factLower.includes(t));
+			if (hit) {
+				await this.emitSpike({
+					factId: newFact.id,
+					content: newFact.content,
+					reason: "repeated-fail",
+					confidence: 0.8, // 반복 + 매칭 = 신뢰성 ↑
+					relatedFactIds: [],
+					emittedAt: now,
+					scope: newFact.encodingContext?.project
+						? { project: newFact.encodingContext.project }
+						: undefined,
+				});
+				// repeated query 의 history entries 제거 (중복 emit 방지)
+				this.recallHistory = this.recallHistory.filter(
+					(h) => h.query.toLowerCase().trim() !== rq,
+				);
+				break;
+			}
+		}
+	}
+
 	/** R4 Step 3d — repeated-fail detection.
 	 *  같은 query 가 *3 회 이상* recall history 에 있고 *모두 result < 3*
 	 *  → 사용자가 같은 거 반복 질문 + 답 부족. naia-agent 가 *진짜 답 모른다고
@@ -1025,6 +1060,8 @@ export class MemorySystem {
 						}
 						// R4 Step 3c — recall-failure-resolved 검사.
 						await this.checkRecallFailureResolved(newFact, now);
+						// R4 Step 3d — repeated-fail 검사 (자동 emit).
+						await this.checkRepeatedFailResolved(newFact, now);
 					}
 
 					// Strengthen associations between extracted entities (cycle-level dedup)

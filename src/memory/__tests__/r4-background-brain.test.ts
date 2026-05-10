@@ -250,6 +250,44 @@ describe("R4 Step 3c — recall-failure-resolved", () => {
 		await memory.close();
 	});
 
+	it("repeated-fail → consolidate 새 fact 매칭 → emit (자동)", async () => {
+		const tmpPath = `/tmp/r4-repemit-${Date.now()}.json`;
+		const adapter = new LocalAdapter({ storePath: tmpPath });
+		const memory = new MemorySystem({ adapter });
+		const m = memory as any;
+		// 같은 query 3회 + 모두 result < 3
+		for (let i = 0; i < 3; i++) {
+			m.recallHistory.push({
+				query: "내 직업",
+				resultCount: 1,
+				ts: Date.now() - i * 1000,
+			});
+		}
+		const received: SpikeEvent[] = [];
+		memory.on("spike", async (e) => {
+			received.push(e);
+		});
+		const fact: Fact = {
+			id: "f-rep",
+			content: "사용자 직업: 디자이너",
+			entities: [],
+			topics: [],
+			createdAt: Date.now(),
+			updatedAt: Date.now(),
+			importance: 0.8,
+			recallCount: 0,
+			lastAccessed: Date.now(),
+			strength: 0.8,
+			status: "active",
+			sourceEpisodes: [],
+		};
+		await m.checkRepeatedFailResolved(fact, Date.now());
+
+		const repeatedSpikes = received.filter((s) => s.reason === "repeated-fail");
+		expect(repeatedSpikes.length).toBeGreaterThanOrEqual(1);
+		await memory.close();
+	});
+
 	it("recall fail (result=0) → consolidate 새 fact 매칭 → emit", async () => {
 		const tmpPath = `/tmp/r4-failresolve-${Date.now()}.json`;
 		const adapter = new LocalAdapter({ storePath: tmpPath });
