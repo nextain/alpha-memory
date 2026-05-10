@@ -390,6 +390,12 @@ export class MemorySystem {
 	/** R4 #26 — Active context (naia-agent → naia-memory).
 	 *  spike rule 평가 시 사용. cross-project leak 방지 (anchor §A10). */
 	private activeContext: import("./spike.js").ActiveContext | null = null;
+	/** R4 #26 Step 3c — Recent recall query history (ring buffer, max 100).
+	 *  *0 result* query 가 *recall failure*. 새 fact 추출 시 history 매칭 시
+	 *  emit reason='recall-failure-resolved'. naia-agent 통합 후 daily 사용
+	 *  시 사용자가 자주 묻던 fact 가 새로 알려진 시점 신호. */
+	private recallHistory: Array<{ query: string; resultCount: number; ts: number }> = [];
+	private static readonly RECALL_HISTORY_MAX = 100;
 
 	/**
 	 * Rolling summaries keyed by sessionId. Incrementally built by
@@ -629,7 +635,57 @@ export class MemorySystem {
 			this.adapter.procedural.getReflections(query, topK),
 		]);
 
+		// R4 Step 3c — recall history ring buffer.
+		this.recallHistory.push({
+			query,
+			resultCount: facts.length,
+			ts: Date.now(),
+		});
+		if (this.recallHistory.length > MemorySystem.RECALL_HISTORY_MAX) {
+			this.recallHistory.shift();
+		}
+
 		return { episodes, facts, reflections };
+	}
+
+	/** R4 Step 3c — recall-failure-resolved detection.
+	 *  새 fact 가 추출됐는데, *최근 fail recall* (resultCount=0) 의 query
+	 *  와 매칭 시 emit. naia-agent 통합 후 \"사용자가 자주 묻던 거 이제 알아\"
+	 *  signal. */
+	private async checkRecallFailureResolved(
+		newFact: { id: string; content: string; encodingContext?: any },
+		now: number,
+	): Promise<void> {
+		// 최근 fail history 조회
+		const failedQueries = this.recallHistory.filter((h) => h.resultCount === 0);
+		if (failedQueries.length === 0) return;
+		// 새 fact content 와 substring 매칭
+		const factLower = newFact.content.toLowerCase();
+		for (const fail of failedQueries) {
+			const queryLower = fail.query.toLowerCase();
+			// query 의 핵심 token (length ≥ 2) 이 새 fact 에 포함?
+			const tokens = queryLower
+				.split(/[\s,.\?!]+/)
+				.filter((t) => t.length >= 2);
+			const hit = tokens.some((t) => factLower.includes(t));
+			if (hit) {
+				await this.emitSpike({
+					factId: newFact.id,
+					content: newFact.content,
+					reason: "recall-failure-resolved",
+					confidence: 0.7,
+					relatedFactIds: [],
+					emittedAt: now,
+					scope: newFact.encodingContext?.project
+						? { project: newFact.encodingContext.project }
+						: undefined,
+				});
+				// fail history 에서 resolved query 제거 (중복 emit 방지)
+				const idx = this.recallHistory.indexOf(fail);
+				if (idx >= 0) this.recallHistory.splice(idx, 1);
+				break;
+			}
+		}
 	}
 
 	/**
@@ -946,6 +1002,8 @@ export class MemorySystem {
 									: undefined,
 							});
 						}
+						// R4 Step 3c — recall-failure-resolved 검사.
+						await this.checkRecallFailureResolved(newFact, now);
 					}
 
 					// Strengthen associations between extracted entities (cycle-level dedup)
@@ -1442,6 +1500,7 @@ export class MemorySystem {
 		this.stopConsolidation();
 		this.spikeHandlers = [];
 		this.activeContext = null;
+		this.recallHistory = [];
 		await this.adapter.close();
 	}
 }
