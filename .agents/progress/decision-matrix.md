@@ -64,3 +64,11 @@
 | **A08** | **Background brain + Active brain 책임 분리** — naia-memory = consolidation + replay + spike emit + priority adjust. naia-agent = subscribe + source monitor + pragmatic gate. CLS / Sharp-wave ripples / Source monitoring 학계 정합. | 2026-05-08 (사용자 directive) |
 | **A09** | **Retrieval ranking 강화 우선** — preservation-first 의 짝. mem0 "97.8% junk" 회피 위해 HyDE / cross-encoder / threshold 필수. (#27) | 2026-05-08 (cross-review) |
 | **A10** | **Privacy 5 차원 분리** — confidence + project scope + irrelevant = naia-memory; PII redaction + source/pragmatic = naia-agent. cross-project leak 의 진짜 위험은 LLM 발화. | 2026-05-08 (사용자 통찰) |
+
+## §A 추가 — 2026-05-10 (Phase B-γ + #27 + #50 측정 종결)
+
+| ID | 항목 | 일자 |
+|----|------|---|
+| **A09 (revised)** | **Retrieval ranking 강화 *priority 재평가*** — chain dominate 가설 검증 (#27 Step 1 sweep + #50 5 conv). 모든 ranking axis (threshold / HyDE / MMR / cross-encoder) noise band ±2pp. naia 의 base retrieval (cosine + BM25 + RRF + KG + R2.5 v2 chain) 이 이미 attribute 별 1개로 압축한 set 위에서 작동 → 후단 ranking 강화 redundant. mem0 "97.8% junk" 회피 가설은 naia 와 무관 (76.8% cosine 강함). #27 후속 step 우선순위 ↓, R4 Background brain + naia-agent 통합 우선. | 2026-05-10 (cross-review 2 reviewer 일치) |
+| **A11** | **합성 측정의 한계 인정** — Phase A (crowdworker prefab) + Phase B-α (의도 contradiction 37.5% 밀도) 모두 synthetic. *진짜 daily 가치* 측정은 naia-os 통합 후만 가능. mock agent loop / synthetic 위 R4 시뮬레이션 = yak shaving (cross-review 거부). | 2026-05-10 |
+| **A12** | **naia 의 *novel first* 영역** — (1) Background brain spike timing-precision 측정 framework (외부 부재 — Letta sleep-time 은 math task 만), (2) 한국어 일반 daily-life multi-session memory ground (CareCall 의료 외 부재). naia-agent 통합 후 *first 측정* 이 진짜 차별화. | 2026-05-10 (cross-review 외부 비교) |
