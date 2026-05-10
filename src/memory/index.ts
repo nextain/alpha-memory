@@ -688,6 +688,27 @@ export class MemorySystem {
 		}
 	}
 
+	/** R4 Step 3d — repeated-fail detection.
+	 *  같은 query 가 *3 회 이상* recall history 에 있고 *모두 result < 3*
+	 *  → 사용자가 같은 거 반복 질문 + 답 부족. naia-agent 가 *진짜 답 모른다고
+	 *  명시* 결정 또는 사용자 명시 알림 path. naia-agent#26 의 source-monitor
+	 *  가 활용. */
+	getRepeatedFailQueries(minRepeats = 3, maxResultThreshold = 3): string[] {
+		const queryCounts = new Map<string, { count: number; allLow: boolean }>();
+		for (const h of this.recallHistory) {
+			const key = h.query.toLowerCase().trim();
+			const existing = queryCounts.get(key) ?? { count: 0, allLow: true };
+			existing.count++;
+			if (h.resultCount >= maxResultThreshold) existing.allLow = false;
+			queryCounts.set(key, existing);
+		}
+		const repeated: string[] = [];
+		for (const [q, info] of queryCounts) {
+			if (info.count >= minRepeats && info.allLow) repeated.push(q);
+		}
+		return repeated;
+	}
+
 	/**
 	 * A/B Test enabled search method for memory algorithms.
 	 * Uses the selected variant of the memory algorithm to perform the search.

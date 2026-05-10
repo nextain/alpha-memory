@@ -223,6 +223,73 @@ describe("R4 Step 3b — high-importance-relevant trigger", () => {
 	});
 });
 
+describe("R4 Step 3c — recall-failure-resolved", () => {
+	it("getRepeatedFailQueries — 3회 반복 + 모두 low result 검출", async () => {
+		const tmpPath = `/tmp/r4-repeated-${Date.now()}.json`;
+		const memory = new MemorySystem({
+			adapter: new LocalAdapter({ storePath: tmpPath }),
+		});
+		// recallHistory 에 직접 push (private — 접근 위해 cast)
+		const m = memory as any;
+		for (let i = 0; i < 3; i++) {
+			m.recallHistory.push({
+				query: "내 직업이 뭐였지",
+				resultCount: 0,
+				ts: Date.now() - i * 1000,
+			});
+		}
+		// 다른 query 1회 + result 충분 — repeated 가 아님
+		m.recallHistory.push({
+			query: "오늘 날씨",
+			resultCount: 5,
+			ts: Date.now(),
+		});
+		const repeated = memory.getRepeatedFailQueries(3, 3);
+		expect(repeated).toContain("내 직업이 뭐였지");
+		expect(repeated).not.toContain("오늘 날씨");
+		await memory.close();
+	});
+
+	it("recall fail (result=0) → consolidate 새 fact 매칭 → emit", async () => {
+		const tmpPath = `/tmp/r4-failresolve-${Date.now()}.json`;
+		const adapter = new LocalAdapter({ storePath: tmpPath });
+		const memory = new MemorySystem({ adapter });
+		const m = memory as any;
+		// fail recall history 직접 inject
+		m.recallHistory.push({
+			query: "엔지니어",
+			resultCount: 0,
+			ts: Date.now(),
+		});
+		const received: SpikeEvent[] = [];
+		memory.on("spike", async (e) => {
+			received.push(e);
+		});
+		// 매칭 fact 직접 추가 + consolidate 흐름 모방
+		const fact: Fact = {
+			id: "f-resolve",
+			content: "사용자 직업: 엔지니어",
+			entities: [],
+			topics: [],
+			createdAt: Date.now(),
+			updatedAt: Date.now(),
+			importance: 0.8,
+			recallCount: 0,
+			lastAccessed: Date.now(),
+			strength: 0.8,
+			status: "active",
+			sourceEpisodes: [],
+		};
+		await m.checkRecallFailureResolved(fact, Date.now());
+
+		const failResolved = received.filter(
+			(s) => s.reason === "recall-failure-resolved",
+		);
+		expect(failResolved.length).toBeGreaterThanOrEqual(1);
+		await memory.close();
+	});
+});
+
 describe("R4 Step 4 — replay boost", () => {
 	it("recent + important fact 의 strength 가 boost 됨 (consolidate)", async () => {
 		const tmpPath = `/tmp/r4-replay-${Date.now()}.json`;
