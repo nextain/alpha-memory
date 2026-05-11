@@ -24,6 +24,16 @@ import {
 	HeuristicContradictionFilter,
 	selectFilter,
 } from "./contradiction-filter.js";
+
+// Re-export contradiction filter surface so consumers (naia-agent / tests) can
+// import HeuristicContradictionFilter from the package main entry without
+// resorting to deep paths (naia-os#272 reconcile — was hardcoded to absolute
+// Windows path).
+export {
+	HeuristicContradictionFilter,
+	selectFilter,
+	type ContradictionFilterProvider,
+} from "./contradiction-filter.js";
 import { findContradictions, findContradictionsWith } from "./reconsolidation.js";
 import type {
 	BackupCapable,
