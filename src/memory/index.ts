@@ -16,6 +16,7 @@
 import crypto, { randomUUID } from "node:crypto";
 import { LocalAdapter } from "./adapters/local.js";
 import { QdrantAdapter } from "./adapters/qdrant.js";
+import { SqliteAdapter } from "./adapters/sqlite.js";
 import type { EmbeddingProvider } from "./embeddings.js";
 import { scoreImportance } from "./importance.js";
 import { allocateBudget } from "./context-budget.js";
@@ -71,6 +72,7 @@ export type {
 } from "./spike.js";
 export { LocalAdapter } from "./adapters/local.js";
 export { QdrantAdapter } from "./adapters/qdrant.js";
+export { SqliteAdapter } from "./adapters/sqlite.js";
 export type {
 	BackupCapable,
 	MemoryAdapter,
@@ -99,13 +101,13 @@ export type FactExtractor = (episodes: Episode[]) => Promise<ExtractedFact[]>;
 
 /** A fact extracted from episodes (before insertion) */
 export interface ExtractedFact {
-	content: string;
-	entities: string[];
-	topics: string[];
-	importance: number;
-	sourceEpisodeIds: string[];
+        content: string;
+        entities: string[];
+        topics: string[];
+        importance: number;
+        maxEmotion: number;
+        sourceEpisodeIds: string[];
 }
-
 export interface MemorySystemOptions {
 	/** Pre-built adapter. If omitted and qdrantOptions is not set, defaults to LocalAdapter. */
 	adapter?: MemoryAdapter;
@@ -190,13 +192,13 @@ async function heuristicFactExtractor(
 		_heuristicWarnOnce = true;
 	}
 	return episodes.map((ep) => ({
-		content: ep.content,
-		entities: [],
-		topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
-		importance: ep.importance.utility,
-		sourceEpisodeIds: [ep.id],
-	}));
-}
+	        content: ep.content,
+	        entities: [],
+	        topics: ep.encodingContext.project ? [ep.encodingContext.project] : [],
+	        importance: ep.importance.utility,
+	        maxEmotion: ep.importance.emotion,
+	        sourceEpisodeIds: [ep.id],
+	}));}
 
 // Phase D.1 — real consolidation primitives.
 // Authored per outline at `.agents/progress/phase-d-1-outline.md`.
@@ -339,16 +341,16 @@ function mergeRelatedFacts(
 				factsWithinTemporalWindow(acc, other, episodes)
 			) {
 				acc = {
-					content: acc.content,
-					entities: unionDedup(acc.entities, other.entities),
-					topics: unionDedup(acc.topics, other.topics),
-					importance: Math.max(acc.importance, other.importance),
-					sourceEpisodeIds: unionDedup(
-						acc.sourceEpisodeIds,
-						other.sourceEpisodeIds,
-					),
-				};
-				merged[j] = true;
+				        content: acc.content,
+				        entities: unionDedup(acc.entities, other.entities),
+				        topics: unionDedup(acc.topics, other.topics),
+				        importance: Math.max(acc.importance, other.importance),
+				        maxEmotion: Math.max(acc.maxEmotion, other.maxEmotion),
+				        sourceEpisodeIds: unionDedup(
+				                acc.sourceEpisodeIds,
+				                other.sourceEpisodeIds,
+				        ),
+				};				merged[j] = true;
 			}
 		}
 		out.push(acc);
@@ -634,15 +636,15 @@ export class MemorySystem {
 		const [episodes, facts, reflections] = await Promise.all([
 			this.adapter.episode.recall(query, { ...context, topK }),
 			this.adapter.semantic.search(query, topK, context.deepRecall, {
-				project: context.project,
-				atTimestamp: context.atTimestamp,
-				mode: context.mode,
-				minConfidence: context.minConfidence,
-				queryHint: context.queryHint,
-				scopeMode: context.scopeMode,
-				crossProject: context.crossProject,
-			}),
-			this.adapter.procedural.getReflections(query, topK),
+			        project: context.project,
+			        atTimestamp: context.atTimestamp,
+			        mode: context.mode,
+			        minConfidence: context.minConfidence,
+			        queryHint: context.queryHint,
+			        scopeMode: context.scopeMode,
+			        crossProject: context.crossProject,
+			        epochAnchor: context.epochAnchor,
+			}),			this.adapter.procedural.getReflections(query, topK),
 		]);
 
 		// R4 Step 3c — recall history ring buffer.
@@ -935,24 +937,28 @@ export class MemorySystem {
 					if (duplicate) {
 						// Near-duplicate found — update metadata but don't create new entry
 						const newImportance = Math.max(
-							duplicate.importance,
-							ef.importance,
-							0.7,
+						        duplicate.importance,
+						        ef.importance,
+						        0.7,
+						);
+						const newMaxEmotion = Math.max(
+						        duplicate.maxEmotion ?? 0,
+						        ef.maxEmotion,
 						);
 						await this.adapter.semantic.upsert({
-							...duplicate,
-							updatedAt: now,
-							lastAccessed: now, // Strengthening on reactivation
-							importance: newImportance,
-							strength: newImportance,
-							sourceEpisodes: [
-								...new Set([
-									...duplicate.sourceEpisodes,
-									...ef.sourceEpisodeIds,
-								]),
-							],
-						});
-						factsUpdated++;
+						        ...duplicate,
+						        updatedAt: now,
+						        lastAccessed: now, // Strengthening on reactivation
+						        importance: newImportance,
+						        maxEmotion: newMaxEmotion,
+						        strength: newImportance,
+						        sourceEpisodes: [
+						                ...new Set([
+						                   ...duplicate.sourceEpisodes,
+						                   ...ef.sourceEpisodeIds,
+						                ]),
+						        ],
+						});						factsUpdated++;
 						continue;
 					}
 
@@ -969,40 +975,44 @@ export class MemorySystem {
 						for (const { fact, result } of contradictions) {
 							if (result.action === "update" && result.updatedContent) {
 								const newImportance = Math.max(
-									fact.importance,
-									ef.importance,
-									0.7,
+								   fact.importance,
+								   ef.importance,
+								   0.7,
+								);
+								const newMaxEmotion = Math.max(
+								   fact.maxEmotion ?? 0,
+								   ef.maxEmotion,
 								);
 								const successorId = `${fact.id}-v${Date.now()}`;
 								await this.adapter.semantic.upsert({
-									...fact,
-									status: "superseded",
-									updatedAt: now,
-									validTo: now,
-									successorId,
+								   ...fact,
+								   status: "superseded",
+								   updatedAt: now,
+								   validTo: now,
+								   successorId,
 								});
 								await this.adapter.semantic.upsert({
-									...fact,
-									id: successorId,
-									content: result.updatedContent,
-									status: "active",
-									createdAt: now,
-									updatedAt: now,
-									lastAccessed: now,
-									importance: newImportance,
-									strength: newImportance,
-									sourceEpisodes: [
-										...new Set([
-											...fact.sourceEpisodes,
-											...ef.sourceEpisodeIds,
-										]),
-									],
-									encodingContext: fact.encodingContext ?? srcEp?.encodingContext,
-									supersedes: fact.id,
-									validFrom: now,
-									validTo: null,
-								});
-								// R4 #26 Step 3a — supersede 시점 spike emit
+								   ...fact,
+								   id: successorId,
+								   content: result.updatedContent,
+								   status: "active",
+								   createdAt: now,
+								   updatedAt: now,
+								   lastAccessed: now,
+								   importance: newImportance,
+								   maxEmotion: newMaxEmotion,
+								   strength: newImportance,
+								   sourceEpisodes: [
+								   ...new Set([
+								   ...fact.sourceEpisodes,
+								   ...ef.sourceEpisodeIds,
+								   ]),
+								   ],
+								   encodingContext: fact.encodingContext ?? srcEp?.encodingContext,
+								   supersedes: fact.id,
+								   validFrom: now,
+								   validTo: null,
+								});								// R4 #26 Step 3a — supersede 시점 spike emit
 								// (consolidate path).
 								await this.emitSpike({
 									factId: successorId,
@@ -1032,21 +1042,21 @@ export class MemorySystem {
 
 						const newImportance = Math.max(ef.importance, 0.7);
 						const newFact: Fact = {
-							id: deterministicId,
-							content: ef.content,
-							entities: ef.entities,
-							topics: ef.topics,
-							createdAt: now,
-							updatedAt: now,
-							importance: newImportance,
-							recallCount: 0,
-							lastAccessed: now,
-							strength: newImportance,
-							status: "active",
-							sourceEpisodes: ef.sourceEpisodeIds,
-							encodingContext: srcEp?.encodingContext,
-						};
-						await this.adapter.semantic.upsert(newFact);
+						        id: deterministicId,
+						        content: ef.content,
+						        entities: ef.entities,
+						        topics: ef.topics,
+						        createdAt: now,
+						        updatedAt: now,
+						        importance: newImportance,
+						        maxEmotion: ef.maxEmotion,
+						        recallCount: 0,
+						        lastAccessed: now,
+						        strength: newImportance,
+						        status: "active",
+						        sourceEpisodes: ef.sourceEpisodeIds,
+						        encodingContext: srcEp?.encodingContext,
+						};						await this.adapter.semantic.upsert(newFact);
 						factsCreated++;
 						// R4 #26 Step 3b — high-importance + active context relevant
 						// 시점 spike emit. naia-agent 가 active context push 했고,
@@ -1096,12 +1106,11 @@ export class MemorySystem {
 			// 5. Run adapter-level decay + cleanup
 			const adapterResult = await this.adapter.consolidate();
 
-			// 5b. R4 #26 Step 5a + 5c — Temporal-anchor + Emotion-anniversary
-			//     scan (consolidate 마다).
-			await this.detectTemporalAnchors(now);
-			await this.detectEmotionAnniversaries(now);
+			// 6. R4 #220 Step 3 — Semantic Consolidation (Insight Distillation)
+			//    Distill clusters of facts into high-level insights.
+			const insightsCreated = await this.distillInsights(now);
 
-			// 6. R4 #26 Step 4 — Replay-worthy fact strength boost.
+			// 7. R4 #26 Step 4 — Replay-worthy fact strength boost.
 			//    학계 정합 (anchor §7): Sharp-wave ripples + CLS — 자다가
 			//    *recent + important + recently-recalled* fact 의 strength
 			//    를 강화 (replay). decay 의 반대 동작.
@@ -1115,43 +1124,130 @@ export class MemorySystem {
 			const fourteenDays = 14 * 24 * 60 * 60 * 1000;
 			let replayBoosted = 0;
 			try {
-				const allFacts = await this.adapter.semantic.getAll();
-				for (const fact of allFacts) {
-					if (fact.status !== "active") continue;
-					const isRecent = now - fact.createdAt < fourteenDays;
-					const isImportant = fact.importance >= 0.7;
-					const recentRecall = now - fact.lastAccessed < sevenDays;
-					if (!(isRecent && isImportant) && !recentRecall) continue;
-					// boost = +5% strength, capped 1.0
-					const boost = this.matchesActiveContextFact(fact) ? 0.1 : 0.05;
-					fact.strength = Math.min(1.0, fact.strength + boost);
-					await this.adapter.semantic.upsert(fact);
-					replayBoosted++;
-				}
+			        const allFacts = await this.adapter.semantic.getAll();
+			        for (const fact of allFacts) {
+			                if (fact.status !== "active") continue;
+			                const isRecent = now - fact.createdAt < fourteenDays;
+			                const isImportant = fact.importance >= 0.7;
+			                const recentRecall = now - fact.lastAccessed < sevenDays;
+			                if (!(isRecent && isImportant) && !recentRecall) continue;
+			                // boost = +5% strength, capped 1.0
+			                const boost = this.matchesActiveContextFact(fact) ? 0.1 : 0.05;
+			                fact.strength = Math.min(1.0, fact.strength + boost);
+			                await this.adapter.semantic.upsert(fact);
+			                replayBoosted++;
+			        }
 			} catch (e: any) {
-				console.warn(`[MemorySystem] replay boost failed: ${e?.message}`);
+			        console.warn(`[MemorySystem] replay boost failed: ${e?.message}`);
 			}
 			// 측정 framework — replay 갯수 기록.
 			try {
-				const { recordReplayBoost } = await import("./usage-tracker.js");
-				recordReplayBoost(replayBoosted);
+			        const { recordReplayBoost } = await import("./usage-tracker.js");
+			        recordReplayBoost(replayBoosted);
 			} catch {}
 
 			return {
-				episodesProcessed: readyEpisodes.length,
-				factsCreated,
-				factsUpdated,
-				memoriesPruned: adapterResult.memoriesPruned,
-				associationsUpdated: adapterResult.associationsUpdated,
-				// R4 Step 4 — replay boost count (informational, not part of legacy
-				// ConsolidationResult contract; type-assert to extend).
-				...({ replayBoosted } as any),
+			        episodesProcessed: readyEpisodes.length,
+			        factsCreated,
+			        factsUpdated,
+			        insightsCreated,
+			        memoriesPruned: adapterResult.memoriesPruned,
+			        associationsUpdated: adapterResult.associationsUpdated,
+			        // R4 Step 4 — replay boost count (informational, not part of legacy
+			        // ConsolidationResult contract; type-assert to extend).
+			        ...({ replayBoosted } as any),
 			};
-		} finally {
+			} finally {
 			this._isConsolidating = false;
-		}
-	}
+			}
+			}
 
+			/**
+			* R4 #220 Step 3 — Semantic Consolidation (The Power of Forgetting).
+			* 
+			* Distills clusters of related facts into high-level semantic insights.
+			* Prunes/archives the raw facts that have been fully consolidated to mirror 
+			* human memory abstraction.
+			*/
+			private async distillInsights(now: number): Promise<number> {
+			let insightsCreated = 0;
+			try {
+			// Get all active facts that are not already insights
+			const allFacts = await this.adapter.semantic.getAll();
+			const activeFacts = allFacts.filter(
+			        (f) =>
+			                f.status === "active" &&
+			                !(f.topics?.includes("system:insight") ?? false),
+			);
+
+			// Use KnowledgeGraph hubs to identify candidates for distillation
+			// This mirrors how the brain prioritizes highly-connected concepts for abstraction.
+			const hubs =
+			        "getStore" in this.adapter
+			                ? (this.adapter as any).getStore().knowledgeGraph?.nodes ?? {}
+			                : {};
+
+			const hubNames = Object.keys(hubs).sort(
+			        (a, b) => (hubs[b].frequency ?? 0) - (hubs[a].frequency ?? 0),
+			);
+
+			for (const hubName of hubNames.slice(0, 10)) {
+			        const related = activeFacts.filter((f) =>
+			                f.entities.some((e) => e.toLowerCase() === hubName.toLowerCase()),
+			        );
+
+			        // Threshold for distillation: 3+ related facts about a hub entity
+			        if (related.length >= 3) {
+			                // R4 #220 — Genuine insight distillation.
+			                // Summarize the core themes of the related facts.
+			                const themes = [...new Set(related.flatMap(f => f.topics ?? []))].join(", ");
+			                const distilledContent = `Consolidated Insight on '${hubName}': Observed consistent patterns regarding ${themes}. Key observations include: ${related.map(f => f.content).join("; ")}`;
+
+			                const hashHex = crypto
+			                        .createHash("sha256")
+			                        .update("insight:" + hubName + related.map((f) => f.id).sort().join(","))
+			                        .digest("hex")
+			                        .slice(0, 32);			                const deterministicId = `insight-${hashHex.slice(0, 8)}-${hashHex.slice(8, 12)}-${hashHex.slice(12, 16)}-${hashHex.slice(16, 20)}-${hashHex.slice(20, 32)}`;
+
+			                const insightFact: Fact = {
+			                        id: deterministicId,
+			                        content: distilledContent,
+			                        entities: [hubName],
+			                        topics: [
+			                                "system:insight",
+			                                ...new Set(related.flatMap((f) => f.topics ?? [])),
+			                        ],
+			                        createdAt: now,
+			                        updatedAt: now,
+			                        importance: 0.95, // Insights are highly important
+			                        maxEmotion: Math.max(...related.map((f) => f.maxEmotion ?? 0), 0.5),
+			                        recallCount: 0,
+			                        lastAccessed: now,
+			                        strength: 1.0, // Fresh insights start at full strength
+			                        status: "active",
+			                        sourceEpisodes: [
+			                                ...new Set(related.flatMap((f) => f.sourceEpisodes)),
+			                        ],
+			                        encodingContext: { category: "insight" },
+			                };
+
+			                await this.adapter.semantic.upsert(insightFact);
+			                insightsCreated++;
+
+			                // "The Power of Forgetting": Archive source facts to prioritize the insight.
+			                // This reduces noise in standard retrieval.
+			                for (const f of related) {
+			                        f.status = "archived";
+			                        f.strength *= 0.5; // Weaken for Ebbinghaus decay sweep
+			                        await this.adapter.semantic.upsert(f);
+			                }
+			        }
+			}
+			} catch (e: any) {
+			console.warn(`[MemorySystem] insight distillation failed: ${e?.message}`);
+			}
+			return insightsCreated;
+			}
 	// ─── Backup ───────────────────────────────────────────────────────────
 
 	/** Returns true if the current adapter supports encrypted backup. */
@@ -1562,10 +1658,24 @@ export class MemorySystem {
 		return false;
 	}
 
+	/** R4 #220 — Register or update a life epoch. */
+	async upsertEpoch(epoch: import("./types.js").Epoch): Promise<void> {
+	        if ("upsertEpoch" in this.adapter) {
+	                await (this.adapter as any).upsertEpoch(epoch);
+	        }
+	}
+
+	/** R4 #220 — Get all defined life epochs. */
+	async getEpochs(): Promise<import("./types.js").Epoch[]> {
+	        if ("getEpochs" in this.adapter) {
+	                return (this.adapter as any).getEpochs();
+	        }
+	        return [];
+	}
+
 	// ─── Lifecycle ────────────────────────────────────────────────────────
 
-	async close(): Promise<void> {
-		this.stopConsolidation();
+	async close(): Promise<void> {		this.stopConsolidation();
 		this.spikeHandlers = [];
 		this.activeContext = null;
 		this.recallHistory = [];
