@@ -58,14 +58,17 @@ const memory = new MemorySystem({
 
 | Adapter | 용도 | 의존 |
 |---|---|---|
-| **`LocalAdapter`** | JSON store + cosine + BM25 + KG. 권장 default | embedding provider |
+| **`SqliteAdapter`** | **권장 Default**. SQLite + R-Tree + FTS5 + vec0. 대규모(1M+) 확장성 | better-sqlite3, sqlite-vec |
+| `LocalAdapter` | JSON store + cosine + BM25 + KG. 소규모/개발용 | embedding provider |
 | `Mem0Adapter` | mem0 OSS backend (vector store + LLM dedup). \"stack on top\" 패턴 | mem0ai/oss + embedding/llm config |
 | `QdrantAdapter` | Qdrant vector DB | qdrant client |
 
 ```ts
-new LocalAdapter({
-  storePath: "/path/to/store.json",  // string (필수)
-  embeddingProvider: ...,              // EmbeddingProvider (선택, 없으면 keyword-only)
+import { SqliteAdapter } from "@nextain/naia-memory";
+
+new SqliteAdapter({
+  dbPath: "~/.naia/memory/naia-memory.db",
+  embeddingProvider: ..., // EmbeddingProvider (필수 권장)
 });
 ```
 
