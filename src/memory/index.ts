@@ -1183,10 +1183,11 @@ export class MemorySystem {
 			// Use KnowledgeGraph hubs to identify candidates for distillation
 			// This mirrors how the brain prioritizes highly-connected concepts for abstraction.
 			const hubs =
-			        "getStore" in this.adapter
-			                ? (this.adapter as any).getStore().knowledgeGraph?.nodes ?? {}
-			                : {};
-
+			        "getHubs" in this.adapter
+			                ? await (this.adapter as any).getHubs()
+			                : "getStore" in this.adapter
+			                        ? (this.adapter as any).getStore().knowledgeGraph?.nodes ?? {}
+			                        : {};
 			const hubNames = Object.keys(hubs).sort(
 			        (a, b) => (hubs[b].frequency ?? 0) - (hubs[a].frequency ?? 0),
 			);
