@@ -21,6 +21,10 @@
 > - `reports/aihub141-r2-3-...-embedding-reanalysis.md` — semantic cosine archive
 > - issue #23 — Phase A 결과 + 외부 벤치 비교 archive
 >
+> > **자가 개선 철학 (Self-Improvement Philosophy)**:
+> - **내부적 엄격함 우선**: SOTA 집착보다 스스로의 기준에 정직한 발전을 지향한다.
+> - **적대적 리뷰 루프**: [실험 → 적대적 리뷰 → 정직한 개선 → 동기화] 무한 루프 가동.
+>
 > ---
 >
 > # ⚠️ STATUS: PARTIAL OUTDATED (2026-05-03 → 본문)
@@ -28,10 +32,11 @@
 > 통합 작업은 R1.4 슬라이스 예정.
 >
 > **AI Session 시작 시 읽기 순서 (강제, plan-v3-anchor §0 기준)**:
-> 1. `.agents/progress/plan-v3-anchor-2026-05-02.md` ← **현 SoT** (모든 작업의 anchor)
-> 2. `.agents/progress/decision-matrix.md` ← §A 채택 / §B 거부 / §C pending / §D 신규
-> 3. `.agents/progress/gap-analysis-r0-2026-05-02.md` ← 코드 vs plan, 모순 5건
-> 4. `.agents/progress/README.md` ← 인덱스 + AI 흔들림 first 참조점
+> 1. `GEMINI.md` ← **Gemini 에이전트 필수 독해**
+> 2. `.agents/progress/plan-v3-anchor-2026-05-02.md` ← **현 아키텍처 SoT**
+> 3. `.agents/progress/decision-matrix.md` ← §A 채택 / §B 거부 / §C pending / §D 신규
+> 4. `.agents/progress/gap-analysis-r0-2026-05-02.md` ← 코드 vs plan, 모순 5건
+> 5. `.agents/progress/README.md` ← 인덱스 + AI 흔들림 first 참조점
 >
 > **본 AGENTS.md (이하 본문)** = 참고용 (R5~R14 진행상황). R1.4 통합 후 v3 정식 docs 로 대체.
 >

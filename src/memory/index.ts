@@ -1676,6 +1676,20 @@ export class MemorySystem {
 
 	// ─── Lifecycle ────────────────────────────────────────────────────────
 
+	/** R2.5 v2 — Bi-temporal recall: memories valid at T. */
+	async recallWithHistory(
+	        query: string,
+	        atTimestamp: number,
+	        opts: RecallContext = {},
+	): Promise<{ facts: Fact[]; episodes: Episode[] }> {
+	        return this.recall(query, { ...opts, mode: "at-time", atTimestamp });
+	}
+
+	/** Run a decay cycle. Returns number of facts archived/weakened. */
+	async applyDecay(): Promise<number> {
+	        return this.adapter.semantic.decay(Date.now());
+	}
+
 	async close(): Promise<void> {		this.stopConsolidation();
 		this.spikeHandlers = [];
 		this.activeContext = null;

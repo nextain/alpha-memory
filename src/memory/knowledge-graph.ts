@@ -123,15 +123,14 @@ export class KnowledgeGraph {
 	 *
 	 * @param seeds - Starting entities
 	 * @param depth - How many hops to spread (default: 2)
-	 * @param decayFactor - Activation decay per hop (default: 0.5)
+	 * @param decayFactor - Activation decay per hop (default: 0.8 - R4 #220)
 	 * @returns Entities sorted by activation level (excluding seeds)
 	 */
 	spreadingActivation(
-		seeds: string[],
-		depth = 2,
-		decayFactor = 0.5,
-	): Array<{ entity: string; activation: number }> {
-		const activation = new Map<string, number>();
+	        seeds: string[],
+	        depth = 2,
+	        decayFactor = 0.8,
+	): Array<{ entity: string; activation: number }> {		const activation = new Map<string, number>();
 		const seedSet = new Set(seeds.map(normalize));
 
 		// Initialize seeds with activation 1.0

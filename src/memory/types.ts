@@ -24,16 +24,29 @@ export interface ImportanceScore {
 
 /** Input to the importance scoring function */
 export interface MemoryInput {
-	content: string;
-	role: "user" | "assistant" | "tool";
-	/** Current conversation context for scoring */
-	context?: string;
-	/** Optional override for timestamp (used in benchmarks) */
-	timestamp?: number;
+        content: string;
+        role: "user" | "assistant" | "tool";
+        /** Current conversation context for scoring */
+        context?: string;
+        /** Optional override for timestamp (used in benchmarks) */
+        timestamp?: number;
+}
+
+/** R4 #220 — Life epoch representing a significant time period or milestone. */
+export interface Epoch {
+        id: string;
+        name: string;
+        /** Description of this period (e.g., 'Before moving to Seoul') */
+        description?: string;
+        /** ms unix timestamp when this period started */
+        start: number;
+        /** ms unix timestamp when this period ended (null for ongoing) */
+        end: number | null;
+        /** Source episode ID that defined this epoch */
+        sourceEpisodeId?: string;
 }
 
 // ─── Episodic Memory (Hippocampus) ───────────────────────────────────────────
-
 /** A single episode — a timestamped event with full context */
 export interface Episode extends Record<string, unknown> {
 	id: string;
@@ -113,9 +126,11 @@ export interface RecallContext {
 	mode?: "latest" | "history" | "at-time";
 	/** Bi-temporal anchor for `mode: 'at-time'`. ms unix timestamp. */
 	atTimestamp?: number;
+	/** R4 #220 — Epoch-based anchor (e.g., '이사 전', '대학 시절').
+	 *  If provided, the system resolves this to a time range via KnowledgeGraph. */
+	epochAnchor?: string;
 	/**
-	 * R5 #28 — Privacy: project scope hard partition.
-	 *
+	 * R5 #28 — Privacy: project scope hard partition.	 *
 	 *  - 'strict' (권장 for production): 해당 project 의 fact 만 노출.
 	 *    cross-project 조회 시 explicit \`crossProject: true\` 필요.
 	 *  - 'soft' (default): 기존 동작 — project 명시 시 우선, 미명시 시
@@ -198,9 +213,11 @@ export interface Fact extends Record<string, unknown> {
 	lastAccessed: number;
 	/** Current strength (Ebbinghaus decay) */
 	strength: number;
+	/** R4 #220 — Highest emotional valence recorded for this fact.
+	 *  Used for non-linear Flashbulb Memory gating. */
+	maxEmotion?: number;
 	/** Lifecycle status — superseded facts are hidden from default search */
-	status: "active" | "superseded" | "archived";
-	/** R2.5 v2 chain — predecessor fact id (chain backward).
+	status: "active" | "superseded" | "archived";	/** R2.5 v2 chain — predecessor fact id (chain backward).
 	 *  Set when this fact replaces an older one on the same attribute.
 	 *  Older fact's `successorId` should point back here. */
 	supersedes?: string | null;
@@ -261,18 +278,19 @@ export interface Reflection extends Record<string, unknown> {
 
 /** Result of a consolidation cycle (sleep cycle analog) */
 export interface ConsolidationResult {
-	/** Number of episodes processed */
-	episodesProcessed: number;
-	/** Number of new facts extracted */
-	factsCreated: number;
-	/** Number of existing facts updated (reconsolidated) */
-	factsUpdated: number;
-	/** Number of weak memories pruned (below decay threshold) */
-	memoriesPruned: number;
-	/** Associations strengthened */
-	associationsUpdated: number;
+        /** Number of episodes processed */
+        episodesProcessed: number;
+        /** Number of new facts extracted */
+        factsCreated: number;
+        /** Number of existing facts updated (reconsolidated) */
+        factsUpdated: number;
+        /** R4 #220 — Number of high-level insights distilled */
+        insightsCreated?: number;
+        /** Number of weak memories pruned (below decay threshold) */
+        memoriesPruned: number;
+        /** Associations strengthened */
+        associationsUpdated: number;
 }
-
 // ─── Memory Adapter Interface ───────────────────────────────────────────────
 
 /**
