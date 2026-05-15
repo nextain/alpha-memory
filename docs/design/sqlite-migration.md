@@ -1,79 +1,51 @@
-# Design Doc: SQLite Hybrid Engine (Scalability Hardening)
+# Design Doc: SQLite Hybrid Engine (Scalability Hardening) v2
 
-**Status**: Draft (Step 1 of Issue #221)  
-**Goal**: Transition from JSON-based storage to a relational SQLite-based hybrid engine to support 10,000+ facts without cognitive drift or performance loss.
-
----
-
-## 1. Schema Design (Relational + Cognitive)
-
-To support our "Gold Standard" cognitive features (Epochs, Flashbulb Memory, Bi-temporal tracking), we require a structured schema.
-
-### A. Episodes Table
-Stores raw interaction logs.
-- `id` (TEXT, PK): UUID
-- `content` (TEXT): Raw message
-- `timestamp` (INTEGER): ms unix epoch
-- `role` (TEXT): user/assistant/tool
-- `consolidated` (BOOLEAN): Extraction status
-- `importance_utility` (REAL): Importance score
-- `importance_emotion` (REAL): Emotional valence
-- `encoding_context` (TEXT): JSON blob of project, sessionId, etc.
-
-### B. Facts Table
-Stores distilled knowledge with bi-temporal versioning support.
-- `id` (TEXT, PK): Unique version ID (e.g., `base-v1`)
-- `base_id` (TEXT): ID shared across versions of the same fact
-- `content` (TEXT): The fact itself
-- `entities` (TEXT): JSON array of normalized entities
-- `topics` (TEXT): JSON array of topics
-- `importance` (REAL): Current utility
-- `max_emotion` (REAL): Flashbulb trigger (highest recorded emotion)
-- `strength` (REAL): Ebbinghaus decay value
-- `status` (TEXT): 'active', 'superseded', 'archived'
-- `created_at` (INTEGER)
-- `updated_at` (INTEGER)
-- `last_accessed` (INTEGER)
-- `recall_count` (INTEGER)
-- `valid_from` (INTEGER): Start of temporal validity
-- `valid_to` (INTEGER): End of temporal validity (NULL if ongoing)
-- `successor_id` (TEXT): Pointer to newer version
-- `supersedes` (TEXT): Pointer to older version
-
-### C. Embeddings Table
-Decoupled vector storage.
-- `id` (TEXT, PK): References Fact or Episode ID
-- `vector` (BLOB): Float32Array serialized vector
-- `target_type` (TEXT): 'fact' or 'episode'
-
-### D. Epochs Table
-Significant life periods.
-- `id` (TEXT, PK)
-- `name` (TEXT): e.g., 'Before the move'
-- `description` (TEXT)
-- `start_time` (INTEGER)
-- `end_time` (INTEGER, NULLABLE)
-- `source_episode_id` (TEXT): Linking back to the event that defined the epoch
-
-### E. Knowledge Graph (Nodes & Edges)
-- `nodes`: `name` (PK), `frequency`, `last_seen`
-- `edges`: `source`, `target`, `weight`, `last_strengthened`
-
-### F. Keyword Search (FTS5)
-- `facts_fts`: Virtual table indexing Fact content, entities, and topics for BM25.
+**Status**: Hardened (Post-Peer Review)  
+**Goal**: Transition to a high-performance relational/vector hybrid engine capable of 1,000,000+ facts while maintaining cognitive integrity and explaining every ranking decision.
 
 ---
 
-## 2. Algorithmic Integrity (Self-Rigorous Approach)
+## 1. Schema Design (Hardened)
 
-We will avoid "SQLite hacks" and focus on:
-1. **Range-Overlap Recall**: SQL implementation of `(valid_from <= actual_end AND valid_to >= start)`.
-2. **Flashbulb SQL Ranking**: A hybrid ORDER BY clause reflecting non-linear gating:
-   ```sql
-   ORDER BY (max_emotion >= 0.8) DESC, relevance_score DESC
-   ```
-3. **Transparent Consolidation**: Atomic transactions for distilling facts to ensure "the power of forgetting" never results in data loss.
+### A. Core Tables
+- **Episodes**: (Standard relational)
+- **Facts**: Added `base_id` indexing and `status_state` enum for consolidation safety.
+- **Epochs**: (Standard relational)
 
-## 3. Next Step: External AI Peer Review
+### B. Bi-temporal R-Tree Indexing (New)
+To solve the $O(N)$ scanning issue of time ranges, we will use the **R-Tree extension**.
+- `facts_time_idx` (VIRTUAL TABLE using rtree): Maps `rowid` to `[valid_from, valid_to]`.
+- This enables $O(\log N)$ spatial queries for temporal overlaps, crucial for long-term persona continuity.
 
-This design will be submitted to the simulated Claude/Codex board for adversarial review before implementation starts.
+### C. Native Vector Search (New)
+Instead of fetching BLOBs to Node.js memory:
+- **Requirement**: Investigate `sqlite-vec` or `sqlite-vss` integration with `better-sqlite3`.
+- **Fallback**: If extensions are blocked, use `better-sqlite3` custom functions (C++ side) to perform dot-product/cosine without crossing the FFI boundary for every row.
+
+### D. FTS5 & RRF Integration
+- Use **FTS5** with `bm25()` scoring.
+- Implement **RRF (Reciprocal Rank Fusion)** at the SQL query level (via CTEs) to ensure the 랭킹 is mathematically sound and "honest" (no arbitrary magic-number additions).
+
+---
+
+## 2. Integrity & State Machine
+
+To prevent "Cognitive Drift" (data/insight mismatch):
+- **Consolidation State**:
+  1. `PENDING`: Episode ready for distillation.
+  2. `IN_PROGRESS`: LLM is processing.
+  3. `COMMITTING`: Writing to SQLite (within a transaction).
+  4. `COMPLETED`: Episode marked as consolidated + source archived.
+- **WAL Mode**: Enable Write-Ahead Logging to ensure crash-safe atomic updates of the Knowledge Graph and Fact store.
+
+## 3. Implementation Action Items
+
+1. **Step 2.1**: Prototype R-Tree temporal search.
+2. **Step 2.2**: Benchmark `sqlite-vec` vs optimized BLOB retrieval.
+3. **Step 2.3**: Update `LocalAdapter` to `SqliteAdapter` with Zero-Clobber migration.
+
+---
+
+## 4. External AI Peer Review (Loop 2)
+
+This v2 design addresses all Loop 1 criticisms. Implementation will begin only after the board confirms the "technical substance" of the R-Tree and State Machine sections.
