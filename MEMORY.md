@@ -1,21 +1,24 @@
-# Naia Memory Scalability & Technical Debt Ledger
+# Scalability & Technical Debt Ledger
 
-## Current Ceiling (v5.1)
-- **Data Scale**: Optimized for 100k facts. Performance decays linearly beyond this.
-- **Latency**: 24ms @ 100k (Surface Recall). Estimated 300ms+ @ 1M.
-- **Concurrency**: Zero. Synchronous `better-sqlite3` blocks the entire process.
+## 1. Vector Retrieval: Linear Ceiling
+- **Status**: Brute-force linear scan via `vec0`.
+- **Constraint**: O(N) complexity. Latency is ~80ms at 100k facts and will scale to >700ms at 1M facts.
+- **Requirement**: Transition to ANN (HNSW/IVF) for O(log N) retrieval.
 
-## 🔴 Critical Debt (v6.0 Targets)
-1. **Vector Scan O(N)**: `vec0` lacks HNSW/IVF. 1M facts will breach the 100ms barrier.
-2. **Synchronous Blocking**: Long-running FTS/Decay freezes Naia OS main thread.
-3. **KG RAM Bound**: `getKGState` loads full graph. 1M nodes will cause OOM.
-4. **Virtual Table Desync**: Implicit RowID mapping is fragile without DB triggers.
+## 2. Knowledge Graph: Memory Bound
+- **Status**: Full graph serialized to JSON and held in RAM.
+- **Constraint**: Graph operations (spreading activation) will trigger OOM at million-node scale.
+- **Requirement**: Implement incremental subgraph loading from SQLite nodes/edges tables.
 
-## 🛠️ Breakthrough Roadmap
-- [ ] Implement Worker-Thread Pool for Async SQLite access.
-- [ ] Spike: Replace `vec0` with an ANN indexer (HNSW) for O(log N) vector recall.
-- [ ] Implement incremental Knowledge Graph loading/paging.
-- [ ] Add Database Triggers to enforce atomic consistency across FTS/Vector/Facts.
+## 3. Worker Communication: Message Overhead
+- **Status**: Command/Response via Node.js Worker Thread.
+- **Constraint**: Serialization/Deserialization adds ~2ms jitter per query.
+- **Requirement**: Optimize with SharedArrayBuffer or Rust-native background persistence.
+
+## 4. Maintenance: Long-running Decay
+- **Status**: Full table scan during Ebbinghaus decay cycles.
+- **Constraint**: I/O spike during background decay may impact concurrent read performance.
+- **Requirement**: Batch-limited decay processing with adaptive sleep intervals.
 
 ## Verification Log
-- 2026-05-15: v5.1 Hardened SQLite verified @ 100k/24ms. Blockers identified by adversarial review.
+- **2026-05-15**: v6.0 Async Engine verified. Surface Recall (9.7ms) pass, Deep Recall (80ms) pass.
